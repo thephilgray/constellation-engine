@@ -14,7 +14,7 @@ Compute: AWS Lambda (Node.js).
 
 Memory: Pinecone (Serverless Vector Database).
 
-Reasoning: Google Gemini 1.5 Pro (Large Context Window).
+Reasoning: Google Gemini 2.5 Flash (Large Context Window).
 
 Storage: GitHub Repository (Synced to local Obsidian vault).
 
