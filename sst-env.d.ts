@@ -5,6 +5,11 @@
 
 declare module "sst" {
   export interface Resource {
+    "BiographerFunction": {
+      "name": string
+      "type": "sst.aws.Function"
+      "url": string
+    }
     "DreamFunction": {
       "name": string
       "type": "sst.aws.Function"
