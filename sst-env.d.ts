@@ -5,6 +5,11 @@
 
 declare module "sst" {
   export interface Resource {
+    "DreamFunction": {
+      "name": string
+      "type": "sst.aws.Function"
+      "url": string
+    }
     "GEMINI_API_KEY": {
       "type": "sst.sst.Secret"
       "value": string
