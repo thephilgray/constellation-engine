@@ -162,3 +162,15 @@ export async function queryPinecone(
     includeMetadata: true,
   });
 }
+
+/**
+ * Sanitizes a markdown string by removing the wrapping ```markdown blocks.
+ * @param markdown The markdown string to sanitize.
+ * @returns The sanitized markdown string.
+ */
+export function sanitizeMarkdown(markdown: string): string {
+  return markdown
+    .replace(/^```markdown\s+/i, "")
+    .replace(/^```\s+/i, "")
+    .replace(/\s+```$/, "");
+}

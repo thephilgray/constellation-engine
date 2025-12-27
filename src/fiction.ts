@@ -1,7 +1,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import type { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
 import { Resource } from "sst";
-import { getEmbedding, upsertToPinecone, appendToFile, getFile, createOrUpdateFile, queryPinecone } from "./utils";
+import { getEmbedding, upsertToPinecone, appendToFile, getFile, createOrUpdateFile, queryPinecone, sanitizeMarkdown } from "./utils";
 
 // Initialize Gemini client
 const genAI = new GoogleGenerativeAI(Resource.GEMINI_API_KEY.value);
@@ -124,6 +124,7 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
         ---
 
         Now, output the **complete, updated Story Bible** with the new information integrated.
+        IMPORTANT: Output RAW markdown only. Do not wrap the output in markdown code blocks. Do not include any conversational text.
       `;
     } else { // IDEA or CHARACTER
       systemPrompt = `
@@ -148,12 +149,16 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
         ---
 
         Now, output the **complete, updated Story Bible** with the new information integrated.
+        IMPORTANT: Output RAW markdown only. Do not wrap the output in markdown code blocks. Do not include any conversational text.
       `;
     }
 
     const generativeModel = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
     const result = await generativeModel.generateContent(systemPrompt);
-    const newBibleContent = result.response.text();
+    let newBibleContent = result.response.text();
+
+    // 🧹 SANITIZE: Remove the wrapping ```markdown blocks
+    newBibleContent = sanitizeMarkdown(newBibleContent);
 
     // 5. Update Story Bible
     await createOrUpdateFile(STORY_BIBLE_PATH, newBibleContent, "chore: Update story bible");

@@ -1,7 +1,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import type { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
 import { Resource } from "sst";
-import { getEmbedding, upsertToPinecone, appendToFile, getFile, createOrUpdateFile, queryPinecone } from "./utils";
+import { getEmbedding, upsertToPinecone, appendToFile, getFile, createOrUpdateFile, queryPinecone, sanitizeMarkdown } from "./utils";
 
 // Set environment for Pinecone Serverless
 process.env.PINECONE_INDEX_HOST = Resource.PINECONE_INDEX_HOST.value;
@@ -114,10 +114,14 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
       - **The Graveyard Rule:** If a topic exists in the "## 🪦 Archived" section of the Current Dashboard, DO NOT generate a new Constellation for it. Ignore those thoughts.
       - **Stability Constraint:** Prefer appending to existing themes over creating new ones or renaming them. Only refactor if the new thought radically changes the context or bridges two previously separate ideas.
       - Maintain the exact markdown structure.
+      - **IMPORTANT:** Output RAW markdown only. Do not wrap the output in markdown code blocks. Do not include any conversational text.
     `;
 
     const result = await generativeModel.generateContent(systemPrompt);
-    const newDashboardContent = result.response.text();
+    let newDashboardContent = result.response.text();
+
+    // 🧹 SANITIZE: Remove the wrapping ```markdown blocks
+    newDashboardContent = sanitizeMarkdown(newDashboardContent);
 
     // 7. Update
     await createOrUpdateFile(DASHBOARD_FILE_PATH, newDashboardContent, "garden: Integrate new thought");

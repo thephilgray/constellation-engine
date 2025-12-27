@@ -1,7 +1,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import type { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
 import { Resource } from "sst";
-import { getEmbedding, upsertToPinecone, appendToFile, getFile, createOrUpdateFile, queryPinecone } from "./utils";
+import { getEmbedding, upsertToPinecone, appendToFile, getFile, createOrUpdateFile, queryPinecone, sanitizeMarkdown } from "./utils";
 
 // Initialize Gemini client
 const genAI = new GoogleGenerativeAI(Resource.GEMINI_API_KEY.value);
@@ -97,11 +97,15 @@ INSTRUCTIONS:
    - **Section 2: Thematic Bins:** Group remaining lines by strong imagery (e.g., 'Nature', 'Tech', 'Heartbreak').
    - **Section 3: The Inbox:** Place the new line here if it fits nowhere else.
 
-CONSTRAINT: Do not alter the raw text of the lyrics. Only group and arrange them.`;
+CONSTRAINT: Do not alter the raw text of the lyrics. Only group and arrange them.
+IMPORTANT: Output RAW markdown only. Do not wrap the output in markdown code blocks. Do not include any conversational text.`;
 
     const generativeModel = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
     const result = await generativeModel.generateContent(systemPrompt);
-    const newSongSeeds = result.response.text();
+    let newSongSeeds = result.response.text();
+
+    // 🧹 SANITIZE: Remove the wrapping ```markdown blocks
+    newSongSeeds = sanitizeMarkdown(newSongSeeds);
 
     // 5. Update
     await createOrUpdateFile(SONG_SEEDS_PATH, newSongSeeds, "chore: Update song seeds");
