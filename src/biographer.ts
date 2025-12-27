@@ -188,7 +188,7 @@ ${contextEntries}
         break;
     }
 
-    const generativeModel = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+    const generativeModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
     const result = await generativeModel.generateContent(systemPrompt);
     const newLifeLogContent = result.response.text();
 
