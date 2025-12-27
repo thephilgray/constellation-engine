@@ -10,6 +10,11 @@ declare module "sst" {
       "type": "sst.aws.Function"
       "url": string
     }
+    "FictionFunction": {
+      "name": string
+      "type": "sst.aws.Function"
+      "url": string
+    }
     "GEMINI_API_KEY": {
       "type": "sst.sst.Secret"
       "value": string
@@ -31,6 +36,11 @@ declare module "sst" {
       "value": string
     }
     "Ingest": {
+      "name": string
+      "type": "sst.aws.Function"
+      "url": string
+    }
+    "LyricsFunction": {
       "name": string
       "type": "sst.aws.Function"
       "url": string
