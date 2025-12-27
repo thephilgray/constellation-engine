@@ -92,7 +92,7 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
     const { content: currentDashboardContent } = await getFile(DASHBOARD_FILE_PATH);
 
     // 6. Synthesize (The "Gardener")
-    const generativeModel = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const generativeModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
     const systemPrompt = `
       You are a Knowledge Gardener. Your task is to integrate a new thought into a living markdown document of thematic clusters called "Constellations". You are managing a Dashboard of the user's writing topics. You have 3 input types:
       - **IDEAS:** Raw thoughts. Cluster them freely.
