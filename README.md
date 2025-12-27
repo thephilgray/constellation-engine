@@ -71,7 +71,7 @@ Framework: SST v3 (Ion)
 
 Language: TypeScript
 
-AI Model: Gemini 1.5 Pro
+AI Model: Gemini 2.5 Flash
 
 Vector DB: Pinecone
 
