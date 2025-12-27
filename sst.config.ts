@@ -46,11 +46,19 @@ export default $config({
       link: [GEMINI_API_KEY, PINECONE_API_KEY, PINECONE_INDEX_HOST, GITHUB_TOKEN, GITHUB_OWNER, GITHUB_REPO, INGEST_API_KEY],
     });
 
+    const biographer = new sst.aws.Function("BiographerFunction", {
+      handler: "src/biographer.handler",
+      url: true, // Creates a public Lambda Function URL
+      timeout: "60 seconds",
+      link: [GEMINI_API_KEY, PINECONE_API_KEY, PINECONE_INDEX_HOST, GITHUB_TOKEN, GITHUB_OWNER, GITHUB_REPO, INGEST_API_KEY],
+    });
+
     return {
       api: ingest.url,
       dreamsEndpoint: dream.url,
       lyricsEndpoint: lyrics.url,
       fictionEndpoint: fiction.url,
+      biographerEndpoint: biographer.url,
     };
   },
 });
