@@ -1,19 +1,14 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { Pinecone } from "@pinecone-database/pinecone";
-import { Octokit } from "@octokit/rest";
 import type { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
 import { Resource } from "sst";
+import { getEmbedding, upsertToPinecone, appendToFile, getFile, createOrUpdateFile, queryPinecone } from "./utils";
 
 // Set environment for Pinecone Serverless
 process.env.PINECONE_INDEX_HOST = Resource.PINECONE_INDEX_HOST.value;
 
 // Initialize clients
 const genAI = new GoogleGenerativeAI(Resource.GEMINI_API_KEY.value);
-const pinecone = new Pinecone({ apiKey: Resource.PINECONE_API_KEY.value });
-const octokit = new Octokit({ auth: Resource.GITHUB_TOKEN.value });
 
-const GITHUB_OWNER = Resource.GITHUB_OWNER.value;
-const GITHUB_REPO = Resource.GITHUB_REPO.value;
 const PINECONE_INDEX_NAME = "brain-dump";
 const DASHBOARD_FILE_PATH = "00_Current_Constellations.md";
 
@@ -36,25 +31,20 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
     const { content: newThought, type = "IDEA" }: { content: string; type?: InputType } = JSON.parse(event.body);
 
     // 2. Embed
-    const embeddingModel = genAI.getGenerativeModel({ model: "text-embedding-004" });
-    const embeddingResult = await embeddingModel.embedContent(newThought);
-    const vector = embeddingResult.embedding.values;
+    const vector = await getEmbedding(newThought);
 
     // 3. Persist (Write)
     const timestamp = Date.now();
     const date = new Date(timestamp);
     const isoDate = date.toISOString().split('T')[0];
     const monthYear = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
-    const pineconeIndex = pinecone.Index(PINECONE_INDEX_NAME);
 
-    // Upsert to Pinecone
-    await pineconeIndex.upsert([
-      {
-        id: `thought-${timestamp}`,
-        values: vector,
-        metadata: { text: newThought, type, timestamp, date: isoDate },
-      },
-    ]);
+    await upsertToPinecone(
+      PINECONE_INDEX_NAME,
+      `thought-${timestamp}`,
+      vector,
+      { text: newThought, type, timestamp, date: isoDate }
+    );
 
     // Create backup in GitHub
     let archivePath: string;
@@ -71,78 +61,38 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
         break;
     }
 
-    let existingContent = "";
-    let fileSha: string | undefined;
-    try {
-      const { data: file } = await octokit.repos.getContent({
-        owner: GITHUB_OWNER,
-        repo: GITHUB_REPO,
-        path: archivePath,
-      });
-      if ("content" in file) {
-        existingContent = Buffer.from(file.content, "base64").toString("utf-8");
-        fileSha = file.sha;
-      }
-    } catch (error: any) {
-      if (error.status !== 404) throw error;
-      // If file doesn't exist, it will be created.
-    }
-
-    const newContent = `${existingContent}\n\n---\n\n${newThought}`;
-
-    await octokit.repos.createOrUpdateFileContents({
-      owner: GITHUB_OWNER,
-      repo: GITHUB_REPO,
-      path: archivePath,
-      message: `archive: ${type} - ${isoDate}`,
-      content: Buffer.from(newContent).toString("base64"),
-      sha: fileSha,
-    });
+    await appendToFile(archivePath, newThought, `archive: ${type} - ${isoDate}`);
 
     // 4. Recall (Read)
     const fourteenDaysAgo = Date.now() - 14 * 24 * 60 * 60 * 1000;
-    const recentResults = await pineconeIndex.query({
+    const recentResults = await queryPinecone(
+      PINECONE_INDEX_NAME,
       vector,
-      filter: { timestamp: { $gte: fourteenDaysAgo } },
-      topK: 100,
-      includeMetadata: true,
-    });
-    
-    const relevantResults = await pineconeIndex.query({
+      100,
+      undefined,
+      { timestamp: { $gte: fourteenDaysAgo } }
+    );
+
+    const relevantResults = await queryPinecone(
+      PINECONE_INDEX_NAME,
       vector,
-      topK: 10,
-      includeMetadata: true,
-    });
+      10
+    );
 
     const contextThoughts = [...recentResults.matches, ...relevantResults.matches]
-      .filter((match, index, self) => 
+      .filter((match, index, self) =>
         match.metadata?.text && self.findIndex(m => m.id === match.id) === index
       )
       .map(m => `[${m.metadata?.type || 'IDEA'}] "${m.metadata?.text}"`)
       .join("\n- ");
-    
+
     const contextString = `Contextual thoughts:\n- ${contextThoughts}`;
 
     // 5. Fetch State
-    let currentDashboardContent = "";
-    let dashboardSha: string | undefined;
-    try {
-      const { data: dashboardFile } = await octokit.repos.getContent({
-        owner: GITHUB_OWNER,
-        repo: GITHUB_REPO,
-        path: DASHBOARD_FILE_PATH,
-      });
-      if ("content" in dashboardFile) {
-        currentDashboardContent = Buffer.from(dashboardFile.content, "base64").toString("utf-8");
-        dashboardSha = dashboardFile.sha;
-      }
-    } catch (error: any) {
-      if (error.status !== 404) throw error;
-      // If dashboard doesn't exist, it will be created.
-    }
+    const { content: currentDashboardContent } = await getFile(DASHBOARD_FILE_PATH);
 
     // 6. Synthesize (The "Gardener")
-    const generativeModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    const generativeModel = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     const systemPrompt = `
       You are a Knowledge Gardener. Your task is to integrate a new thought into a living markdown document of thematic clusters called "Constellations". You are managing a Dashboard of the user's writing topics. You have 3 input types:
       - **IDEAS:** Raw thoughts. Cluster them freely.
@@ -170,14 +120,7 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
     const newDashboardContent = result.response.text();
 
     // 7. Update
-    await octokit.repos.createOrUpdateFileContents({
-      owner: GITHUB_OWNER,
-      repo: GITHUB_REPO,
-      path: DASHBOARD_FILE_PATH,
-      message: `garden: Integrate new thought`,
-      content: Buffer.from(newDashboardContent).toString("base64"),
-      sha: dashboardSha,
-    });
+    await createOrUpdateFile(DASHBOARD_FILE_PATH, newDashboardContent, "garden: Integrate new thought");
 
     return {
       statusCode: 200,
