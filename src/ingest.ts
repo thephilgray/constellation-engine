@@ -37,7 +37,6 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
     const timestamp = Date.now();
     const date = new Date(timestamp);
     const isoDate = date.toISOString().split('T')[0];
-    const monthYear = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
 
     await upsertToPinecone(
       PINECONE_INDEX_NAME,
@@ -48,16 +47,17 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
 
     // Create backup in GitHub
     let archivePath: string;
+    const fileName = `${isoDate}-${timestamp}.md`;
     switch (type) {
       case "DRAFT":
-        archivePath = `Drafts/${monthYear}.md`;
+        archivePath = `Drafts/${fileName}`;
         break;
       case "SOURCE":
-        archivePath = `References/${monthYear}.md`;
+        archivePath = `References/${fileName}`;
         break;
       case "IDEA":
       default:
-        archivePath = `_Archive/${monthYear}.md`;
+        archivePath = `_Archive/${fileName}`;
         break;
     }
 
