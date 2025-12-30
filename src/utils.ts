@@ -82,33 +82,17 @@ export async function createOrUpdateFile(path: string, content: string, message:
  * @param message The commit message.
  */
 export async function appendToFile(path: string, content: string, message: string) {
-    let existingContent = "";
-    let fileSha: string | undefined;
-    try {
-      const { data: file } = await octokit.repos.getContent({
-        owner: GITHUB_OWNER,
-        repo: GITHUB_REPO,
-        path: path,
-      });
-      if ("content" in file) {
-        existingContent = Buffer.from(file.content, "base64").toString("utf-8");
-        fileSha = file.sha;
-      }
-    } catch (error: any) {
-      if (error.status !== 404) throw error;
-      // If file doesn't exist, it will be created.
-    }
-  
-    const newContent = `${existingContent}\n\n---\n\n${content}`;
-  
-    await octokit.repos.createOrUpdateFileContents({
-      owner: GITHUB_OWNER,
-      repo: GITHUB_REPO,
-      path: path,
-      message: message,
-      content: Buffer.from(newContent).toString("base64"),
-      sha: fileSha,
-    });
+  const { content: existingContent, sha: fileSha } = await getFile(path);
+  const newContent = existingContent ? `${existingContent}\n\n---\n\n${content}` : content;
+
+  await octokit.repos.createOrUpdateFileContents({
+    owner: GITHUB_OWNER,
+    repo: GITHUB_REPO,
+    path,
+    message,
+    content: Buffer.from(newContent).toString("base64"),
+    sha: fileSha,
+  });
 }
 
 
@@ -118,23 +102,42 @@ export async function appendToFile(path: string, content: string, message: strin
  * @returns The content of the file and its SHA.
  */
 export async function getFile(path: string): Promise<{ content: string; sha: string | undefined }> {
-  let content = "";
-  let sha: string | undefined;
+  console.log(`[getFile] Fetching: ${path}`);
   try {
-    const { data: file } = await octokit.repos.getContent({
+    const { data: file } = await octokit.request("GET /repos/{owner}/{repo}/contents/{path}", {
       owner: GITHUB_OWNER,
       repo: GITHUB_REPO,
-      path,
+      path: path,
     });
-    if ("content" in file) {
-      content = Buffer.from(file.content, "base64").toString("utf-8");
-      sha = file.sha;
+    console.log(`[getFile] Fetched successfully: ${path}`);
+
+    // The response from octokit.request should be the same as octokit.repos.getContent
+    // but we need to handle the case where file is an array (for directories)
+    if (Array.isArray(file)) {
+      console.log(`[getFile] Path is a directory, not a file: ${path}`);
+      return { content: "", sha: undefined };
     }
+
+    if (file.content && file.sha) {
+      console.log(`[getFile] File has content and sha: ${path}`);
+      return {
+        content: Buffer.from(file.content, "base64").toString("utf-8"),
+        sha: file.sha,
+      };
+    }
+    
+    console.log(`[getFile] File has no content or sha: ${path}`);
+    return { content: "", sha: undefined };
+    
   } catch (error: any) {
-    if (error.status !== 404) throw error;
-    // If file doesn't exist, return empty content.
+    console.log(`[getFile] Caught error for path: ${path}`, JSON.stringify(error, null, 2));
+    if (error.status === 404) {
+      console.log(`[getFile] Error is 404, returning empty for: ${path}`);
+      return { content: "", sha: undefined };
+    }
+    console.log(`[getFile] Error is not 404, rethrowing for: ${path}`);
+    throw error;
   }
-  return { content, sha };
 }
 
 /**

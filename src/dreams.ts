@@ -51,7 +51,7 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
       .map(m => `- "${m.metadata?.text}" `)
       .join("\n");
 
-    // 4. Synthesize (Gemini 3 Pro Preview)
+    // 4. Synthesize (Gemini 2.5 Flash)
     const { content: currentAnalysis } = await getFile(DREAM_JOURNAL_ANALYSIS_PATH);
 
     const systemPrompt = `
@@ -75,7 +75,7 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
       - Output RAW markdown only. Do not wrap the output in markdown code blocks.
     `;
 
-    const generativeModel = genAI.getGenerativeModel({ model: "gemini-3-pro-preview" });
+    const generativeModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
     const result = await generativeModel.generateContent(systemPrompt);
     let newAnalysis = result.response.text();
 

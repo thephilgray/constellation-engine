@@ -92,7 +92,7 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
     const { content: currentDashboardContent } = await getFile(DASHBOARD_FILE_PATH);
 
     // 6. Synthesize (The "Gardener")
-    const generativeModel = genAI.getGenerativeModel({ model: "gemini-3-pro-preview" });
+    const generativeModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
     const systemPrompt = `
       You are a Knowledge Gardener. Your task is to integrate a new thought into a living markdown document of thematic clusters called "Constellations". You are managing a Dashboard of the user's writing topics. You have 3 input types:
       - **IDEAS:** Raw thoughts. Cluster them freely.
@@ -112,7 +112,7 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
       - If the input is a DRAFT, find the matching Constellation and add a sub-header: ### 📝 Active Draft: [One line summary].
       - If the input is a SOURCE, find the matching Constellation and add a bullet point: * 📎 Ref: [Summary of source].
       - **The Graveyard Rule:** If a topic exists in the "## 🪦 Archived" section of the Current Dashboard, DO NOT generate a new Constellation for it. Ignore those thoughts.
-      - **Stability Constraint:** Prefer appending to existing themes over creating new ones or renaming them. Only refactor if the new thought radically changes the context or bridges two previously separate ideas.
+      - **Stability Constraint:** Prefer appending to existing themes. You can create new themes if the new thought doesn't fit well into any existing ones. Only refactor if the new thought radically changes the context or bridges two previously separate ideas.
       - Maintain the exact markdown structure.
       - **IMPORTANT:** Output RAW markdown only. Do not wrap the output in markdown code blocks. Do not include any conversational text.
     `;

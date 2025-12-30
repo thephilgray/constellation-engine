@@ -14,7 +14,7 @@ Compute: AWS Lambda (Node.js).
 
 Memory: Pinecone (Serverless Vector Database).
 
-Reasoning: Google Gemini 3 Pro Preview (Large Context Window).
+Reasoning: Google Gemini 2.5 Flash (Large Context Window).
 
 Storage: GitHub Repository (Synced to local Obsidian vault).
 
@@ -71,7 +71,7 @@ Framework: SST v3 (Ion)
 
 Language: TypeScript
 
-AI Model: Gemini 3 Pro Preview
+AI Model: Gemini 2.5 Flash
 
 Vector DB: Pinecone
 

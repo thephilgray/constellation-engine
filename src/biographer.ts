@@ -112,7 +112,7 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
       await customAppendToFile(memoryPath, contentWithHeader, `memory: ${isoDate}`);
     }
 
-    // 4. The "Biographer" Logic (Gemini 3 Pro Preview)
+    // 4. The "Biographer" Logic (Gemini 2.5 Flash)
     // Step A: Recall
     const similarEntries = await queryPinecone(PINECONE_INDEX_NAME, vector, 5, BIOGRAPHY_NAMESPACE);
     const contextEntries = similarEntries.matches
@@ -188,7 +188,7 @@ ${contextEntries}
         break;
     }
 
-    const generativeModel = genAI.getGenerativeModel({ model: "gemini-3-pro-preview" });
+    const generativeModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
     const result = await generativeModel.generateContent(systemPrompt);
     const newLifeLogContent = result.response.text();
 
