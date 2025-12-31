@@ -10,6 +10,10 @@ declare module "sst" {
       "type": "sst.aws.Function"
       "url": string
     }
+    "DialecticalLibrarian": {
+      "arn": string
+      "type": "sst.aws.StepFunctions"
+    }
     "DreamFunction": {
       "name": string
       "type": "sst.aws.Function"
@@ -36,11 +40,40 @@ declare module "sst" {
       "type": "sst.sst.Secret"
       "value": string
     }
+    "GOOGLE_BOOKS_API_KEY": {
+      "type": "sst.sst.Secret"
+      "value": string
+    }
     "INGEST_API_KEY": {
       "type": "sst.sst.Secret"
       "value": string
     }
     "Ingest": {
+      "name": string
+      "type": "sst.aws.Function"
+      "url": string
+    }
+    "LibrarianFetchContext": {
+      "name": string
+      "type": "sst.aws.Function"
+    }
+    "LibrarianPersistRecs": {
+      "name": string
+      "type": "sst.aws.Function"
+    }
+    "LibrarianRetrieveAndCurate": {
+      "name": string
+      "type": "sst.aws.Function"
+    }
+    "LibrarianStrategicAnalysis": {
+      "name": string
+      "type": "sst.aws.Function"
+    }
+    "LibrarianSynthesizeInsights": {
+      "name": string
+      "type": "sst.aws.Function"
+    }
+    "LibrarianTrigger": {
       "name": string
       "type": "sst.aws.Function"
       "url": string
