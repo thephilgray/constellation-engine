@@ -11,28 +11,60 @@ const StrategicQuerySchema = z.object({
   rationale: z.string().describe("Why this query helps the user."),
 });
 
-const AnalysisResultSchema = z.array(StrategicQuerySchema).length(3);
+const ArticleQueriesSchema = z.object({
+  devToTag: z.string().describe("A relevant tag for Dev.to search (e.g., 'react', 'architecture')."),
+  hnQuery: z.string().describe("A search query for Hacker News."),
+  arxivQuery: z.string().describe("A search query for arXiv (CS/Math papers).")
+});
+
+const AnalysisResultSchema = z.object({
+  bookQueries: z.array(StrategicQuerySchema).length(3),
+  articleQueries: ArticleQueriesSchema
+});
 type AnalysisResult = z.infer<typeof AnalysisResultSchema>;
 
 export const handler = async (event: { recentWriting: string }): Promise<AnalysisResult> => {
   if (!event.recentWriting) {
     console.log("No recent writing provided. Returning empty analysis.");
     // Return a default or empty structure that won't break the next step
-    return [
+    return {
+      bookQueries: [
         { query: "general programming", sort: 'relevance', rationale: "Default query due to no recent writing." },
         { query: "philosophy of science", sort: 'relevance', rationale: "Default query due to no recent writing." },
         { query: "history of technology", sort: 'relevance', rationale: "Default query due to no recent writing." },
-    ];
+      ],
+      articleQueries: {
+        devToTag: "programming",
+        hnQuery: "technology",
+        arxivQuery: "computer science"
+      }
+    };
   }
 
   const model = genAI.getGenerativeModel({
     model: "gemini-2.5-flash",
-    systemInstruction: `Analyze the user's writing. Identify the core topics. If the topic is technical, scientific, or news-related, prioritize recency. Generate exactly 3 objects, one for each Lens, as a JSON array. Wrap the JSON array in a markdown code block (e.g., \`\`\`json[{"query": "...", "sort": "...", "rationale": "..."}, ...]\`\`\`):
-    1.  Data Lens (Empirical evidence, foundational texts).
-    2.  Counterpoint Lens (Opposing arguments, alternative schools of thought).
-    3.  Orthogonal Lens (Metaphorical concepts, related ideas from different fields).
+    systemInstruction: `Analyze the user's writing. Identify the core topics. If the topic is technical, scientific, or news-related, prioritize recency.
+    
+    1. Generate 3 "Book Lenses" (Data, Counterpoint, Orthogonal).
+    2. Generate "Article Queries" for Dev.to, Hacker News, and arXiv.
 
-    For each lens, provide:
+    Output a JSON object wrapped in markdown (e.g. \`\`\`json { "bookQueries": [...], "articleQueries": {...} } \`\`\`):
+    
+    Structure:
+    {
+      "bookQueries": [
+        { "query": "...", "sort": "...", "rationale": "..." }, // Data Lens
+        { "query": "...", "sort": "...", "rationale": "..." }, // Counterpoint Lens
+        { "query": "...", "sort": "...", "rationale": "..." }  // Orthogonal Lens
+      ],
+      "articleQueries": {
+        "devToTag": "...", // single word tag (no #)
+        "hnQuery": "...",
+        "arxivQuery": "..."
+      }
+    }
+    
+    For each book lens, provide:
     - query: The Google Books search query.
     - sort: 'newest' (if topic is tech/science/news) or 'relevance').
     - rationale: A brief explanation of why this query is a useful lens for the user's writing.`

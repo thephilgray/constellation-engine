@@ -30,6 +30,10 @@ export default $config({
         link: [GEMINI_API_KEY],
         timeout: "30 seconds",
       }),
+      fetchArticles: new sst.aws.Function("LibrarianFetchArticles", {
+        handler: "src/librarian/fetchArticles.handler",
+        timeout: "60 seconds",
+      }),
       retrieveAndCurate: new sst.aws.Function("LibrarianRetrieveAndCurate", {
         handler: "src/librarian/retrieveAndCurate.handler",
         link: [GEMINI_API_KEY, GOOGLE_BOOKS_API_KEY, GITHUB_TOKEN, GITHUB_OWNER, GITHUB_REPO],
@@ -69,7 +73,7 @@ export default $config({
 
     const intelligentRetrievalState = sst.aws.StepFunctions.map({
       name: "IntelligentRetrieval",
-      items: "{% $states.input.strategicAnalysisResult %}",
+      items: "{% $states.input.strategicAnalysisResult.bookQueries %}",
       processor: sst.aws.StepFunctions.lambdaInvoke({
         name: "RetrieveAndCurateTask",
         function: librarianFunctions.retrieveAndCurate,
@@ -86,12 +90,32 @@ export default $config({
       }
     });
 
+    const fetchArticlesState = sst.aws.StepFunctions.lambdaInvoke({
+        name: "FetchArticles",
+        function: librarianFunctions.fetchArticles,
+        payload: {
+            "devToTag": "{% $states.input.strategicAnalysisResult.articleQueries.devToTag %}",
+            "hnQuery": "{% $states.input.strategicAnalysisResult.articleQueries.hnQuery %}",
+            "arxivQuery": "{% $states.input.strategicAnalysisResult.articleQueries.arxivQuery %}"
+        },
+        output: {
+            "articles": "{% $states.result.Payload %}"
+        } 
+    });
+
+    const parallelRetrievalState = sst.aws.StepFunctions.parallel({
+        name: "ParallelRetrieval",
+    })
+    .branch(intelligentRetrievalState)
+    .branch(fetchArticlesState);
+
     const synthesizeInsightsState = sst.aws.StepFunctions.lambdaInvoke({
       name: "SynthesizeInsights",
       function: librarianFunctions.synthesizeInsights,
       payload: {
-        "books": "{% $states.input.mapResult %}",
-        "recentWriting": "{% $states.input.fetchContextResult.recentWriting %}"
+        "books": "{% $states.input[0].mapResult %}",
+        "articles": "{% $states.input[1].articles %}",
+        "recentWriting": "{% $states.input[0].fetchContextResult.recentWriting %}"
       },
        output: {
         "insightsResult": "{% $states.result.Payload %}",
@@ -108,7 +132,7 @@ export default $config({
 
     const definition = fetchContextState
         .next(strategicAnalysisState)
-        .next(intelligentRetrievalState)
+        .next(parallelRetrievalState)
         .next(synthesizeInsightsState)
         .next(persistRecommendationsState);
 

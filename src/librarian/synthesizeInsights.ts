@@ -15,12 +15,20 @@ const BookSchema = z.object({
 }).passthrough();
 type Book = z.infer<typeof BookSchema>;
 
+interface ArticleItem {
+  title: string;
+  url: string;
+  source: 'Dev.to' | 'HackerNews' | 'arXiv';
+  contentPayload: string;
+}
+
 interface HandlerInput {
   // Direct input (if manually invoked or transformed)
   books?: (Book | null)[];
+  articles?: ArticleItem[];
   recentWriting?: string;
   
-  // Step Function State Input
+  // Step Function State Input (Backward compatibility / Raw input structure)
   fetchContextResult?: {
     recentWriting: string;
   };
@@ -63,25 +71,31 @@ export const handler = async (event: HandlerInput): Promise<string> => {
     });
   }
 
-  // Filter out nulls. We trust the structural check above.
+  // Filter out nulls.
   const validBooks = books.filter((b): b is Book => b !== null);
+  
+  // Extract articles
+  const articles = event.articles || [];
 
-  if (validBooks.length === 0) {
-    console.log("No valid books found to synthesize.");
-    // DEBUG: Return details about why it failed
-    return `## No new book recommendations were found in this run.\n\nDebug Info:\nInput mapResult length: ${event.mapResult?.length}\nExtracted books length: ${books.length}\nValid books length: ${validBooks.length}`;
+  if (validBooks.length === 0 && articles.length === 0) {
+    console.log("No valid books or articles found to synthesize.");
+    return `## No new recommendations were found in this run.`;
   }
 
   const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
   const prompt = `
-You are a literary analyst. For each of the selected books provided, write a "Perspective Paragraph." 
-This paragraph must explain *specifically* how the book challenges, expands upon, or offers a new lens on the user's arguments and ideas as presented in their writing. 
-Avoid generic summaries of the book. Focus on the dialectical relationship between the book and the user's text.
+You are a literary and technical analyst. Review the selected books and articles. 
+Synthesize the user's writing against these materials.
+
+**Key Instructions:**
+1.  **Books:** Write a "Perspective Paragraph" explaining how the book challenges/expands the user's ideas.
+2.  **Articles:** specific attention to the *Hacker News* comments. Use them to highlight potential flaws, controversies, or "real-world" friction points in the user's thinking.
+3.  **Synthesis:** Do not just list items. Connect them back to the user's text.
 
 **User's Recent Writing:**
 ---
-${recentWriting || "No writing was provided, so focus on the potential value of the book in general terms of intellectual growth."}
+${recentWriting || "No writing was provided."}
 ---
 
 **Selected Books:**
@@ -89,13 +103,18 @@ ${recentWriting || "No writing was provided, so focus on the potential value of 
 ${JSON.stringify(validBooks.map(b => b.volumeInfo), null, 2)}
 ---
 
+**Selected Articles:**
+---
+${JSON.stringify(articles, null, 2)}
+---
+
 **Output Format:**
-For each book, provide a response in Markdown format, like this:
+Provide a response in Markdown. Group by source type (Books vs Articles) or by Theme, whichever makes for a stronger narrative.
 
-## [Book Title]
-By [Authors]
+## [Item Title]
+[Source] | [Link](URL)
 
-[Your "Perspective Paragraph" here.]
+[Your Analysis/Perspective]
 
 ---
 `;

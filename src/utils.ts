@@ -118,11 +118,11 @@ export async function getFile(path: string): Promise<{ content: string; sha: str
       return { content: "", sha: undefined };
     }
 
-    if (file.content && file.sha) {
+    if ((file as any).content && (file as any).sha) {
       console.log(`[getFile] File has content and sha: ${path}`);
       return {
-        content: Buffer.from(file.content, "base64").toString("utf-8"),
-        sha: file.sha,
+        content: Buffer.from((file as any).content, "base64").toString("utf-8"),
+        sha: (file as any).sha,
       };
     }
     

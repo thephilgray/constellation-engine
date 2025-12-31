@@ -53,6 +53,10 @@ declare module "sst" {
       "type": "sst.aws.Function"
       "url": string
     }
+    "LibrarianFetchArticles": {
+      "name": string
+      "type": "sst.aws.Function"
+    }
     "LibrarianFetchContext": {
       "name": string
       "type": "sst.aws.Function"
