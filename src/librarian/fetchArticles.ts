@@ -61,13 +61,14 @@ async function fetchDevTo(tag: string): Promise<ArticleItem[]> {
 
 async function fetchHackerNews(query: string): Promise<ArticleItem[]> {
   try {
-    // 1. Search for stories
-    const searchUrl = `http://hn.algolia.com/api/v1/search`;
+    // 1. Search for recent stories with significant discussion
+    const searchUrl = `http://hn.algolia.com/api/v1/search_by_date`;
     const searchResponse = await axios.get(searchUrl, {
         params: {
             tags: 'story',
             query: query,
-            hitsPerPage: 1 // We only focus on the top result to get deep comments
+            numericFilters: 'num_comments>10', // Ensure there is actual discourse
+            hitsPerPage: 1
         }
     });
 
@@ -119,6 +120,8 @@ async function fetchArxiv(query: string): Promise<ArticleItem[]> {
     const response = await axios.get(url, {
         params: {
             search_query: `all:${query}`,
+            sortBy: 'submittedDate',
+            sortOrder: 'descending',
             start: 0,
             max_results: 3
         }
