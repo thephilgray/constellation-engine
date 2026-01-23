@@ -1,62 +1,57 @@
-
 import { Octokit } from "@octokit/rest";
 import { Resource } from "sst";
+import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
+import { DynamoDBDocumentClient, ScanCommand } from "@aws-sdk/lib-dynamodb";
+import type { ConstellationRecord } from "../lib/schemas";
 
 const octokit = new Octokit({ auth: Resource.GITHUB_TOKEN.value });
 const owner = Resource.GITHUB_OWNER.value;
 const repo = Resource.GITHUB_REPO.value;
-const vaultPath = "_Archive";
 const recommendationsFile = "BookRecommendations.md";
+
+const dynamo = DynamoDBDocumentClient.from(new DynamoDBClient({}));
+const TABLE_NAME = Resource.UnifiedLake.name;
 
 async function getRecentWriting(): Promise<string> {
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
     const since = sevenDaysAgo.toISOString();
 
+    console.log(`Fetching writing since: ${since}`);
+
     try {
-        const commits = await octokit.repos.listCommits({
-            owner,
-            repo,
-            path: vaultPath,
-            since,
+        // Scan the table for entries created in the last 7 days.
+        // Note: For production with many users, a GSI on `type` and `createdAt` would be better.
+        const command = new ScanCommand({
+            TableName: TABLE_NAME,
+            FilterExpression: "#type = :type AND #createdAt >= :since",
+            ExpressionAttributeNames: {
+                "#type": "type",
+                "#createdAt": "createdAt",
+            },
+            ExpressionAttributeValues: {
+                ":type": "Entry",
+                ":since": since,
+            },
         });
 
-        if (commits.data.length === 0) {
+        const response = await dynamo.send(command);
+        const entries = (response.Items || []) as ConstellationRecord[];
+
+        if (entries.length === 0) {
             return "";
         }
 
-        const fileContents: string[] = [];
-        const processedFiles = new Set<string>();
+        console.log(`Found ${entries.length} recent entries.`);
 
-        for (const commit of commits.data) {
-            const commitDetails = await octokit.repos.getCommit({
-                owner,
-                repo,
-                ref: commit.sha,
-            });
+        // Combine content
+        return entries
+            .map(entry => entry.content)
+            .join("\n\n---\n\n");
 
-            for (const file of commitDetails.data.files ?? []) {
-                if (file.filename && file.filename.endsWith('.md') && !processedFiles.has(file.filename)) {
-                    processedFiles.add(file.filename);
-                    try {
-                        const contentResponse = await octokit.repos.getContent({
-                            owner,
-                            repo,
-                            path: file.filename,
-                        });
-                        if ('content' in contentResponse.data) {
-                            fileContents.push(Buffer.from(contentResponse.data.content, 'base64').toString('utf-8'));
-                        }
-                    } catch (contentError) {
-                        console.warn(`Could not fetch content for ${file.filename}:`, contentError);
-                    }
-                }
-            }
-        }
-        return fileContents.join("\n\n---\n\n");
     } catch (error) {
-        console.error("Error fetching recent writing:", error);
-        return ""; // Return empty string on error to not block the workflow
+        console.error("Error fetching recent writing from DynamoDB:", error);
+        return "";
     }
 }
 
@@ -95,9 +90,6 @@ export const handler = async (): Promise<{ recentWriting: string; pastRecsList: 
     ]);
 
     if (!recentWriting) {
-        // If there's no new writing, we can short-circuit the whole process.
-        // Step Functions can be configured to handle this, but for now we'll let it continue
-        // and the AI will have no context.
         console.log("No recent writing found in the last 7 days.");
     }
 

@@ -1,25 +1,56 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
+import { DynamoDBDocumentClient, PutCommand } from "@aws-sdk/lib-dynamodb";
 import type { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
 import { Resource } from "sst";
-import { getEmbedding, upsertToPinecone, appendToFile, getFile, createOrUpdateFile, queryPinecone, sanitizeMarkdown } from "./utils";
+import KSUID from "ksuid";
+import { getEmbedding, upsertToPinecone } from "./utils";
+import type { ConstellationRecord, IntentRouterOutput, PineconeMetadata } from "./lib/schemas";
 
-// Set environment for Pinecone Serverless
-process.env.PINECONE_INDEX_HOST = Resource.PINECONE_INDEX_HOST.value;
-
-// Initialize clients
+// Initialize Clients
 const genAI = new GoogleGenerativeAI(Resource.GEMINI_API_KEY.value);
+const dynamoClient = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 
-const PINECONE_INDEX_NAME = "brain-dump";
-const DASHBOARD_FILE_PATH = "00_Current_Constellations.md";
+// Environment
+const PINECONE_INDEX_NAME = "brain-dump"; // Or typically Resource.PineconeIndex.value if managed
+const TABLE_NAME = Resource.UnifiedLake.name;
 
-type InputType = "IDEA" | "DRAFT" | "SOURCE";
+const INTENT_ROUTER_PROMPT = `
+# System Prompt: Constellation Engine Intent Router
+
+You are a hyper-efficient data processing engine for a 'Second Brain' application. Your sole purpose is to receive a piece of content, analyze it, and return a structured JSON object.
+
+**RULES:**
+1.  **Analyze the Input:** The user will provide a block of text, a URL, or a reference to an uploaded file.
+2.  **Determine Originality:**
+    *   If the content appears to be the user's own thoughts, set \`isOriginal: true\`.
+    *   If it contains quotes, is a direct paste from a web article, or is a URL, set \`isOriginal: false\`.
+3.  **Extract Source (if \`isOriginal: false\`):**
+    *   If a URL is present, populate \`sourceURL\`.
+    *   Attempt to identify \`sourceTitle\` and \`sourceAuthor\` from the text if available.
+4.  **Process Multimedia:**
+    *   **For Audio:** Assume the input is a transcription. Extract the core message into \`content\`. Generate \`tags\` describing the emotional tone (e.g., "emotional_tone: excited"). Set \`mediaType: 'audio'\`.
+    *   **For Images:** Assume the input is a description of an image. Summarize the description into \`content\`. Generate \`tags\` describing the key visual concepts (e.g., "concept: UML Diagram", "style: hand-drawn"). Set \`mediaType: 'image'\`.
+    *   **For Text:** The input is the content. Set \`mediaType: 'text'\`.
+5.  **Output JSON ONLY:** Your entire response MUST be a single, valid JSON object matching the \`IntentRouterOutput\` interface. Do not include any explanations or conversational text.
+
+**JSON OUTPUT FORMAT:**
+{
+  "isOriginal": boolean,
+  "sourceURL": string | null,
+  "sourceTitle": string | null,
+  "sourceAuthor": string | null,
+  "content": string,
+  "tags": string[],
+  "mediaType": "text" | "audio" | "image"
+}
+`;
 
 export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
   try {
-    // API Key Authentication
-    const authHeader = event.headers.authorization;
-    const expectedApiKey = `Bearer ${Resource.INGEST_API_KEY.value}`;
-    if (authHeader !== expectedApiKey) {
+    // 1. Authentication
+    const userId = event.requestContext.authorizer?.jwt?.claims?.sub;
+    if (!userId) {
       return { statusCode: 401, body: JSON.stringify({ message: "Unauthorized" }) };
     }
 
@@ -27,114 +58,75 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
       return { statusCode: 400, body: JSON.stringify({ message: "Request body is empty." }) };
     }
 
-    // 1. Receive Input
-    const { content: newThought, type = "IDEA" }: { content: string; type?: InputType } = JSON.parse(event.body);
+    const { content: rawInput } = JSON.parse(event.body);
+    if (!rawInput) {
+       return { statusCode: 400, body: JSON.stringify({ message: "Content is required." }) };
+    }
 
-    // 2. Embed
-    const vector = await getEmbedding(newThought);
+    // 2. Intent Router (Classification & Extraction)
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" }); // Fast model for routing
+    const result = await model.generateContent(`${INTENT_ROUTER_PROMPT}\n\nINPUT:\n${rawInput}`);
+    const responseText = result.response.text().replace(/```json\n?|\n?```/g, '').trim();
+    const routerOutput = JSON.parse(responseText) as IntentRouterOutput;
 
-    // 3. Persist (Write)
-    const timestamp = Date.now();
-    const date = new Date(timestamp);
-    const isoDate = date.toISOString().split('T')[0];
+    // 3. ID Generation
+    const id = (await KSUID.random()).string;
+    const now = new Date().toISOString();
+
+    // 4. Prepare DynamoDB Record
+    const record: ConstellationRecord = {
+      PK: `USER#${userId}`,
+      SK: `ENTRY#${id}`,
+      id,
+      type: "Entry",
+      createdAt: now,
+      updatedAt: now,
+      content: routerOutput.content,
+      isOriginal: routerOutput.isOriginal,
+      sourceURL: routerOutput.sourceURL || undefined,
+      sourceTitle: routerOutput.sourceTitle || undefined,
+      sourceAuthor: routerOutput.sourceAuthor || undefined,
+      mediaType: routerOutput.mediaType,
+      tags: routerOutput.tags,
+      lastAccessed: now,
+    };
+
+    // 5. Save to DynamoDB
+    await dynamoClient.send(new PutCommand({
+      TableName: TABLE_NAME,
+      Item: record,
+    }));
+
+    // 6. Generate Embedding
+    const vector = await getEmbedding(routerOutput.content);
+
+    // 7. Save to Pinecone
+    const pineconeMetadata: PineconeMetadata = {
+      id,
+      userId: userId as string,
+      isOriginal: routerOutput.isOriginal,
+      mediaType: routerOutput.mediaType,
+      createdAt: now,
+      tags: routerOutput.tags,
+    };
 
     await upsertToPinecone(
       PINECONE_INDEX_NAME,
-      `thought-${timestamp}`,
+      id,
       vector,
-      { text: newThought, type, timestamp, date: isoDate }
+      pineconeMetadata as unknown as Record<string, any>
     );
-
-    // Create backup in GitHub
-    let archivePath: string;
-    const fileName = `${isoDate}-${timestamp}.md`;
-    switch (type) {
-      case "DRAFT":
-        archivePath = `Drafts/${fileName}`;
-        break;
-      case "SOURCE":
-        archivePath = `References/${fileName}`;
-        break;
-      case "IDEA":
-      default:
-        archivePath = `_Archive/${fileName}`;
-        break;
-    }
-
-    await appendToFile(archivePath, newThought, `archive: ${type} - ${isoDate}`);
-
-    // 4. Recall (Read)
-    const fourteenDaysAgo = Date.now() - 14 * 24 * 60 * 60 * 1000;
-    const recentResults = await queryPinecone(
-      PINECONE_INDEX_NAME,
-      vector,
-      100,
-      undefined,
-      { timestamp: { $gte: fourteenDaysAgo } }
-    );
-
-    const relevantResults = await queryPinecone(
-      PINECONE_INDEX_NAME,
-      vector,
-      10
-    );
-
-    const contextThoughts = [...recentResults.matches, ...relevantResults.matches]
-      .filter((match, index, self) =>
-        match.metadata?.text && self.findIndex(m => m.id === match.id) === index
-      )
-      .map(m => `[${m.metadata?.type || 'IDEA'}] "${m.metadata?.text}"`)
-      .join("\n- ");
-
-    const contextString = `Contextual thoughts:\n- ${contextThoughts}`;
-
-    // 5. Fetch State
-    const { content: currentDashboardContent } = await getFile(DASHBOARD_FILE_PATH);
-
-    // 6. Synthesize (The "Gardener")
-    const generativeModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-    const systemPrompt = `
-      You are a Knowledge Gardener. Your task is to integrate a new thought into a living markdown document of thematic clusters called "Constellations". You are managing a Dashboard of the user's writing topics. You have 3 input types:
-      - **IDEAS:** Raw thoughts. Cluster them freely.
-      - **DRAFTS:** Actual writing. These indicate the user is ACTIVELY working on a topic. Give it higher priority.
-      - **SOURCES:** External quotes/links. These are EVIDENCE. Never create a Constellation based on a source title. Only use sources to support existing themes.
-
-      **Current Dashboard State:**
-      ${currentDashboardContent}
-
-      **New Thought:**
-      "[${type}] ${newThought}"
-
-      **Context from related thoughts:**
-      ${contextString}
-
-      **Rules:**
-      - If the input is a DRAFT, find the matching Constellation and add a sub-header: ### 📝 Active Draft: [One line summary].
-      - If the input is a SOURCE, find the matching Constellation and add a bullet point: * 📎 Ref: [Summary of source].
-      - **The Graveyard Rule:** If a topic exists in the "## 🪦 Archived" section of the Current Dashboard, DO NOT generate a new Constellation for it. Ignore those thoughts.
-      - **Stability Constraint:** Prefer appending to existing themes. You can create new themes if the new thought doesn't fit well into any existing ones. Only refactor if the new thought radically changes the context or bridges two previously separate ideas.
-      - Maintain the exact markdown structure.
-      - **IMPORTANT:** Output RAW markdown only. Do not wrap the output in markdown code blocks. Do not include any conversational text.
-    `;
-
-    const result = await generativeModel.generateContent(systemPrompt);
-    let newDashboardContent = result.response.text();
-
-    // 🧹 SANITIZE: Remove the wrapping ```markdown blocks
-    newDashboardContent = sanitizeMarkdown(newDashboardContent);
-
-    // 7. Update
-    await createOrUpdateFile(DASHBOARD_FILE_PATH, newDashboardContent, "garden: Integrate new thought");
 
     return {
       statusCode: 200,
-      body: JSON.stringify({ message: "Ingestion successful." }),
+      body: JSON.stringify({ message: "Ingested successfully", id, routerOutput }),
     };
+
   } catch (error: any) {
-    console.error(error);
+    console.error("Ingestion Error:", error);
     return {
       statusCode: 500,
-      body: JSON.stringify({ message: "An error occurred.", error: error.message }),
+      body: JSON.stringify({ message: "Internal Server Error", error: error.message }),
     };
   }
 }

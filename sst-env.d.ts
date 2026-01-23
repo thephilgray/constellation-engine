@@ -5,6 +5,14 @@
 
 declare module "sst" {
   export interface Resource {
+    "AssetBucket": {
+      "name": string
+      "type": "sst.aws.Bucket"
+    }
+    "Auth": {
+      "id": string
+      "type": "sst.aws.CognitoUserPool"
+    }
     "BiographerFunction": {
       "name": string
       "type": "sst.aws.Function"
@@ -48,9 +56,8 @@ declare module "sst" {
       "type": "sst.sst.Secret"
       "value": string
     }
-    "Ingest": {
-      "name": string
-      "type": "sst.aws.Function"
+    "IngestApi": {
+      "type": "sst.aws.ApiGatewayV2"
       "url": string
     }
     "LibrarianFetchArticles": {
@@ -94,6 +101,19 @@ declare module "sst" {
     "PINECONE_INDEX_HOST": {
       "type": "sst.sst.Secret"
       "value": string
+    }
+    "UnifiedLake": {
+      "name": string
+      "type": "sst.aws.Dynamo"
+    }
+    "Web": {
+      "type": "sst.aws.Astro"
+      "url": string
+    }
+    "WebApp": {
+      "id": string
+      "secret": string
+      "type": "sst.aws.CognitoUserPoolClient"
     }
   }
 }
