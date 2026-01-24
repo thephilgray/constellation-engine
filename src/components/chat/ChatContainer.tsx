@@ -61,10 +61,11 @@ Here is how you can use the system:
 *   **Save a Note:** Just type your thought, idea, or paste an article. The system detects "saving" intent automatically.
 *   **Ask a Question:** Ask anything! The "Incubator" will search your saved knowledge to provide an answer with citations.
 *   **Slash Commands:**
-    *   \`/dream\`: Trigger a serendipitous connection (The Dreamer).
-    *   \`/reflect [timeframe]\`: Generate a review (The Biographer).
-    *   \`/fic <idea/scene>\`: Update the Story Bible (The Storyteller).
-    *   \`/lyrics <line>\`: Update Song Seeds (The Bard).
+    *   \`/reflect <entry>\`: Log a journal entry and update your Life Log narrative.
+    *   \`/dream <dream>\`: Log a dream and get a Jungian analysis.
+    *   \`/dream\` (no text): Trigger a serendipitous connection from The Dreamer.
+    *   \`/fic <idea>\`: Add to the Story Bible.
+    *   \`/lyrics <line>\`: Add to Song Seeds.
     *   \`/read\`: Trigger the Dialectical Librarian.
 `
         };
