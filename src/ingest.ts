@@ -126,7 +126,7 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
       const contextText = contextEntries.join("\n\n");
 
       // 4. Synthesize Answer with Gemini
-      const ragModel = genAI.getGenerativeModel({ model: "gemini-3-pro-preview" }); // Upgraded for better synthesis
+      const ragModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
       const ragPrompt = `${RAG_SYSTEM_PROMPT}\n\nUSER QUESTION:\n${routerOutput.content}\n\nRETRIEVED CONTEXT:\n${contextText || "No relevant context found."}`;
       
       const ragResult = await ragModel.generateContent(ragPrompt);

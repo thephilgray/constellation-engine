@@ -183,7 +183,7 @@ export async function handler(event: APIGatewayProxyEventV2): Promise<APIGateway
     - Do not use markdown code blocks (\`\`\`markdown).
     `;
 
-    const generativeModel = genAI.getGenerativeModel({ model: "gemini-3-pro-preview" });
+    const generativeModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
     const result = await generativeModel.generateContent(systemPrompt);
     const newLifeLogContent = sanitizeMarkdown(result.response.text());
 

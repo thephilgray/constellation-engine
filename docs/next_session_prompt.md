@@ -1,4 +1,4 @@
-I am building "Constellation Engine," a Second Brain application using SST v3, DynamoDB, Pinecone, and Gemini 2.5 Flash / 3.0 Pro.
+I am building "Constellation Engine," a Second Brain application using SST v3, DynamoDB, Pinecone, and Gemini 2.5 Flash.
 
 **Current System Status:**
 1.  **Unified Lake:** Data is stored in DynamoDB and indexed in Pinecone. The ingestion engine now supports **Global Search** across all memory namespaces (`biography`, `dreams`, `ideas`, `fiction`, `lyrics`).
@@ -6,7 +6,7 @@ I am building "Constellation Engine," a Second Brain application using SST v3, D
     *   **Agents:** Biographer (`/reflect`), Architect (`/think`), Dreamer (`/dream`), Storyteller (`/fic`), Bard (`/lyrics`), Librarian (`/read`).
     *   **Recent Upgrades:**
         *   `/reflect` now supports a "no-argument" mode to refresh the dashboard without adding an entry.
-        *   Agents and Query synthesis upgraded to **Gemini 3.0 Pro Preview** for deeper insights.
+        *   Reverted to **Gemini 2.5 Flash** for all agents to ensure stability and speed (resolving timeouts with 3.0 Pro).
         *   Fixed "Daily Pulse" formatting and "Recovered Memories" structure in Life Log.
 3.  **The Office (Dashboards):**
     *   **Mobile-Ready:** Responsive UI with collapsible sidebar and mobile menu.
