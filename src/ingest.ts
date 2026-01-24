@@ -121,6 +121,12 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
     const now = new Date().toISOString();
 
     // 4. Prepare DynamoDB Record
+    // CRITICAL: For text, we use the RAW input to preserve exact wording. 
+    // The Intent Router (AI) is only trusted for metadata or if it's processing audio/images.
+    const finalContent = (routerOutput.mediaType === 'text' || !routerOutput.mediaType) 
+        ? rawInput 
+        : routerOutput.content;
+
     const record: ConstellationRecord = {
       PK: `USER#${userId}`,
       SK: `ENTRY#${id}`,
@@ -128,7 +134,7 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
       type: "Entry",
       createdAt: now,
       updatedAt: now,
-      content: routerOutput.content,
+      content: finalContent,
       isOriginal: routerOutput.isOriginal,
       sourceURL: routerOutput.sourceURL || undefined,
       sourceTitle: routerOutput.sourceTitle || undefined,

@@ -46,6 +46,28 @@ export const ChatContainer: React.FC = () => {
     // Add user message
     const userMessage: MessageProps = { role: "user", content };
     setMessages((prev) => [...prev, userMessage]);
+
+    // Local Command Handling: /help
+    if (content.trim().toLowerCase() === "/help") {
+        const helpMessage: MessageProps = {
+            role: "assistant",
+            content: `**Constellation Engine Help**
+
+Here is how you can use the system:
+
+*   **Save a Note:** Just type your thought, idea, or paste an article. The system detects "saving" intent automatically.
+*   **Ask a Question:** Ask anything! The "Incubator" will search your saved knowledge to provide an answer with citations.
+*   **Slash Commands (Coming Soon):**
+    *   \`/dream\`: Trigger a serendipitous connection (The Dreamer).
+    *   \`/reflect\`: Generate a weekly review (The Biographer).
+    *   \`/fic\`: Turn your notes into a story (The Storyteller).
+`
+        };
+        // Small delay to simulate processing
+        setTimeout(() => setMessages((prev) => [...prev, helpMessage]), 500);
+        return;
+    }
+
     setIsLoading(true);
 
     try {
