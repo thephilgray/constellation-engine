@@ -50,7 +50,7 @@ export default $config({
         handler: "src/workers/githubBackup.handler",
         link: [GITHUB_TOKEN, GITHUB_OWNER, GITHUB_REPO, GEMINI_API_KEY, PINECONE_API_KEY],
     }, {
-      filters: [{ dynamodb: { NewImage: { type: { S: ["Entry"] } } } }]
+      filters: [{ dynamodb: { NewImage: { type: { S: ["Entry", "Dashboard"] } } } }]
     });
 
     // LIBRARIAN WORKFLOW START
@@ -312,7 +312,7 @@ export default $config({
 
     api.route("GET /dashboard", {
       handler: "src/functions/dashboard.handler",
-      link: [GITHUB_TOKEN, GITHUB_OWNER, GITHUB_REPO, GEMINI_API_KEY, PINECONE_API_KEY, PINECONE_INDEX_HOST],
+      link: [table],
       timeout: "30 seconds",
     }, {
       auth: {

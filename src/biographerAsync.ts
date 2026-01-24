@@ -1,21 +1,18 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { Resource } from "sst";
-import { getEmbedding, upsertToPinecone, getFile, createOrUpdateFile, queryPinecone, sanitizeMarkdown } from "./utils";
-import { Octokit } from "@octokit/rest";
-import { saveRecord } from "./lib/dynamo";
+import { getEmbedding, upsertToPinecone, queryPinecone, sanitizeMarkdown } from "./utils";
+import { saveRecord, getRecord } from "./lib/dynamo";
 import type { ConstellationRecord } from "./lib/schemas";
 import { randomUUID } from "crypto";
 
 // Initialize Gemini client
 const genAI = new GoogleGenerativeAI(Resource.GEMINI_API_KEY.value);
-const octokit = new Octokit({ auth: Resource.GITHUB_TOKEN.value });
-
-const GITHUB_OWNER = Resource.GITHUB_OWNER.value;
-const GITHUB_REPO = Resource.GITHUB_REPO.value;
 
 const PINECONE_INDEX_NAME = "brain-dump";
 const BIOGRAPHY_NAMESPACE = "biography";
-const LIFE_LOG_PATH = "00_Life_Log.md";
+// LIFE_LOG_PATH is no longer used for direct file access, but the concept remains
+const DASHBOARD_PK = "DASHBOARD#life_log";
+const DASHBOARD_SK = "STATE";
 
 const initialLifeLogContent = `# 🧬 Life Log: The Current Chapter
 *A living snapshot of where you are right now.*
@@ -31,40 +28,6 @@ const initialLifeLogContent = `# 🧬 Life Log: The Current Chapter
 ## 💓 The Daily Pulse
 - 
 *${new Date().toISOString().split('T')[0]}:* The story begins here. The user has just initialized their Life Log, ready to capture the unfolding journey of their life.`;
-
-// This is a placeholder for a proper GitHub file append utility
-// The current 'customAppendToFile' is NOT USED in the new DynamoDB-centric flow.
-// It is kept here for reference or potential future use in other contexts.
-async function customAppendToFile(path: string, content: string, message: string) {
-  let existingContent = "";
-  let fileSha: string | undefined;
-  try {
-    const { data: file } = await octokit.repos.getContent({
-      owner: GITHUB_OWNER,
-      repo: GITHUB_REPO,
-      path: path,
-    });
-    if ("content" in file) {
-      existingContent = Buffer.from(file.content, "base64").toString("utf-8");
-      fileSha = file.sha;
-    }
-  } catch (error: any) {
-    if (error.status !== 404) throw error;
-    // If file doesn't exist, it will be created.
-  }
-
-  const newContent = `${existingContent}\n\n${content}`;
-
-  await octokit.repos.createOrUpdateFileContents({
-    owner: GITHUB_OWNER,
-    repo: GITHUB_REPO,
-    path: path,
-    message: message,
-    content: Buffer.from(newContent).toString("base64"),
-    sha: fileSha,
-  });
-}
-
 
 interface AsyncPayload {
     content?: string;
@@ -120,9 +83,12 @@ export async function handler(event: AsyncPayload) {
     }
 
     // 4. Update Dashboard
-    let { content: lifeLogContent } = await getFile(LIFE_LOG_PATH);
-    if (!lifeLogContent) {
-        lifeLogContent = initialLifeLogContent;
+    // Fetch current state from DynamoDB instead of GitHub
+    let lifeLogContent = initialLifeLogContent;
+    const existingDashboard = await getRecord(DASHBOARD_PK, DASHBOARD_SK);
+    
+    if (existingDashboard && existingDashboard.content) {
+        lifeLogContent = existingDashboard.content;
     }
 
     const systemPrompt = content ? `
@@ -185,9 +151,22 @@ export async function handler(event: AsyncPayload) {
     const result = await generativeModel.generateContent(systemPrompt);
     const newLifeLogContent = sanitizeMarkdown(result.response.text());
 
-    // 5. Update Dashboard File
-    await createOrUpdateFile(LIFE_LOG_PATH, newLifeLogContent, "chore: Update Life Log dashboard");
-    console.log("Biographer Async Worker Completed Successfully");
+    // 5. Update Dashboard in Unified Lake (DynamoDB)
+    const dashboardRecord: ConstellationRecord = {
+        PK: DASHBOARD_PK as any, // Cast to satisfy specific union type if needed
+        SK: DASHBOARD_SK as any,
+        id: "life_log",
+        type: "Dashboard",
+        createdAt: existingDashboard?.createdAt || isoDate, // Preserve original creation date
+        updatedAt: isoDate,
+        content: newLifeLogContent,
+        isOriginal: false, // Generated content
+        mediaType: "text",
+        lastAccessed: isoDate,
+    };
+
+    await saveRecord(dashboardRecord);
+    console.log("Biographer Async Worker Completed Successfully. Dashboard updated in DynamoDB.");
 
   } catch (error: any) {
     console.error("Biographer Async Worker Failed:", error);

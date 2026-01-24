@@ -1,12 +1,12 @@
 
 export interface ConstellationRecord {
   // Core Keys for Single-Table Design
-  PK: `USER#${string}`;
-  SK: `ENTRY#${string}` | `METADATA`;
+  PK: `USER#${string}` | `DASHBOARD#${string}`;
+  SK: `ENTRY#${string}` | `METADATA` | `STATE`;
 
   // Universal Attributes
   id: string;
-  type: 'Entry' | 'User' | 'Recommendation';
+  type: 'Entry' | 'User' | 'Recommendation' | 'Dashboard';
   createdAt: string;
   updatedAt: string;
 

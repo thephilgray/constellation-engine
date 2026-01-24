@@ -21,40 +21,53 @@ export const handler = async (event: DynamoDBStreamEvent) => {
             continue;
         }
 
-        // Only backup entries
-        if (item.type !== 'Entry') continue;
+        // Only backup entries and dashboards
+        if (item.type !== 'Entry' && item.type !== 'Dashboard') continue;
 
-        // Construct Markdown Content with Frontmatter
-        const frontmatter = [
-            "---",
-            `id: "${item.id}"`,
-            `created_at: "${item.createdAt}"`,
-            `original: ${item.isOriginal}`,
-            `type: "${item.mediaType}"`,
-            item.tags ? `tags: [${item.tags.map(t => `"${t}"`).join(', ')}]` : "",
-            item.sourceURL ? `source_url: "${item.sourceURL}"` : "",
-            item.sourceTitle ? `source_title: "${item.sourceTitle}"` : "",
-            item.sourceAuthor ? `source_author: "${item.sourceAuthor}"` : "",
-            "---"
-        ].filter(line => line !== "").join("\n");
+        let filePath = "";
+        let fileContent = "";
 
-        const fileContent = `${frontmatter}\n\n${item.content}`;
+        if (item.type === 'Dashboard') {
+             if (item.id === 'life_log') {
+                 filePath = "00_Life_Log.md";
+                 fileContent = item.content; // No frontmatter for the main dashboard view
+                 console.log(`Updating Dashboard: ${filePath}`);
+             } else {
+                 console.log(`Skipping unknown dashboard id: ${item.id}`);
+                 continue;
+             }
+        } else {
+            // Construct Markdown Content with Frontmatter for Entries
+            const frontmatter = [
+                "---",
+                `id: "${item.id}"`,
+                `created_at: "${item.createdAt}"`,
+                `original: ${item.isOriginal}`,
+                `type: "${item.mediaType}"`,
+                item.tags ? `tags: [${item.tags.map(t => `"${t}"`).join(', ')}]` : "",
+                item.sourceURL ? `source_url: "${item.sourceURL}"` : "",
+                item.sourceTitle ? `source_title: "${item.sourceTitle}"` : "",
+                item.sourceAuthor ? `source_author: "${item.sourceAuthor}"` : "",
+                "---"
+            ].filter(line => line !== "").join("\n");
 
-        // Determine File Path
-        const year = new Date(item.createdAt).getFullYear();
-        const month = String(new Date(item.createdAt).getMonth() + 1).padStart(2, '0');
-        const day = String(new Date(item.createdAt).getDate()).padStart(2, '0');
-        const filename = `${year}-${month}-${day}_${item.id}.md`;
-        
-        // Folder structure: Archive/YYYY/MM/filename.md
-        const filePath = `Archive/${year}/${month}/${filename}`;
+            fileContent = `${frontmatter}\n\n${item.content}`;
 
-        console.log(`Backing up ${item.id} to ${filePath}`);
+            // Determine File Path
+            const year = new Date(item.createdAt).getFullYear();
+            const month = String(new Date(item.createdAt).getMonth() + 1).padStart(2, '0');
+            const day = String(new Date(item.createdAt).getDate()).padStart(2, '0');
+            const filename = `${year}-${month}-${day}_${item.id}.md`;
+            
+            // Folder structure: Archive/YYYY/MM/filename.md
+            filePath = `Archive/${year}/${month}/${filename}`;
+            console.log(`Backing up ${item.id} to ${filePath}`);
+        }
 
         await createOrUpdateFile(
           filePath,
           fileContent,
-          `backup: ${item.mediaType} entry ${item.id}`
+          `backup: ${item.type} ${item.id}`
         );
 
       } catch (error) {

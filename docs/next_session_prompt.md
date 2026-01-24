@@ -9,8 +9,9 @@ I am building "Constellation Engine," a Second Brain application using SST v3, D
     *   **Agents:** Fully operational on Gemini 2.5 Flash.
     *   **Reflect:** `/reflect` creates structured records in the Unified Lake.
 3.  **Dashboards:**
-    *   Currently served from **GitHub** (via `dashboard.ts`).
-    *   Agents update these files directly.
+    *   **Read:** Refactored `src/functions/dashboard.ts` to fetch `DASHBOARD#<type>` records from DynamoDB.
+    *   **Write:** **Refactored.** Agents (`biographerAsync`) now write generated dashboard content directly to DynamoDB (`DASHBOARD#life_log`, `STATE`).
+    *   **Backup:** The `githubBackup` worker handles backing up the dashboard state to `00_Life_Log.md` via DynamoDB Streams.
 
 **The Goal for This Session:**
 "Dashboard Optimization & Unification."
@@ -18,12 +19,17 @@ With the data foundation solid and fully migrated, we must now ensure the "View"
 
 **Potential Tasks:**
 
-1.  **Unified Dashboard Read (High Priority):**
-    *   **Current:** `dashboard.ts` reads from GitHub API (slower, rate limits).
-    *   **Goal:** Store the latest "Dashboard State" in DynamoDB (e.g., `PK=DASHBOARD#life_log`) and have the frontend read from there for instant loads.
-    *   **Enabler:** This architectural change allows us to programmatically regenerate the dashboard state without constant GitHub commits.
+1.  **Unified Dashboard Read (COMPLETE):**
+    *   **Refactored:** `dashboard.ts` now fetches from DynamoDB.
+    *   **Schema:** Added support for `DASHBOARD#` PK and `Dashboard` type in `schemas.ts`.
+    *   **Infra:** Updated `sst.config.ts` to link the table to the dashboard endpoint.
 
-2.  **Dashboard Content Intelligence (Refinement):**
+2.  **Unified Dashboard Write (COMPLETE):**
+    *   **Action:** Updated `src/biographerAsync.ts` to read/write `DASHBOARD#life_log` from DynamoDB.
+    *   **Action:** Updated `src/workers/githubBackup.ts` to handle `Dashboard` type and update `00_Life_Log.md`.
+    *   **Result:** Dashboards are now fully decoupled from synchronous GitHub API calls.
+
+3.  **Dashboard Content Intelligence (Refinement) - NEXT:**
     *   **The Daily Pulse:**
         *   **Issue:** Dates are currently incorrect (off by ~2 years) and list is stale.
         *   **Fix:** Biographer must query DynamoDB for the *last 5 active days* to build a sliding window summary (e.g., "Jan 20 - Jan 24").
@@ -33,16 +39,12 @@ With the data foundation solid and fully migrated, we must now ensure the "View"
         *   "Recovered Memories": Limit to 6-8 items max.
         *   "Milestones" & "Themes": Consolidate to reduce visual bloat.
 
-3.  **Unified Dashboard Write (High Priority):**
-    *   **Current:** Agents (Biographer) update GitHub files directly.
-    *   **Goal:** Agents should update the DynamoDB Dashboard record. A stream/worker can then backup this state to GitHub. This keeps the live app decoupled from GitHub latency.
-
-3.  **Archive Strategy:**
+4.  **Archive Strategy:**
     *   Automate moving old "Daily Pulse" items to archive files to keep the main dashboards lightweight.
 
-4.  **Voice Interface (Nice to Have):**
+5.  **Voice Interface (Nice to Have):**
     *   **Goal:** Add a microphone button to the Chat UI.
     *   **Status:** Backend ready (`mediaType: 'audio'`), but deprioritized in favor of core architectural performance (Dashboards).
 
 **Immediate Next Step:**
-Start with **Task 1 (Unified Dashboard Read)**. Refactor `src/functions/dashboard.ts` to fetch from DynamoDB instead of GitHub.
+Start with **Task 3 (Dashboard Content Intelligence)**. We need to make the dashboard *smarter* by querying the Unified Lake for recent context instead of just relying on the vector search or previous file state. This will ensure the "Daily Pulse" is accurate and relevant.
