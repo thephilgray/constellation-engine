@@ -12,6 +12,7 @@ interface ArticleQueries {
   devToTag: string;
   hnQuery: string;
   arxivQuery: string;
+  existingUrls?: string[];
 }
 
 export const handler = async (event: ArticleQueries): Promise<ArticleItem[]> => {
@@ -32,6 +33,13 @@ export const handler = async (event: ArticleQueries): Promise<ArticleItem[]> => 
       console.error(`Error fetching from source ${index}:`, result.reason);
     }
   });
+
+  if (event.existingUrls && event.existingUrls.length > 0) {
+      const initialCount = articles.length;
+      const filteredArticles = articles.filter(article => !event.existingUrls!.includes(article.url));
+      console.log(`Filtered out ${initialCount - filteredArticles.length} articles that were already ingested.`);
+      return filteredArticles;
+  }
 
   return articles;
 };

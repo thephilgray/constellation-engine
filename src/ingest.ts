@@ -63,6 +63,7 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
 
       // 3. Fetch Full Content from DynamoDB (if matches found)
       let contextText = "";
+      let contextSources: { id: string; title?: string; url?: string }[] = [];
       
       if (contextIds.length > 0) {
         const keys = contextIds.map(id => ({
@@ -74,7 +75,7 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
           RequestItems: {
             [TABLE_NAME]: {
               Keys: keys,
-              ProjectionExpression: "content, sourceTitle, createdAt" // Fetch only needed fields
+              ProjectionExpression: "id, content, sourceTitle, sourceURL, createdAt" // Fetch needed fields
             }
           }
         }));
@@ -84,6 +85,12 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
         contextText = foundItems.map((item: any) => 
           `--- ENTRY (Date: ${item.createdAt}, Title: ${item.sourceTitle || 'Untitled'}) ---\n${item.content}`
         ).join("\n\n");
+
+        contextSources = foundItems.map((item: any) => ({
+            id: item.id,
+            title: item.sourceTitle || "Untitled Entry",
+            url: item.sourceURL
+        }));
       }
 
       // 4. Synthesize Answer with Gemini
@@ -99,7 +106,7 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
           message: "Query processed", 
           intent: 'query',
           answer: answer,
-          contextIds 
+          contextSources 
         }),
       };
     }

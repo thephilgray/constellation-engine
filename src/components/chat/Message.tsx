@@ -2,12 +2,19 @@ import React from "react";
 import { cn } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";
 
+export interface Source {
+  id: string;
+  title: string;
+  url?: string;
+}
+
 export interface MessageProps {
   role: "user" | "assistant";
   content: string;
+  sources?: Source[];
 }
 
-export const Message: React.FC<MessageProps> = ({ role, content }) => {
+export const Message: React.FC<MessageProps> = ({ role, content, sources }) => {
   return (
     <div
       className={cn(
@@ -35,6 +42,30 @@ export const Message: React.FC<MessageProps> = ({ role, content }) => {
         >
           {content}
         </ReactMarkdown>
+
+        {sources && sources.length > 0 && (
+          <div className="mt-3 pt-2 border-t border-black/10 dark:border-white/10">
+            <p className="text-xs font-semibold mb-1 opacity-70">Sources:</p>
+            <ul className="text-xs space-y-1">
+              {sources.map((source) => (
+                <li key={source.id}>
+                  {source.url ? (
+                    <a 
+                      href={source.url} 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="hover:underline text-blue-500 dark:text-blue-400"
+                    >
+                      {source.title}
+                    </a>
+                  ) : (
+                    <span className="opacity-70">{source.title}</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
     </div>
   );

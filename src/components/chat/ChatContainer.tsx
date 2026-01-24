@@ -83,7 +83,8 @@ export const ChatContainer: React.FC = () => {
         
         const aiMessage: MessageProps = { 
             role: "assistant", 
-            content: responseContent 
+            content: responseContent,
+            sources: data.contextSources
         };
         setMessages((prev) => [...prev, aiMessage]);
 

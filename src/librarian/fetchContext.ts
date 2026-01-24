@@ -6,16 +6,14 @@ import type { ConstellationRecord } from "../lib/schemas";
 const dynamo = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 const TABLE_NAME = Resource.UnifiedLake.name;
 
-async function getRecentWriting(): Promise<string> {
+async function getRecentEntries(): Promise<ConstellationRecord[]> {
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
     const since = sevenDaysAgo.toISOString();
 
-    console.log(`Fetching writing since: ${since}`);
+    console.log(`Fetching entries since: ${since}`);
 
     try {
-        // Scan the table for entries created in the last 7 days.
-        // Note: For production with many users, a GSI on `type` and `createdAt` would be better.
         const command = new ScanCommand({
             TableName: TABLE_NAME,
             FilterExpression: "#type = :type AND #createdAt >= :since",
@@ -32,23 +30,37 @@ async function getRecentWriting(): Promise<string> {
         const response = await dynamo.send(command);
         const entries = (response.Items || []) as ConstellationRecord[];
 
-        if (entries.length === 0) {
-            return "";
-        }
-
         console.log(`Found ${entries.length} recent entries.`);
-
-        // Combine content
-        return entries
-            .map(entry => entry.content)
-            .join("\n\n---\n\n");
+        return entries;
 
     } catch (error) {
-        console.error("Error fetching recent writing from DynamoDB:", error);
-        return "";
+        console.error("Error fetching recent entries from DynamoDB:", error);
+        return [];
     }
 }
 
+async function getAllIngestedUrls(): Promise<string[]> {
+    try {
+        // Optimize: Only fetch the sourceURL attribute
+        const command = new ScanCommand({
+            TableName: TABLE_NAME,
+            FilterExpression: "attribute_exists(sourceURL)",
+            ProjectionExpression: "sourceURL",
+        });
+
+        const response = await dynamo.send(command);
+        const items = response.Items || [];
+        
+        const urls = items
+            .map((item: any) => item.sourceURL)
+            .filter((url): url is string => !!url);
+
+        return Array.from(new Set(urls));
+    } catch (error) {
+        console.error("Error fetching ingested URLs:", error);
+        return [];
+    }
+}
 
 async function getPastRecommendations(): Promise<string[]> {
     try {
@@ -88,15 +100,16 @@ async function getPastRecommendations(): Promise<string[]> {
     }
 }
 
-export const handler = async (): Promise<{ recentWriting: string; pastRecsList: string[] }> => {
-    const [recentWriting, pastRecsList] = await Promise.all([
-        getRecentWriting(),
+export const handler = async (): Promise<{ recentEntries: ConstellationRecord[]; pastRecsList: string[]; allIngestedUrls: string[] }> => {
+    const [recentEntries, pastRecsList, allIngestedUrls] = await Promise.all([
+        getRecentEntries(),
         getPastRecommendations(),
+        getAllIngestedUrls()
     ]);
 
-    if (!recentWriting) {
-        console.log("No recent writing found in the last 7 days.");
+    if (recentEntries.length === 0) {
+        console.log("No recent entries found in the last 7 days.");
     }
 
-    return { recentWriting, pastRecsList };
+    return { recentEntries, pastRecsList, allIngestedUrls };
 };

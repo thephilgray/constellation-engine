@@ -2,6 +2,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { Resource } from "sst";
 import { z } from "zod";
+import type { ConstellationRecord } from "../lib/schemas";
 
 const genAI = new GoogleGenerativeAI(Resource.GEMINI_API_KEY.value);
 
@@ -26,11 +27,11 @@ interface HandlerInput {
   // Direct input (if manually invoked or transformed)
   books?: (Book | null)[];
   articles?: ArticleItem[];
-  recentWriting?: string;
+  recentEntries?: ConstellationRecord[];
   
   // Step Function State Input (Backward compatibility / Raw input structure)
   fetchContextResult?: {
-    recentWriting: string;
+    recentEntries: ConstellationRecord[];
   };
   mapResult?: {
     Payload: Book | null | string;
@@ -40,8 +41,8 @@ interface HandlerInput {
 export const handler = async (event: HandlerInput): Promise<string> => {
   console.log("Handler input:", JSON.stringify(event, null, 2));
 
-  // Extract recentWriting
-  const recentWriting = event.recentWriting || event.fetchContextResult?.recentWriting || "";
+  // Extract recentEntries
+  const recentEntries = event.recentEntries || event.fetchContextResult?.recentEntries || [];
 
   // Extract books
   let books: (Book | null)[] = [];
@@ -84,18 +85,28 @@ export const handler = async (event: HandlerInput): Promise<string> => {
 
   const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
+  // Format entries for the prompt
+  const entriesContext = recentEntries.map(entry => {
+      const meta = [];
+      if (entry.tags && entry.tags.length > 0) meta.push(`Tags: ${entry.tags.join(", ")}`);
+      if (entry.mediaType) meta.push(`Type: ${entry.mediaType}`);
+      if (entry.sourceTitle) meta.push(`Source: ${entry.sourceTitle}`);
+      
+      return `Entry (${meta.join(" | ")}):\n${entry.content}`;
+  }).join("\n\n---\n\n") || "No recent entries provided.";
+
   const prompt = `
 You are a literary and technical analyst. Review the selected books and articles. 
-Synthesize the user's writing against these materials.
+Synthesize the user's recent entries (notes, thoughts, saved items) against these materials.
 
 **Key Instructions:**
 1.  **Books:** Write a "Perspective Paragraph" explaining how the book challenges/expands the user's ideas.
 2.  **Articles:** specific attention to the *Hacker News* comments. Use them to highlight potential flaws, controversies, or "real-world" friction points in the user's thinking.
-3.  **Synthesis:** Do not just list items. Connect them back to the user's text.
+3.  **Synthesis:** Do not just list items. Connect them back to the user's specific entries where possible.
 
-**User's Recent Writing:**
+**User's Recent Entries:**
 ---
-${recentWriting || "No writing was provided."}
+${entriesContext}
 ---
 
 **Selected Books:**

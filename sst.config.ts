@@ -98,7 +98,7 @@ export default $config({
       name: "StrategicAnalysis",
       function: librarianFunctions.strategicAnalysis,
       payload: {
-        "recentWriting": "{% $states.input.fetchContextResult.recentWriting %}",
+        "recentEntries": "{% $states.input.fetchContextResult.recentEntries %}",
       },
       output: {
         "fetchContextResult": "{% $states.input.fetchContextResult %}",
@@ -131,7 +131,8 @@ export default $config({
         payload: {
             "devToTag": "{% $states.input.strategicAnalysisResult.articleQueries.devToTag %}",
             "hnQuery": "{% $states.input.strategicAnalysisResult.articleQueries.hnQuery %}",
-            "arxivQuery": "{% $states.input.strategicAnalysisResult.articleQueries.arxivQuery %}"
+            "arxivQuery": "{% $states.input.strategicAnalysisResult.articleQueries.arxivQuery %}",
+            "existingUrls": "{% $states.input.fetchContextResult.allIngestedUrls %}"
         },
         output: {
             "articles": "{% $states.result.Payload %}"
@@ -150,7 +151,7 @@ export default $config({
       payload: {
         "books": "{% $states.input[0].mapResult %}",
         "articles": "{% $states.input[1].articles %}",
-        "recentWriting": "{% $states.input[0].fetchContextResult.recentWriting %}"
+        "recentEntries": "{% $states.input[0].fetchContextResult.recentEntries %}"
       },
        output: {
         "insightsResult": "{% $states.result.Payload %}",
@@ -262,6 +263,15 @@ export default $config({
       url: true, // Creates a public Lambda Function URL
       timeout: "60 seconds",
       link: [GEMINI_API_KEY, PINECONE_API_KEY, PINECONE_INDEX_HOST, GITHUB_TOKEN, GITHUB_OWNER, GITHUB_REPO, INGEST_API_KEY, table, bucket],
+    });
+
+    const dreamer = new sst.aws.Cron("DreamerCron", {
+      schedule: "rate(1 day)",
+      job: {
+        handler: "src/librarian/dreamer.handler",
+        link: [GEMINI_API_KEY, PINECONE_API_KEY, PINECONE_INDEX_HOST, table],
+        timeout: "90 seconds",
+      }
     });
 
     return {

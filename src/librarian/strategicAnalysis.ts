@@ -1,6 +1,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { Resource } from "sst";
 import { z } from "zod";
+import type { ConstellationRecord } from "../lib/schemas";
 
 const genAI = new GoogleGenerativeAI(Resource.GEMINI_API_KEY.value);
 
@@ -23,9 +24,9 @@ const AnalysisResultSchema = z.object({
 });
 type AnalysisResult = z.infer<typeof AnalysisResultSchema>;
 
-export const handler = async (event: { recentWriting: string }): Promise<AnalysisResult> => {
-  if (!event.recentWriting) {
-    console.log("No recent writing provided. Returning empty analysis.");
+export const handler = async (event: { recentEntries: ConstellationRecord[] }): Promise<AnalysisResult> => {
+  if (!event.recentEntries || event.recentEntries.length === 0) {
+    console.log("No recent entries provided. Returning empty analysis.");
     // Return a default or empty structure that won't break the next step
     return {
       bookQueries: [
@@ -41,9 +42,20 @@ export const handler = async (event: { recentWriting: string }): Promise<Analysi
     };
   }
 
+  // Format entries for the prompt, including metadata
+  const entriesContext = event.recentEntries.map(entry => {
+      const meta = [];
+      if (entry.tags && entry.tags.length > 0) meta.push(`Tags: ${entry.tags.join(", ")}`);
+      if (entry.mediaType) meta.push(`Type: ${entry.mediaType}`);
+      if (entry.sourceTitle) meta.push(`Source: ${entry.sourceTitle}`);
+      
+      return `Entry (${meta.join(" | ")}):\n${entry.content.substring(0, 1000)}`; // Truncate content slightly to save tokens if very long
+  }).join("\n\n---\n\n");
+
   const model = genAI.getGenerativeModel({
     model: "gemini-2.5-flash",
-    systemInstruction: `Analyze the user's writing. Identify the core topics. If the topic is technical, scientific, or news-related, prioritize recency.
+    systemInstruction: `Analyze the user's recent entries (notes, saved articles, thoughts). Identify the core topics and interests.
+    Pay attention to the metadata (tags, media types).
     
     1. Generate 3 "Book Lenses" (Data, Counterpoint, Orthogonal).
     2. Generate "Article Queries" for Dev.to, Hacker News, and arXiv.
@@ -70,7 +82,7 @@ export const handler = async (event: { recentWriting: string }): Promise<Analysi
     - rationale: A brief explanation of why this query is a useful lens for the user's writing.`
   });
 
-  const prompt = `Here is the user's recent writing:\n\n---\n\n${event.recentWriting}\n\n---`;
+  const prompt = `Here are the user's recent entries:\n\n${entriesContext}`;
 
   try {
     const result = await model.generateContent(prompt);
