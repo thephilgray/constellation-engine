@@ -62,6 +62,7 @@ Here is how you can use the system:
 *   **Ask a Question:** Ask anything! The "Incubator" will search your saved knowledge to provide an answer with citations.
 *   **Slash Commands:**
     *   \`/reflect <entry>\`: Log a journal entry and update your Life Log narrative.
+    *   \`/think <thought>\`: Log a significant idea to your Idea Garden.
     *   \`/dream <dream>\`: Log a dream and get a Jungian analysis.
     *   \`/dream\` (no text): Trigger a serendipitous connection from The Dreamer.
     *   \`/fic <idea>\`: Add to the Story Bible.
@@ -99,6 +100,12 @@ Here is how you can use the system:
             endpoint = `${API_URL}/reflect`;
             const param = content.substring(8).trim() || "Today";
             body = { content: param, tag: "JOURNAL", date: new Date().toISOString() };
+            isCommand = true;
+        } else if (lowerContent.startsWith("/think")) {
+            endpoint = `${API_URL}/think`;
+            const param = content.substring(7).trim();
+            if (!param) throw new Error("Please provide a thought.");
+            body = { content: param };
             isCommand = true;
         } else if (lowerContent.startsWith("/fic")) {
             endpoint = `${API_URL}/fiction`;
@@ -142,6 +149,8 @@ Here is how you can use the system:
                  responseContent = `**The Dreamer (Spark):**\n\n${data.spark}`;
              } else if (data.dreamAnalysis) {
                  responseContent = `**The Dreamer (Analysis):**\n\n${data.dreamAnalysis}`;
+             } else if (data.garden) {
+                 responseContent = `**The Architect (Idea Garden):**\n\n${data.garden}`;
              } else if (data.analysis) {
                  responseContent = `**The Biographer:**\n\n${data.analysis}`;
              } else if (data.storyBible) {

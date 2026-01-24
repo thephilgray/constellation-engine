@@ -5,6 +5,7 @@ import { getFile } from "../utils";
 // Map "friendly" keys to actual file paths
 const DASHBOARD_FILES: Record<string, string> = {
     "life_log": "00_Life_Log.md",
+    "idea_garden": "00_Idea_Garden.md",
     "story_bible": "00_Story_Bible.md",
     "song_seeds": "00_Song_Seeds.md",
     "dream_analysis": "00_Dream_Journal_Analysis.md",

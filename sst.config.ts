@@ -275,6 +275,18 @@ export default $config({
       },
     });
 
+    api.route("POST /think", {
+      handler: "src/philosopher.handler",
+      link: [GEMINI_API_KEY, PINECONE_API_KEY, PINECONE_INDEX_HOST, GITHUB_TOKEN, GITHUB_OWNER, GITHUB_REPO, INGEST_API_KEY, table, bucket],
+      timeout: "60 seconds",
+    }, {
+      auth: {
+        jwt: {
+          authorizer: authorizer.id,
+        },
+      },
+    });
+
     api.route("POST /read", {
       handler: "src/librarian/trigger.handler",
       link: [dialecticalLibrarian],
