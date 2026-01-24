@@ -29,17 +29,12 @@ With the data foundation solid and fully migrated, we must now ensure the "View"
     *   **Action:** Updated `src/workers/githubBackup.ts` to handle `Dashboard` type and update `00_Life_Log.md`.
     *   **Result:** Dashboards are now fully decoupled from synchronous GitHub API calls.
 
-3.  **Dashboard Content Intelligence (Refinement) - NEXT:**
-    *   **The Daily Pulse:**
-        *   **Issue:** Dates are currently incorrect (off by ~2 years) and list is stale.
-        *   **Fix:** Biographer must query DynamoDB for the *last 5 active days* to build a sliding window summary (e.g., "Jan 20 - Jan 24").
-    *   **State of Mind:** Limit input context to the past 7 days.
-    *   **Narrative:** Ensure the most recent entry is always woven into the story.
-    *   **Constraints:**
-        *   "Recovered Memories": Limit to 6-8 items max.
-        *   "Milestones" & "Themes": Consolidate to reduce visual bloat.
+3.  **Dashboard Content Intelligence (Refinement) (COMPLETE):**
+    *   **Action:** Implemented `queryRecentEntries` in `dynamo.ts` to fetch "last 5 active days".
+    *   **Action:** Updated `biographerAsync.ts` to inject recent history into the prompt.
+    *   **Result:** "Daily Pulse" and "State of Mind" now use accurate, retrieved context. Constraints applied.
 
-4.  **Archive Strategy:**
+4.  **Archive Strategy - NEXT:**
     *   Automate moving old "Daily Pulse" items to archive files to keep the main dashboards lightweight.
 
 5.  **Voice Interface (Nice to Have):**
@@ -47,4 +42,4 @@ With the data foundation solid and fully migrated, we must now ensure the "View"
     *   **Status:** Backend ready (`mediaType: 'audio'`), but deprioritized in favor of core architectural performance (Dashboards).
 
 **Immediate Next Step:**
-Start with **Task 3 (Dashboard Content Intelligence)**. We need to make the dashboard *smarter* by querying the Unified Lake for recent context instead of just relying on the vector search or previous file state. This will ensure the "Daily Pulse" is accurate and relevant.
+Proceed to **Task 4 (Archive Strategy)**. We need to implement a mechanism to periodically prune the "Daily Pulse" and move older items to an archive (e.g., `01_Archive_2026.md` or a dedicated DynamoDB archive structure).
