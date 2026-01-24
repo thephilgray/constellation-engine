@@ -93,7 +93,7 @@ You are a hyper-efficient data processing engine for a 'Second Brain' applicatio
  * Uses the Intent Router prompt to process raw text content.
  */
 async function generateUnifiedMetadata(content: string): Promise<IntentRouterOutput> {
-  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
   const result = await model.generateContent(`${INTENT_ROUTER_PROMPT}\n\nINPUT:\n${content}`);
   const jsonText = result.response.text().replace(/```json\n?|\n?```/g, '').trim();
   return JSON.parse(jsonText) as IntentRouterOutput;

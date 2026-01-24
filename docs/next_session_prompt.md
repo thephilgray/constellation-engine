@@ -1,4 +1,4 @@
-I am building "Constellation Engine," a Second Brain application using SST v3, DynamoDB, Pinecone, and Gemini 2.0 Flash.
+I am building "Constellation Engine," a Second Brain application using SST v3, DynamoDB, Pinecone, and Gemini 2.5 Flash.
 
 **Current System Status:**
 1.  **Unified Lake:** Data is stored in DynamoDB and indexed in Pinecone.

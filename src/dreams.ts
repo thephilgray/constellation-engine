@@ -75,7 +75,7 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
       - Output RAW markdown only. Do not wrap the output in markdown code blocks.
     `;
 
-    const generativeModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    const generativeModel = genAI.getGenerativeModel({ model: "gemini-3-pro-preview" });
     const result = await generativeModel.generateContent(systemPrompt);
     let newAnalysis = result.response.text();
 

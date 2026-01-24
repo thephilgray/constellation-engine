@@ -113,7 +113,7 @@ ${contextEntries}
     - Do not use markdown code blocks (
     `;
 
-    const generativeModel = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    const generativeModel = genAI.getGenerativeModel({ model: "gemini-3-pro-preview" });
     const result = await generativeModel.generateContent(systemPrompt);
     const newGardenContent = result.response.text();
 

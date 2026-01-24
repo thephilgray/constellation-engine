@@ -23,11 +23,11 @@ const initialLifeLogContent = `# 🧬 Life Log: The Current Chapter
 - **Focus:** Just getting started.
 - **Active Themes:** Setting up the system.
 
-## 📖 The Narrative (Latest Chapter)
-The story begins here. The user has just initialized their Life Log, ready to capture the unfolding journey of their life.
-
 ## 🕯️ Recovered Memories
-*(No memories logged yet.)*`;
+*(No memories logged yet.)*
+
+## 💓 The Daily Pulse
+- **${new Date().toISOString().split('T')[0]}:** The story begins here. The user has just initialized their Life Log, ready to capture the unfolding journey of their life.`;
 
 async function customAppendToFile(path: string, content: string, message: string) {
   let existingContent = "";
@@ -144,24 +144,25 @@ export async function handler(event: APIGatewayProxyEventV2): Promise<APIGateway
         - Update **Mood** and **Focus** to match the *new entry*.
         - Update **Active Themes**: If a theme from the past is no longer relevant, remove it. Add new themes that emerge from this entry.
 
-    2.  **## 📖 The Narrative (Latest Chapter):**
-        - This section should read like a story (3-4 paragraphs max).
-        - **Rewrite** this section to include the events/thoughts from the New Entry.
-        - Connect it to the recent past (existing text). 
-        - If the narrative is getting too long, summarize the oldest details and focus on the "now".
-        - Use a third-person or first-person perspective consistently (match the existing style).
-
-    3.  **## 🕯️ Recovered Memories:**
+    2.  **## 🕯️ Recovered Memories:**
         - ONLY update this if the New Entry is a 'MEMORY'. 
         - If it is, add a concise summary of the memory.
+        - Do NOT prefix entries with "[Current]".
         - If not, keep the existing memories (unless they are very old/stale, then you can prune them).
+
+    3.  **## 💓 The Daily Pulse:**
+        - This section is a chronological log of summaries.
+        - Add a new bullet point for the **Current Date** (${isoDate}) summarizing the New Entry.
+        - **Format:** "- **YYYY-MM-DD:** [Summary]"
+        - Do NOT use "**Today:**". Always use the specific date.
+        - Keep previous entries. If the list gets too long (over 10 entries), summarize the oldest ones into a single paragraph at the top of this section or remove them if they are captured in the "Story Bible".
 
     **Output:**
     - Return the **FULL** Markdown file content.
     - Do not use markdown code blocks (\`\`\`markdown).
     `;
 
-    const generativeModel = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    const generativeModel = genAI.getGenerativeModel({ model: "gemini-3-pro-preview" });
     const result = await generativeModel.generateContent(systemPrompt);
     const newLifeLogContent = result.response.text();
 
