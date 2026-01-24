@@ -7,7 +7,8 @@ const DASHBOARD_FILES: Record<string, string> = {
     "life_log": "00_Life_Log.md",
     "story_bible": "00_Story_Bible.md",
     "song_seeds": "00_Song_Seeds.md",
-    "dream_analysis": "00_Dream_Journal_Analysis.md"
+    "dream_analysis": "00_Dream_Journal_Analysis.md",
+    "reading_list": "00_Book_Recommendations.md"
 };
 
 export async function handler(event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> {

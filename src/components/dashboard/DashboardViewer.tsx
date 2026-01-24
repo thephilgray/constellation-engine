@@ -4,13 +4,14 @@ import Markdown from "react-markdown";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { API_URL } from "@/lib/amplify";
-import { BookOpen, Mic2, Moon, Sparkles } from "lucide-react"; // Icons
+import { BookOpen, Mic2, Moon, Sparkles, Library } from "lucide-react"; // Icons
 
 const DASHBOARDS = [
     { id: "life_log", label: "Life Log", icon: <BookOpen className="w-4 h-4 mr-2" /> },
     { id: "story_bible", label: "Story Bible", icon: <Sparkles className="w-4 h-4 mr-2" /> },
     { id: "song_seeds", label: "Song Seeds", icon: <Mic2 className="w-4 h-4 mr-2" /> },
     { id: "dream_analysis", label: "Dream Journal", icon: <Moon className="w-4 h-4 mr-2" /> },
+    { id: "reading_list", label: "Reading List", icon: <Library className="w-4 h-4 mr-2" /> },
 ];
 
 interface DashboardViewerProps {
