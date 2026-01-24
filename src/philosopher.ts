@@ -1,7 +1,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from "aws-lambda";
 import { Resource } from "sst";
-import { getEmbedding, upsertToPinecone, getFile, createOrUpdateFile, queryPinecone, appendToFile } from "./utils";
+import { getEmbedding, upsertToPinecone, getFile, createOrUpdateFile, queryPinecone, appendToFile, sanitizeMarkdown } from "./utils";
 
 // Initialize Gemini client
 const genAI = new GoogleGenerativeAI(Resource.GEMINI_API_KEY.value);
@@ -115,7 +115,7 @@ ${contextEntries}
 
     const generativeModel = genAI.getGenerativeModel({ model: "gemini-3-pro-preview" });
     const result = await generativeModel.generateContent(systemPrompt);
-    const newGardenContent = result.response.text();
+    const newGardenContent = sanitizeMarkdown(result.response.text());
 
     // 5. Update Dashboard
     await createOrUpdateFile(IDEA_GARDEN_PATH, newGardenContent, "chore: Update Idea Garden");

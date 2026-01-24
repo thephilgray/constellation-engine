@@ -1,7 +1,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from "aws-lambda";
 import { Resource } from "sst";
-import { getEmbedding, upsertToPinecone, getFile, createOrUpdateFile, queryPinecone } from "./utils";
+import { getEmbedding, upsertToPinecone, getFile, createOrUpdateFile, queryPinecone, sanitizeMarkdown } from "./utils";
 import { Octokit } from "@octokit/rest";
 
 // Initialize Gemini client
@@ -78,9 +78,8 @@ export async function handler(event: APIGatewayProxyEventV2): Promise<APIGateway
     // 1. Ingest and Validate Input
     const { content, tag = "JOURNAL", date: dateString }: { content: string; tag: "JOURNAL" | "MEMORY"; date?: string } = JSON.parse(event.body);
 
-    if (!content) {
-      return { statusCode: 400, body: JSON.stringify({ message: "Content is required." }) };
-    }
+    // Allow empty content for "Regenerate Dashboard" mode
+    // if (!content) { ... } // REMOVED check
 
     const date = dateString ? new Date(dateString) : new Date();
     const year = date.getFullYear();
@@ -88,35 +87,39 @@ export async function handler(event: APIGatewayProxyEventV2): Promise<APIGateway
     const day = date.getDate().toString().padStart(2, '0');
     const isoDate = `${year}-${month}-${day}`;
 
-    // 2. Embed & Save to Pinecone
-    const vector = await getEmbedding(content);
-    await upsertToPinecone(
-      PINECONE_INDEX_NAME,
-      `biography-${date.getTime()}`,
-      vector,
-      { text: content, tag, date: isoDate },
-      BIOGRAPHY_NAMESPACE
-    );
+    let contextEntries = "";
 
-    // 3. Storage Logic (GitHub)
-    if (tag === 'JOURNAL') {
-      const journalPath = `Journal/${year}/${month}/${isoDate}.md`;
-      const photosLink = `\n\n[📸 Photos from this day](https://photos.google.com/search/${isoDate})`;
-      const contentWithLink = `${content}${photosLink}`;
-      await customAppendToFile(journalPath, contentWithLink, `journal: ${isoDate}`);
-    } else if (tag === 'MEMORY') {
-      const memoryPath = `Memories/Log/${year}-${month}.md`;
-      const header = `### [Recalled on ${isoDate}]`;
-      const contentWithHeader = `${header}\n${content}`;
-      await customAppendToFile(memoryPath, contentWithHeader, `memory: ${isoDate}`);
+    if (content) {
+        // 2. Embed & Save to Pinecone
+        const vector = await getEmbedding(content);
+        await upsertToPinecone(
+          PINECONE_INDEX_NAME,
+          `biography-${date.getTime()}`,
+          vector,
+          { text: content, tag, date: isoDate },
+          BIOGRAPHY_NAMESPACE
+        );
+
+        // 3. Storage Logic (GitHub)
+        if (tag === 'JOURNAL') {
+          const journalPath = `Journal/${year}/${month}/${isoDate}.md`;
+          const photosLink = `\n\n[📸 Photos from this day](https://photos.google.com/search/${isoDate})`;
+          const contentWithLink = `${content}${photosLink}`;
+          await customAppendToFile(journalPath, contentWithLink, `journal: ${isoDate}`);
+        } else if (tag === 'MEMORY') {
+          const memoryPath = `Memories/Log/${year}-${month}.md`;
+          const header = `### [Recalled on ${isoDate}]`;
+          const contentWithHeader = `${header}\n${content}`;
+          await customAppendToFile(memoryPath, contentWithHeader, `memory: ${isoDate}`);
+        }
+
+        // 4. The "Biographer" Logic (Gemini 2.0 Flash)
+        // Step A: Recall
+        const similarEntries = await queryPinecone(PINECONE_INDEX_NAME, vector, 5, BIOGRAPHY_NAMESPACE);
+        contextEntries = similarEntries.matches
+          .map(m => `- "${m.metadata?.text}" `)
+          .join("\n");
     }
-
-    // 4. The "Biographer" Logic (Gemini 2.0 Flash)
-    // Step A: Recall
-    const similarEntries = await queryPinecone(PINECONE_INDEX_NAME, vector, 5, BIOGRAPHY_NAMESPACE);
-    const contextEntries = similarEntries.matches
-      .map(m => `- "${m.metadata?.text}" `)
-      .join("\n");
 
     // Step B: System Prompt Construction
     let { content: lifeLogContent } = await getFile(LIFE_LOG_PATH);
@@ -124,7 +127,7 @@ export async function handler(event: APIGatewayProxyEventV2): Promise<APIGateway
         lifeLogContent = initialLifeLogContent;
     }
 
-    const systemPrompt = `
+    const systemPrompt = content ? `
     You are The Biographer. You are rewriting the current chapter of the user's autobiography based on a new event.
 
     **Goal:** Update the "Life Log" to reflect the user's *current* state of mind and weave the new entry into a cohesive narrative. 
@@ -160,11 +163,29 @@ export async function handler(event: APIGatewayProxyEventV2): Promise<APIGateway
     **Output:**
     - Return the **FULL** Markdown file content.
     - Do not use markdown code blocks (\`\`\`markdown).
+    ` : `
+    You are The Biographer. You are refining and polishing the user's "Life Log".
+
+    **Goal:** Review the current dashboard for clarity, tone, and formatting. Ensure the narrative flows well and the "Daily Pulse" is up to date (without adding new information).
+
+    **Current Dashboard State:**
+    ${lifeLogContent}
+
+    **Instructions:**
+    1.  **Review & Polish:** Fix any typos, awkward phrasing, or formatting inconsistencies.
+    2.  **Ensure Format Compliance:**
+        - "The Daily Pulse" should use "- **YYYY-MM-DD:** [Summary]" format.
+        - "Recovered Memories" should NOT have "[Current]" prefixes.
+    3.  **Do NOT add new content** since no new entry was provided. Just refine what is there.
+
+    **Output:**
+    - Return the **FULL** Markdown file content.
+    - Do not use markdown code blocks (\`\`\`markdown).
     `;
 
     const generativeModel = genAI.getGenerativeModel({ model: "gemini-3-pro-preview" });
     const result = await generativeModel.generateContent(systemPrompt);
-    const newLifeLogContent = result.response.text();
+    const newLifeLogContent = sanitizeMarkdown(result.response.text());
 
     // 5. Update Dashboard
     await createOrUpdateFile(LIFE_LOG_PATH, newLifeLogContent, "chore: Update Life Log dashboard");

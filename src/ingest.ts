@@ -48,53 +48,85 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
       // 1. Generate Embedding for the query
       const vector = await getEmbedding(routerOutput.content);
 
-      // 2. Query Pinecone for Context
-      // Filter by userId to ensure privacy
-      const queryResponse = await queryPinecone(
-        PINECONE_INDEX_NAME, 
-        vector, 
-        10, 
-        undefined, 
-        { userId: userId } 
+      // 2. Query Pinecone (All Namespaces)
+      // We search all specialized memory compartments to form a holistic answer.
+      const namespaces = ['', 'biography', 'dreams', 'fiction', 'lyrics', 'ideas'];
+      const searchPromises = namespaces.map(ns => 
+        queryPinecone(PINECONE_INDEX_NAME, vector, 5, ns || undefined, { userId: userId })
+          .then(res => res.matches?.map(m => ({ ...m, _namespace: ns })) || [])
       );
-      
-      const matches = queryResponse.matches || [];
-      const contextIds = matches.map(m => m.id);
 
-      // 3. Fetch Full Content from DynamoDB (if matches found)
-      let contextText = "";
-      let contextSources: { id: string; title?: string; url?: string }[] = [];
+      const allMatches = (await Promise.all(searchPromises)).flat();
+
+      // Sort by score (descending) and take top 15
+      const sortedMatches = allMatches
+        .sort((a, b) => (b.score || 0) - (a.score || 0))
+        .slice(0, 15);
+
+      const contextIds = sortedMatches.map(m => m.id);
+
+      // 3. Construct Context (Prefer Metadata, Fallback to DynamoDB)
+      let contextEntries: string[] = [];
+      let contextSources: { id: string; title?: string; url?: string; score?: number }[] = [];
       
-      if (contextIds.length > 0) {
-        const keys = contextIds.map(id => ({
+      // IDs that need fetching from DynamoDB (missing metadata text)
+      const missingContentIds: string[] = [];
+
+      for (const match of sortedMatches) {
+          const meta = match.metadata as unknown as PineconeMetadata;
+          const score = match.score ? match.score.toFixed(2) : "?";
+          const source = `[${match._namespace || 'general'} | ${score}]`;
+
+          if (meta && meta.text) {
+              // Found in metadata (Fast Path)
+              contextEntries.push(`--- ENTRY ${source} ---\n${meta.text}`);
+              contextSources.push({
+                  id: match.id,
+                  title: (meta as any).title || "Memory",
+                  score: match.score
+              });
+          } else {
+              // Need to fetch from DB
+              missingContentIds.push(match.id);
+          }
+      }
+      
+      // Fetch missing content from DynamoDB
+      if (missingContentIds.length > 0) {
+        const keys = missingContentIds.map(id => ({
           PK: `USER#${userId}`,
           SK: `ENTRY#${id}`
         }));
 
-        const batchGet = await dynamoClient.send(new BatchGetCommand({
-          RequestItems: {
-            [TABLE_NAME]: {
-              Keys: keys,
-              ProjectionExpression: "id, content, sourceTitle, sourceURL, createdAt" // Fetch needed fields
+        try {
+            const batchGet = await dynamoClient.send(new BatchGetCommand({
+            RequestItems: {
+                [TABLE_NAME]: {
+                Keys: keys,
+                ProjectionExpression: "id, content, sourceTitle, sourceURL, createdAt"
+                }
             }
-          }
-        }));
-        
-        const foundItems = batchGet.Responses?.[TABLE_NAME] || [];
-        
-        contextText = foundItems.map((item: any) => 
-          `--- ENTRY (Date: ${item.createdAt}, Title: ${item.sourceTitle || 'Untitled'}) ---\n${item.content}`
-        ).join("\n\n");
-
-        contextSources = foundItems.map((item: any) => ({
-            id: item.id,
-            title: item.sourceTitle || "Untitled Entry",
-            url: item.sourceURL
-        }));
+            }));
+            
+            const foundItems = batchGet.Responses?.[TABLE_NAME] || [];
+            
+            for (const item of foundItems) {
+                contextEntries.push(`--- ENTRY (DB: ${item.createdAt}) ---\n${item.content}`);
+                contextSources.push({
+                    id: item.id,
+                    title: item.sourceTitle || "Archived Entry",
+                    url: item.sourceURL
+                });
+            }
+        } catch (err) {
+            console.error("Failed to fetch missing content from DynamoDB", err);
+        }
       }
 
+      const contextText = contextEntries.join("\n\n");
+
       // 4. Synthesize Answer with Gemini
-      const ragModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" }); // Or 1.5-pro
+      const ragModel = genAI.getGenerativeModel({ model: "gemini-3-pro-preview" }); // Upgraded for better synthesis
       const ragPrompt = `${RAG_SYSTEM_PROMPT}\n\nUSER QUESTION:\n${routerOutput.content}\n\nRETRIEVED CONTEXT:\n${contextText || "No relevant context found."}`;
       
       const ragResult = await ragModel.generateContent(ragPrompt);

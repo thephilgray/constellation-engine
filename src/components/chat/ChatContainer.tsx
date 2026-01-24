@@ -62,6 +62,7 @@ Here is how you can use the system:
 *   **Ask a Question:** Ask anything! The "Incubator" will search your saved knowledge to provide an answer with citations.
 *   **Slash Commands:**
     *   \`/reflect <entry>\`: Log a journal entry and update your Life Log narrative.
+    *   \`/reflect\` (no text): Refresh and polish the Life Log dashboard without adding an entry.
     *   \`/think <thought>\`: Log a significant idea to your Idea Garden.
     *   \`/dream <dream>\`: Log a dream and get a Jungian analysis.
     *   \`/dream\` (no text): Trigger a serendipitous connection from The Dreamer.
@@ -98,7 +99,7 @@ Here is how you can use the system:
             isCommand = true;
         } else if (lowerContent.startsWith("/reflect")) {
             endpoint = `${API_URL}/reflect`;
-            const param = content.substring(8).trim() || "Today";
+            const param = content.substring(8).trim(); // Allow empty content
             body = { content: param, tag: "JOURNAL", date: new Date().toISOString() };
             isCommand = true;
         } else if (lowerContent.startsWith("/think")) {

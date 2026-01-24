@@ -27,9 +27,14 @@ export interface PineconeMetadata {
   id: string;
   userId: string;
   isOriginal: boolean;
-  mediaType: 'text' | 'audio' | 'image';
+  mediaType?: 'text' | 'audio' | 'image';
   createdAt: string;
-  tags: string[];
+  tags?: string[];
+  // Specialized Agent Metadata
+  text?: string;
+  title?: string;
+  date?: string;
+  tag?: string;
 }
 
 export interface IntentRouterOutput {
