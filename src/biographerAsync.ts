@@ -1,7 +1,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { Resource } from "sst";
 import { getEmbedding, upsertToPinecone, queryPinecone, sanitizeMarkdown } from "./utils";
-import { saveRecord, getRecord } from "./lib/dynamo";
+import { saveRecord, getRecord, queryRecentEntries } from "./lib/dynamo";
 import type { ConstellationRecord } from "./lib/schemas";
 import { randomUUID } from "crypto";
 
@@ -47,6 +47,25 @@ export async function handler(event: AsyncPayload) {
     const entryId = `biography-${date.getTime()}`;
 
     let contextEntries = "";
+
+    // Fetch recent history for context (Last 5 Active Days)
+    const recentRecords = await queryRecentEntries(userId, 50);
+    const entriesByDate = new Map<string, string[]>();
+    for (const record of recentRecords) {
+        const dateKey = record.createdAt.split('T')[0];
+        if (!entriesByDate.has(dateKey)) {
+            entriesByDate.set(dateKey, []);
+        }
+        entriesByDate.get(dateKey)?.push(record.content);
+    }
+    // Get last 5 days chronologically
+    const last5Dates = Array.from(entriesByDate.keys()).sort().slice(-5);
+    
+    let recentHistoryContext = "";
+    for (const d of last5Dates) {
+        const entries = entriesByDate.get(d);
+        recentHistoryContext += `\n**${d}:**\n${entries?.map(e => `- ${e}`).join('\n')}`;
+    }
 
     if (content) {
         // 1. Embed & Save to Pinecone (Vector Store)
@@ -100,6 +119,8 @@ export async function handler(event: AsyncPayload) {
     **Input Data:**
     - **Current Date:** ${isoDate.split('T')[0]}
     - **New Entry (${tag}):** "${content}"
+    - **Recent History (Last 5 Active Days):**
+    ${recentHistoryContext}
     - **Context (Similar Past Entries):** \n${contextEntries}
 
     **Current Dashboard State:**
@@ -108,21 +129,22 @@ export async function handler(event: AsyncPayload) {
     **Instructions for Updates:**
 
     1.  **## 📊 State of Mind:** 
-        - Update **Mood** and **Focus** to match the *new entry*.
-        - Update **Active Themes**: If a theme from the past is no longer relevant, remove it. Add new themes that emerge from this entry.
+        - Update **Mood** and **Focus** based on the *New Entry* and the *Recent History* (last 7 days).
+        - Update **Active Themes**: Consolidate themes to reduce visual bloat. If a theme is no longer relevant, remove it. Add new themes that emerge from this entry.
 
     2.  **## 🕯️ Recovered Memories:**
         - ONLY update this if the New Entry is a 'MEMORY'. 
         - If it is, add a concise summary of the memory.
         - Do NOT prefix entries with "[Current]".
-        - If not, keep the existing memories (unless they are very old/stale, then you can prune them).
+        - Limit the total number of memories in this list to **6-8 items max**. Prune the oldest or least relevant ones if needed.
 
     3.  **## 💓 The Daily Pulse:**
-        - This section is a chronological log of summaries.
-        - Add a new bullet point for the **Current Date** (${isoDate.split('T')[0]}) summarizing the New Entry.
-        - **Format:** "- **YYYY-MM-DD:** [Summary]"
+        - This section is a chronological log of the *Last 5 Active Days*.
+        - **Source of Truth:** Use the **Recent History** provided above to build this list.
+        - **Format:** "- **YYYY-MM-DD:** [Summary of all entries for this day]"
+        - Ensure every date in the "Recent History" (up to the last 5) is represented.
         - Do NOT use "**Today:**". Always use the specific date.
-        - Keep previous entries. If the list gets too long (over 10 entries), summarize the oldest ones into a single paragraph at the top of this section or remove them if they are captured in the "Story Bible".
+        - Do NOT include dates that are not in the Recent History (unless they are already in the dashboard and you are just appending, but prefer to refresh the list based on the history).
 
     **Output:**
     - Return the **FULL** Markdown file content.
@@ -130,7 +152,10 @@ export async function handler(event: AsyncPayload) {
     ` : `
     You are The Biographer. You are refining and polishing the user's "Life Log".
 
-    **Goal:** Review the current dashboard for clarity, tone, and formatting. Ensure the narrative flows well and the "Daily Pulse" is up to date (without adding new information).
+    **Goal:** Review the current dashboard for clarity, tone, and formatting. Ensure the narrative flows well and the "Daily Pulse" is up to date based on the recent history.
+
+    **Recent History (Last 5 Active Days):**
+    ${recentHistoryContext}
 
     **Current Dashboard State:**
     ${lifeLogContent}
@@ -139,8 +164,9 @@ export async function handler(event: AsyncPayload) {
     1.  **Review & Polish:** Fix any typos, awkward phrasing, or formatting inconsistencies.
     2.  **Ensure Format Compliance:**
         - "The Daily Pulse" should use "- **YYYY-MM-DD:** [Summary]" format.
-        - "Recovered Memories" should NOT have "[Current]" prefixes.
-    .  **Do NOT add new content** since no new entry was provided. Just refine what is there.
+        - Ensure "The Daily Pulse" accurately reflects the **Recent History** dates.
+        - "Recovered Memories" should NOT have "[Current]" prefixes and be limited to 6-8 items.
+    3.  **Do NOT add new content** since no new entry was provided. Just refine what is there using the history as a fact-check.
 
     **Output:**
     - Return the **FULL** Markdown file content.

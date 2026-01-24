@@ -73,3 +73,30 @@ export async function queryByPK(pk: string): Promise<ConstellationRecord[]> {
         throw new Error("Could not query records from DynamoDB.");
     }
 }
+
+/**
+ * Queries for the most recent entries for a given user.
+ * @param userId The ID of the user.
+ * @param limit The maximum number of entries to retrieve (default: 20).
+ * @returns An array of the most recent ConstellationRecords.
+ */
+export async function queryRecentEntries(userId: string, limit: number = 20): Promise<ConstellationRecord[]> {
+    const command = new QueryCommand({
+        TableName: TABLE_NAME,
+        KeyConditionExpression: "PK = :pk AND begins_with(SK, :skPrefix)",
+        ExpressionAttributeValues: {
+            ":pk": `USER#${userId}`,
+            ":skPrefix": "ENTRY#",
+        },
+        ScanIndexForward: false, // Descending order (newest first)
+        Limit: limit,
+    });
+
+    try {
+        const { Items } = await docClient.send(command);
+        return (Items as ConstellationRecord[]) || [];
+    } catch (error) {
+        console.error("Error querying recent entries:", error);
+        throw new Error("Could not query recent entries from DynamoDB.");
+    }
+}
