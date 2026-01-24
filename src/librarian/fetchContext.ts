@@ -1,13 +1,7 @@
-import { Octokit } from "@octokit/rest";
-import { Resource } from "sst";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, ScanCommand } from "@aws-sdk/lib-dynamodb";
+import { DynamoDBDocumentClient, ScanCommand, QueryCommand } from "@aws-sdk/lib-dynamodb";
+import { Resource } from "sst";
 import type { ConstellationRecord } from "../lib/schemas";
-
-const octokit = new Octokit({ auth: Resource.GITHUB_TOKEN.value });
-const owner = Resource.GITHUB_OWNER.value;
-const repo = Resource.GITHUB_REPO.value;
-const recommendationsFile = "BookRecommendations.md";
 
 const dynamo = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 const TABLE_NAME = Resource.UnifiedLake.name;
@@ -58,27 +52,38 @@ async function getRecentWriting(): Promise<string> {
 
 async function getPastRecommendations(): Promise<string[]> {
     try {
-        const { data } = await octokit.repos.getContent({
-            owner,
-            repo,
-            path: recommendationsFile,
+        // Query for recommendations stored under USER#SYSTEM
+        const command = new QueryCommand({
+            TableName: TABLE_NAME,
+            KeyConditionExpression: "PK = :pk",
+            ExpressionAttributeValues: {
+                ":pk": "USER#SYSTEM"
+            }
         });
 
-        if (!('content' in data)) {
+        const response = await dynamo.send(command);
+        const items = (response.Items || []) as ConstellationRecord[];
+
+        if (items.length === 0) {
+            console.log("No past recommendations found in DynamoDB.");
             return [];
         }
 
-        const content = Buffer.from(data.content, 'base64').toString('utf-8');
-        // Simple regex to find markdown headings (e.g., "## Book Title")
-        const titles = content.match(/^##\s*(.*)/gm);
-        return titles ? titles.map(title => title.replace("## ", "").trim()) : [];
+        // Extract titles from all recommendation entries
+        const allTitles: string[] = [];
+        for (const item of items) {
+             // Simple regex to find markdown headings (e.g., "## Book Title")
+             const titles = item.content.match(/^##\s*(.*)/gm);
+             if (titles) {
+                titles.forEach(t => allTitles.push(t.replace("## ", "").trim()));
+             }
+        }
+        
+        // Deduplicate
+        return Array.from(new Set(allTitles));
 
     } catch (error: any) {
-        if (error.status === 404) {
-            console.log(`${recommendationsFile} not found. Assuming no past recommendations.`);
-            return [];
-        }
-        console.error("Error fetching past recommendations:", error);
+        console.error("Error fetching past recommendations from DynamoDB:", error);
         return [];
     }
 }

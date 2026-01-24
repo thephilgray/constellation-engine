@@ -1,10 +1,11 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, PutCommand } from "@aws-sdk/lib-dynamodb";
+import { DynamoDBDocumentClient, PutCommand, BatchGetCommand } from "@aws-sdk/lib-dynamodb";
 import type { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
 import { Resource } from "sst";
 import KSUID from "ksuid";
-import { getEmbedding, upsertToPinecone } from "./utils";
+import { getEmbedding, upsertToPinecone, queryPinecone } from "./utils";
+import { INTENT_ROUTER_SYSTEM_PROMPT, RAG_SYSTEM_PROMPT } from "./lib/prompts";
 import type { ConstellationRecord, IntentRouterOutput, PineconeMetadata } from "./lib/schemas";
 
 // Initialize Clients
@@ -12,39 +13,8 @@ const genAI = new GoogleGenerativeAI(Resource.GEMINI_API_KEY.value);
 const dynamoClient = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 
 // Environment
-const PINECONE_INDEX_NAME = "brain-dump"; // Or typically Resource.PineconeIndex.value if managed
+const PINECONE_INDEX_NAME = "brain-dump";
 const TABLE_NAME = Resource.UnifiedLake.name;
-
-const INTENT_ROUTER_PROMPT = `
-# System Prompt: Constellation Engine Intent Router
-
-You are a hyper-efficient data processing engine for a 'Second Brain' application. Your sole purpose is to receive a piece of content, analyze it, and return a structured JSON object.
-
-**RULES:**
-1.  **Analyze the Input:** The user will provide a block of text, a URL, or a reference to an uploaded file.
-2.  **Determine Originality:**
-    *   If the content appears to be the user's own thoughts, set \`isOriginal: true\`.
-    *   If it contains quotes, is a direct paste from a web article, or is a URL, set \`isOriginal: false\`.
-3.  **Extract Source (if \`isOriginal: false\`):**
-    *   If a URL is present, populate \`sourceURL\`.
-    *   Attempt to identify \`sourceTitle\` and \`sourceAuthor\` from the text if available.
-4.  **Process Multimedia:**
-    *   **For Audio:** Assume the input is a transcription. Extract the core message into \`content\`. Generate \`tags\` describing the emotional tone (e.g., "emotional_tone: excited"). Set \`mediaType: 'audio'\`.
-    *   **For Images:** Assume the input is a description of an image. Summarize the description into \`content\`. Generate \`tags\` describing the key visual concepts (e.g., "concept: UML Diagram", "style: hand-drawn"). Set \`mediaType: 'image'\`.
-    *   **For Text:** The input is the content. Set \`mediaType: 'text'\`.
-5.  **Output JSON ONLY:** Your entire response MUST be a single, valid JSON object matching the \`IntentRouterOutput\` interface. Do not include any explanations or conversational text.
-
-**JSON OUTPUT FORMAT:**
-{
-  "isOriginal": boolean,
-  "sourceURL": string | null,
-  "sourceTitle": string | null,
-  "sourceAuthor": string | null,
-  "content": string,
-  "tags": string[],
-  "mediaType": "text" | "audio" | "image"
-}
-`;
 
 export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
   try {
@@ -65,10 +35,80 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
 
     // 2. Intent Router (Classification & Extraction)
     const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" }); // Fast model for routing
-    const result = await model.generateContent(`${INTENT_ROUTER_PROMPT}\n\nINPUT:\n${rawInput}`);
+    const result = await model.generateContent(`${INTENT_ROUTER_SYSTEM_PROMPT}\n\nINPUT:\n${rawInput}`);
     const responseText = result.response.text().replace(/```json\n?|\n?```/g, '').trim();
     const routerOutput = JSON.parse(responseText) as IntentRouterOutput;
 
+    // ---------------------------------------------------------
+    // BRANCH A: QUERY (The Incubator)
+    // ---------------------------------------------------------
+    if (routerOutput.intent === 'query') {
+      console.log("Processing Query:", routerOutput.content);
+
+      // 1. Generate Embedding for the query
+      const vector = await getEmbedding(routerOutput.content);
+
+      // 2. Query Pinecone for Context
+      // Filter by userId to ensure privacy
+      const queryResponse = await queryPinecone(
+        PINECONE_INDEX_NAME, 
+        vector, 
+        10, 
+        undefined, 
+        { userId: userId } 
+      );
+      
+      const matches = queryResponse.matches || [];
+      const contextIds = matches.map(m => m.id);
+
+      // 3. Fetch Full Content from DynamoDB (if matches found)
+      let contextText = "";
+      
+      if (contextIds.length > 0) {
+        const keys = contextIds.map(id => ({
+          PK: `USER#${userId}`,
+          SK: `ENTRY#${id}`
+        }));
+
+        const batchGet = await dynamoClient.send(new BatchGetCommand({
+          RequestItems: {
+            [TABLE_NAME]: {
+              Keys: keys,
+              ProjectionExpression: "content, sourceTitle, createdAt" // Fetch only needed fields
+            }
+          }
+        }));
+        
+        const foundItems = batchGet.Responses?.[TABLE_NAME] || [];
+        
+        contextText = foundItems.map((item: any) => 
+          `--- ENTRY (Date: ${item.createdAt}, Title: ${item.sourceTitle || 'Untitled'}) ---\n${item.content}`
+        ).join("\n\n");
+      }
+
+      // 4. Synthesize Answer with Gemini
+      const ragModel = genAI.getGenerativeModel({ model: "gemini-2.0-flash" }); // Or 1.5-pro
+      const ragPrompt = `${RAG_SYSTEM_PROMPT}\n\nUSER QUESTION:\n${routerOutput.content}\n\nRETRIEVED CONTEXT:\n${contextText || "No relevant context found."}`;
+      
+      const ragResult = await ragModel.generateContent(ragPrompt);
+      const answer = ragResult.response.text();
+
+      return {
+        statusCode: 200,
+        body: JSON.stringify({
+          message: "Query processed", 
+          intent: 'query',
+          answer: answer,
+          contextIds 
+        }),
+      };
+    }
+
+    // ---------------------------------------------------------
+    // BRANCH B: SAVE (The Recorder)
+    // ---------------------------------------------------------
+    // Default to 'save' if intent is missing or explicitly 'save'
+    
     // 3. ID Generation
     const id = (await KSUID.random()).string;
     const now = new Date().toISOString();
@@ -119,7 +159,12 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
 
     return {
       statusCode: 200,
-      body: JSON.stringify({ message: "Ingested successfully", id, routerOutput }),
+      body: JSON.stringify({
+        message: "Ingested successfully", 
+        intent: 'save',
+        id, 
+        routerOutput 
+      }),
     };
 
   } catch (error: any) {

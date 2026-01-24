@@ -27,6 +27,9 @@ export default $config({
             userPool: {
                 // You can customize the CloudFormation/Pulumi resource here if needed
                 // e.g. mfaConfiguration: "OFF"
+                adminCreateUserConfig: {
+                    allowAdminCreateUserOnly: true,
+                },
             }
         }
     });

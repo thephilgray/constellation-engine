@@ -24,17 +24,13 @@ export const Message: React.FC<MessageProps> = ({ role, content }) => {
         )}
       >
         <ReactMarkdown 
-          classNames={{
-            p: "mb-2 last:mb-0",
-            ul: "list-disc ml-4 mb-2",
-            ol: "list-decimal ml-4 mb-2",
-            li: "mb-1",
-            code: "bg-black/10 dark:bg-white/10 rounded px-1 py-0.5 font-mono text-xs",
-            pre: "bg-black/10 dark:bg-white/10 rounded p-2 mb-2 overflow-x-auto"
-          }}
           components={{
-            pre: ({node, ...props}) => <div className="overflow-auto my-2 rounded bg-black/10 p-2" {...props} />,
-            code: ({node, ...props}) => <code className="font-mono text-xs bg-black/10 rounded px-1" {...props} />
+            p: ({node, ...props}) => <p className="mb-2 last:mb-0" {...props} />,
+            ul: ({node, ...props}) => <ul className="list-disc ml-4 mb-2" {...props} />,
+            ol: ({node, ...props}) => <ol className="list-decimal ml-4 mb-2" {...props} />,
+            li: ({node, ...props}) => <li className="mb-1" {...props} />,
+            pre: ({node, ...props}) => <pre className="bg-black/10 dark:bg-white/10 rounded p-2 mb-2 overflow-x-auto" {...props} />,
+            code: ({node, ...props}) => <code className="bg-black/10 dark:bg-white/10 rounded px-1 py-0.5 font-mono text-xs" {...props} />
           }}
         >
           {content}

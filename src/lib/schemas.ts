@@ -6,7 +6,7 @@ export interface ConstellationRecord {
 
   // Universal Attributes
   id: string;
-  type: 'Entry' | 'User';
+  type: 'Entry' | 'User' | 'Recommendation';
   createdAt: string;
   updatedAt: string;
 
@@ -33,6 +33,7 @@ export interface PineconeMetadata {
 }
 
 export interface IntentRouterOutput {
+  intent: 'save' | 'query';
   isOriginal: boolean;
   sourceURL?: string;
   sourceTitle?: string;

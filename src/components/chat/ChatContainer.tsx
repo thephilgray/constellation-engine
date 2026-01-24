@@ -72,14 +72,18 @@ export const ChatContainer: React.FC = () => {
 
         const data = await response.json();
         
-        // The ingest endpoint currently returns a success message, but not the synthesized response directly
-        // because it updates the Dashboard file.
-        // For the chat UI, we might want to display a confirmation or fetch the updated dashboard snippet.
-        // For now, let's display a generic success or the data if available.
+        let responseContent = "";
+        if (data.intent === 'query' && data.answer) {
+             responseContent = data.answer;
+        } else if (data.intent === 'save') {
+             responseContent = `Saved! (ID: ${data.id})`;
+        } else {
+             responseContent = data.message || "Operation complete.";
+        }
         
         const aiMessage: MessageProps = { 
             role: "assistant", 
-            content: `Saved! (ID: ${data.id})` 
+            content: responseContent 
         };
         setMessages((prev) => [...prev, aiMessage]);
 
@@ -110,7 +114,7 @@ export const ChatContainer: React.FC = () => {
           <span>Constellation Chat</span>
           <Button variant="ghost" size="sm" onClick={handleLogout}>Sign Out</Button>
         </div>
-        <MessageList messages={messages} />
+        <MessageList messages={messages} isLoading={isLoading} />
         <ChatInput onSend={handleSend} isLoading={isLoading} />
       </Card>
     </div>
