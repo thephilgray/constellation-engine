@@ -293,7 +293,7 @@ export default $config({
 
     api.route("GET /dashboard", {
       handler: "src/functions/dashboard.handler",
-      link: [GITHUB_TOKEN, GITHUB_OWNER, GITHUB_REPO],
+      link: [GITHUB_TOKEN, GITHUB_OWNER, GITHUB_REPO, GEMINI_API_KEY, PINECONE_API_KEY, PINECONE_INDEX_HOST],
       timeout: "30 seconds",
     }, {
       auth: {
