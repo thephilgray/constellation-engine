@@ -227,6 +227,70 @@ export default $config({
       },
     });
 
+    api.route("POST /dream", {
+      handler: "src/librarian/dreamer.handler",
+      link: [GEMINI_API_KEY, PINECONE_API_KEY, PINECONE_INDEX_HOST, table, auth],
+      timeout: "90 seconds",
+    }, {
+      auth: {
+        jwt: {
+          authorizer: authorizer.id,
+        },
+      },
+    });
+
+    api.route("POST /reflect", {
+      handler: "src/biographer.handler",
+      link: [GEMINI_API_KEY, PINECONE_API_KEY, PINECONE_INDEX_HOST, GITHUB_TOKEN, GITHUB_OWNER, GITHUB_REPO, INGEST_API_KEY, table, bucket],
+      timeout: "60 seconds",
+    }, {
+      auth: {
+        jwt: {
+          authorizer: authorizer.id,
+        },
+      },
+    });
+
+    api.route("POST /fiction", {
+      handler: "src/fiction.handler",
+      link: [GEMINI_API_KEY, PINECONE_API_KEY, PINECONE_INDEX_HOST, GITHUB_TOKEN, GITHUB_OWNER, GITHUB_REPO, INGEST_API_KEY, table, bucket],
+      timeout: "60 seconds",
+    }, {
+      auth: {
+        jwt: {
+          authorizer: authorizer.id,
+        },
+      },
+    });
+
+    api.route("POST /lyrics", {
+      handler: "src/lyrics.handler",
+      link: [GEMINI_API_KEY, PINECONE_API_KEY, PINECONE_INDEX_HOST, GITHUB_TOKEN, GITHUB_OWNER, GITHUB_REPO, INGEST_API_KEY, table, bucket],
+      timeout: "60 seconds",
+    }, {
+      auth: {
+        jwt: {
+          authorizer: authorizer.id,
+        },
+      },
+    });
+
+    api.route("POST /read", {
+      handler: "src/librarian/trigger.handler",
+      link: [dialecticalLibrarian],
+      permissions: [{
+        actions: ["states:StartExecution"],
+        resources: [dialecticalLibrarian.arn],
+      }],
+      timeout: "30 seconds",
+    }, {
+      auth: {
+        jwt: {
+          authorizer: authorizer.id,
+        },
+      },
+    });
+
     // DEPLOY FRONTEND
     const site = new sst.aws.Astro("Web", {
       link: [api, auth, webClient], // Link API and Auth to the frontend
@@ -235,34 +299,6 @@ export default $config({
         PUBLIC_USER_POOL_CLIENT_ID: webClient.id,
         PUBLIC_API_URL: api.url,
       }
-    });
-
-    const dream = new sst.aws.Function("DreamFunction", {
-      handler: "src/dreams.handler",
-      url: true, // Creates a public Lambda Function URL
-      timeout: "60 seconds",
-      link: [GEMINI_API_KEY, PINECONE_API_KEY, PINECONE_INDEX_HOST, GITHUB_TOKEN, GITHUB_OWNER, GITHUB_REPO, INGEST_API_KEY, table, bucket],
-    });
-
-    const lyrics = new sst.aws.Function("LyricsFunction", {
-      handler: "src/lyrics.handler",
-      url: true, // Creates a public Lambda Function URL
-      timeout: "60 seconds",
-      link: [GEMINI_API_KEY, PINECONE_API_KEY, PINECONE_INDEX_HOST, GITHUB_TOKEN, GITHUB_OWNER, GITHUB_REPO, INGEST_API_KEY, table, bucket],
-    });
-
-    const fiction = new sst.aws.Function("FictionFunction", {
-      handler: "src/fiction.handler",
-      url: true, // Creates a public Lambda Function URL
-      timeout: "60 seconds",
-      link: [GEMINI_API_KEY, PINECONE_API_KEY, PINECONE_INDEX_HOST, GITHUB_TOKEN, GITHUB_OWNER, GITHUB_REPO, INGEST_API_KEY, table, bucket],
-    });
-
-    const biographer = new sst.aws.Function("BiographerFunction", {
-      handler: "src/biographer.handler",
-      url: true, // Creates a public Lambda Function URL
-      timeout: "60 seconds",
-      link: [GEMINI_API_KEY, PINECONE_API_KEY, PINECONE_INDEX_HOST, GITHUB_TOKEN, GITHUB_OWNER, GITHUB_REPO, INGEST_API_KEY, table, bucket],
     });
 
     const dreamer = new sst.aws.Cron("DreamerCron", {
@@ -277,10 +313,6 @@ export default $config({
     return {
       site: site.url,
       api: api.url,
-      dreamsEndpoint: dream.url,
-      lyricsEndpoint: lyrics.url,
-      fictionEndpoint: fiction.url,
-      biographerEndpoint: biographer.url,
       librarianEndpoint: librarianTrigger.url,
       userPoolId: auth.id,
       userPoolClientId: webClient.id, // Access client ID from the client resource, not the pool

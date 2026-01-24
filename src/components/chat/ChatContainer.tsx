@@ -57,13 +57,14 @@ Here is how you can use the system:
 
 *   **Save a Note:** Just type your thought, idea, or paste an article. The system detects "saving" intent automatically.
 *   **Ask a Question:** Ask anything! The "Incubator" will search your saved knowledge to provide an answer with citations.
-*   **Slash Commands (Coming Soon):**
+*   **Slash Commands:**
     *   \`/dream\`: Trigger a serendipitous connection (The Dreamer).
-    *   \`/reflect\`: Generate a weekly review (The Biographer).
-    *   \`/fic\`: Turn your notes into a story (The Storyteller).
+    *   \`/reflect [timeframe]\`: Generate a review (The Biographer).
+    *   \`/fic <idea/scene>\`: Update the Story Bible (The Storyteller).
+    *   \`/lyrics <line>\`: Update Song Seeds (The Bard).
+    *   \`/read\`: Trigger the Dialectical Librarian.
 `
         };
-        // Small delay to simulate processing
         setTimeout(() => setMessages((prev) => [...prev, helpMessage]), 500);
         return;
     }
@@ -78,35 +79,90 @@ Here is how you can use the system:
             throw new Error("No authentication token found.");
         }
 
-        const response = await fetch(`${API_URL}/ingest`, {
+        // Command Routing
+        let endpoint = `${API_URL}/ingest`;
+        let body: any = { content, type: "IDEA" };
+        let isCommand = false;
+
+        const lowerContent = content.trim().toLowerCase();
+
+        if (lowerContent.startsWith("/dream")) {
+            endpoint = `${API_URL}/dream`;
+            const param = content.substring(6).trim();
+            body = param ? { content: param } : {}; 
+            isCommand = true;
+        } else if (lowerContent.startsWith("/reflect")) {
+            endpoint = `${API_URL}/reflect`;
+            const param = content.substring(8).trim() || "Today";
+            body = { content: param, tag: "JOURNAL", date: new Date().toISOString() };
+            isCommand = true;
+        } else if (lowerContent.startsWith("/fic")) {
+            endpoint = `${API_URL}/fiction`;
+            const param = content.substring(4).trim();
+            if (!param) throw new Error("Please provide an idea or scene description.");
+            body = { content: param, tag: "IDEA" };
+            isCommand = true;
+        } else if (lowerContent.startsWith("/lyrics")) {
+            endpoint = `${API_URL}/lyrics`;
+            const param = content.substring(7).trim();
+            if (!param) throw new Error("Please provide a lyric line.");
+            body = { content: param };
+            isCommand = true;
+        } else if (lowerContent.startsWith("/read") || lowerContent.startsWith("/recommend")) {
+            endpoint = `${API_URL}/read`;
+            body = {};
+            isCommand = true;
+        }
+
+        const response = await fetch(endpoint, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
                 "Authorization": `Bearer ${token}`
             },
-            body: JSON.stringify({ content, type: "IDEA" }) // Defaulting to IDEA for now
+            body: JSON.stringify(body)
         });
 
         if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(errorData.message || "Failed to send message");
+            throw new Error(errorData.message || "Failed to process request");
         }
 
         const data = await response.json();
         
         let responseContent = "";
-        if (data.intent === 'query' && data.answer) {
-             responseContent = data.answer;
-        } else if (data.intent === 'save') {
-             responseContent = `Saved! (ID: ${data.id})`;
+        let sources = undefined;
+
+        if (isCommand) {
+             if (data.spark) {
+                 responseContent = `**The Dreamer (Spark):**\n\n${data.spark}`;
+             } else if (data.dreamAnalysis) {
+                 responseContent = `**The Dreamer (Analysis):**\n\n${data.dreamAnalysis}`;
+             } else if (data.analysis) {
+                 responseContent = `**The Biographer:**\n\n${data.analysis}`;
+             } else if (data.storyBible) {
+                 responseContent = `**The Storyteller (Updated Bible):**\n\n${data.storyBible}`;
+             } else if (data.songSeeds) {
+                 responseContent = `**The Bard (Song Seeds):**\n\n${data.songSeeds}`;
+             } else {
+                 responseContent = data.message || "Command executed.";
+             }
         } else {
-             responseContent = data.message || "Operation complete.";
+             // Ingest / Query logic
+            if (data.intent === 'query' && data.answer) {
+                 responseContent = data.answer;
+                 sources = data.contextSources;
+            } else if (data.intent === 'save') {
+                 responseContent = `Saved! (ID: ${data.id})`;
+            } else {
+                 responseContent = data.message || "Operation complete.";
+            }
         }
         
         const aiMessage: MessageProps = { 
             role: "assistant", 
             content: responseContent,
-            sources: data.contextSources
+            sources: sources
         };
         setMessages((prev) => [...prev, aiMessage]);
 

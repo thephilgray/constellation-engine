@@ -13,24 +13,9 @@ declare module "sst" {
       "id": string
       "type": "sst.aws.CognitoUserPool"
     }
-    "BiographerFunction": {
-      "name": string
-      "type": "sst.aws.Function"
-      "url": string
-    }
     "DialecticalLibrarian": {
       "arn": string
       "type": "sst.aws.StepFunctions"
-    }
-    "DreamFunction": {
-      "name": string
-      "type": "sst.aws.Function"
-      "url": string
-    }
-    "FictionFunction": {
-      "name": string
-      "type": "sst.aws.Function"
-      "url": string
     }
     "GEMINI_API_KEY": {
       "type": "sst.sst.Secret"
@@ -85,11 +70,6 @@ declare module "sst" {
       "type": "sst.aws.Function"
     }
     "LibrarianTrigger": {
-      "name": string
-      "type": "sst.aws.Function"
-      "url": string
-    }
-    "LyricsFunction": {
       "name": string
       "type": "sst.aws.Function"
       "url": string

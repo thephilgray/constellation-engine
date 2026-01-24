@@ -1,5 +1,5 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import type { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
+import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from "aws-lambda";
 import { Resource } from "sst";
 import { getEmbedding, upsertToPinecone, appendToFile, getFile, createOrUpdateFile, queryPinecone, sanitizeMarkdown } from "./utils";
 
@@ -27,12 +27,15 @@ const INITIAL_SONG_SEEDS_CONTENT = `# 🎵 Song Seeds
 (Finished songs)
 `;
 
-export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+export async function handler(event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> {
   try {
-    // API Key Authentication
-    const authHeader = event.headers.authorization;
+    // Authentication: Support both API Key (legacy/server) and Cognito JWT (client)
+    const authHeader = event.headers?.authorization || event.headers?.Authorization;
     const expectedApiKey = `Bearer ${Resource.INGEST_API_KEY.value}`;
-    if (authHeader !== expectedApiKey) {
+    const isApiKeyValid = authHeader === expectedApiKey;
+    const isCognitoValid = !!event.requestContext.authorizer?.jwt;
+
+    if (!isApiKeyValid && !isCognitoValid) {
       return { statusCode: 401, body: JSON.stringify({ message: "Unauthorized" }) };
     }
 
@@ -112,7 +115,10 @@ IMPORTANT: Output RAW markdown only. Do not wrap the output in markdown code blo
 
     return {
       statusCode: 200,
-      body: JSON.stringify({ message: "Lyric logged and song seeds updated successfully." }),
+      body: JSON.stringify({ 
+        message: "Lyric logged and song seeds updated successfully.",
+        songSeeds: newSongSeeds
+      }),
     };
   } catch (error: any) {
     console.error(error);

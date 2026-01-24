@@ -1,5 +1,5 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import type { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
+import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from "aws-lambda";
 import { Resource } from "sst";
 import { getEmbedding, upsertToPinecone, getFile, createOrUpdateFile, queryPinecone } from "./utils";
 import { Octokit } from "@octokit/rest";
@@ -63,12 +63,15 @@ async function customAppendToFile(path: string, content: string, message: string
   });
 }
 
-export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+export async function handler(event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> {
   try {
-    // API Key Authentication
-    const authHeader = event.headers.authorization;
+    // Authentication: Support both API Key (legacy/server) and Cognito JWT (client)
+    const authHeader = event.headers?.authorization || event.headers?.Authorization;
     const expectedApiKey = `Bearer ${Resource.INGEST_API_KEY.value}`;
-    if (authHeader !== expectedApiKey) {
+    const isApiKeyValid = authHeader === expectedApiKey;
+    const isCognitoValid = !!event.requestContext.authorizer?.jwt;
+
+    if (!isApiKeyValid && !isCognitoValid) {
       return { statusCode: 401, body: JSON.stringify({ message: "Unauthorized" }) };
     }
 
@@ -197,7 +200,10 @@ ${contextEntries}
 
     return {
       statusCode: 200,
-      body: JSON.stringify({ message: "Biography entry processed and Life Log updated successfully." }),
+      body: JSON.stringify({ 
+        message: "Biography entry processed and Life Log updated successfully.",
+        analysis: newLifeLogContent
+      }),
     };
   } catch (error: any) {
     console.error(error);

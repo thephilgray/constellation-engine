@@ -1,5 +1,5 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import type { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
+import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from "aws-lambda";
 import { Resource } from "sst";
 import { getEmbedding, upsertToPinecone, appendToFile, getFile, createOrUpdateFile, queryPinecone, sanitizeMarkdown } from "./utils";
 
@@ -33,12 +33,15 @@ const STORY_BIBLE_TEMPLATE = `# 📖 Story Bible
 (Fragments, Dialogue snippets)
 `;
 
-export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+export async function handler(event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> {
   try {
-    // API Key Authentication
-    const authHeader = event.headers.authorization;
+    // Authentication: Support both API Key (legacy/server) and Cognito JWT (client)
+    const authHeader = event.headers?.authorization || event.headers?.Authorization;
     const expectedApiKey = `Bearer ${Resource.INGEST_API_KEY.value}`;
-    if (authHeader !== expectedApiKey) {
+    const isApiKeyValid = authHeader === expectedApiKey;
+    const isCognitoValid = !!event.requestContext.authorizer?.jwt;
+
+    if (!isApiKeyValid && !isCognitoValid) {
       return { statusCode: 401, body: JSON.stringify({ message: "Unauthorized" }) };
     }
 
@@ -165,7 +168,10 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
 
     return {
       statusCode: 200,
-      body: JSON.stringify({ message: "Fiction entry processed successfully." }),
+      body: JSON.stringify({ 
+        message: "Fiction entry processed successfully.",
+        storyBible: newBibleContent
+      }),
     };
   } catch (error: any) {
     console.error("Error in fiction handler:", error);
