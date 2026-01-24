@@ -22,12 +22,15 @@ const initialLifeLogContent = `# 🧬 Life Log: The Current Chapter
 - **Focus:** Just getting started.
 - **Active Themes:** Setting up the system.
 
-## 🕯️ Recovered Memories
-*(No memories logged yet.)*
-
 ## 💓 The Daily Pulse
 - 
-*${new Date().toISOString().split('T')[0]}:* The story begins here. The user has just initialized their Life Log, ready to capture the unfolding journey of their life.`;
+*${new Date().toISOString().split('T')[0]}:* System initialization.
+
+## 📖 The Narrative Arc
+The story begins here. The user has just initialized their Life Log, ready to capture the unfolding journey of their life.
+
+## 🕯️ Recovered Memories
+*(No memories logged yet.)*`;
 
 interface AsyncPayload {
     content?: string;
@@ -127,24 +130,31 @@ export async function handler(event: AsyncPayload) {
     ${lifeLogContent}
 
     **Instructions for Updates:**
-
+    
     1.  **## 📊 State of Mind:** 
         - Update **Mood** and **Focus** based on the *New Entry* and the *Recent History* (last 7 days).
         - Update **Active Themes**: Consolidate themes to reduce visual bloat. If a theme is no longer relevant, remove it. Add new themes that emerge from this entry.
 
-    2.  **## 🕯️ Recovered Memories:**
-        - ONLY update this if the New Entry is a 'MEMORY'. 
-        - If it is, add a concise summary of the memory.
-        - Do NOT prefix entries with "[Current]".
-        - Limit the total number of memories in this list to **6-8 items max**. Prune the oldest or least relevant ones if needed.
-
-    3.  **## 💓 The Daily Pulse:**
+    2.  **## 💓 The Daily Pulse:**
         - This section is a chronological log of the *Last 5 Active Days*.
         - **Source of Truth:** Use the **Recent History** provided above to build this list.
         - **Format:** "- **YYYY-MM-DD:** [Summary of all entries for this day]"
         - Ensure every date in the "Recent History" (up to the last 5) is represented.
         - Do NOT use "**Today:**". Always use the specific date.
         - Do NOT include dates that are not in the Recent History (unless they are already in the dashboard and you are just appending, but prefer to refresh the list based on the history).
+
+    3.  **## 📖 The Narrative Arc:**
+        - This is the MOST IMPORTANT section for the user's story.
+        - Write a 1-2 paragraph narrative summary of the *current chapter* in the user's life.
+        - Synthesize the **Recent History**, the **New Entry**, and the **State of Mind** into a cohesive story.
+        - Write in the style of a thoughtful autobiography or journal (third-person "The user..." or first-person as requested, but implied third-person "The Biographer" voice is standard).
+        - Capture the *feeling* and *significance* of the recent events, not just a list of what happened.
+
+    4.  **## 🕯️ Recovered Memories:**
+        - ONLY update this if the New Entry is a 'MEMORY'. 
+        - If it is, add a concise summary of the memory.
+        - Do NOT prefix entries with "[Current]".
+        - Limit the total number of memories in this list to **6-8 items max**. Prune the oldest or least relevant ones if needed.
 
     **Output:**
     - Return the **FULL** Markdown file content.
@@ -163,6 +173,7 @@ export async function handler(event: AsyncPayload) {
     **Instructions:**
     1.  **Review & Polish:** Fix any typos, awkward phrasing, or formatting inconsistencies.
     2.  **Ensure Format Compliance:**
+        - **"## 📖 The Narrative Arc"** should be a cohesive 1-2 paragraph story summarizing the recent history.
         - "The Daily Pulse" should use "- **YYYY-MM-DD:** [Summary]" format.
         - Ensure "The Daily Pulse" accurately reflects the **Recent History** dates.
         - "Recovered Memories" should NOT have "[Current]" prefixes and be limited to 6-8 items.
