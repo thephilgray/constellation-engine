@@ -15,23 +15,19 @@ const PINECONE_INDEX_NAME = "brain-dump";
 const BIOGRAPHY_NAMESPACE = "biography";
 const LIFE_LOG_PATH = "00_Life_Log.md";
 
-const initialLifeLogContent = `# 🧬 Life Log
-*The running history of past and present.*
+const initialLifeLogContent = `# 🧬 Life Log: The Current Chapter
+*A living snapshot of where you are right now.*
 
-## 📅 The Daily Pulse
-(Last 7 days of journal summaries)
+## 📊 State of Mind
+- **Mood:** Neutral
+- **Focus:** Just getting started.
+- **Active Themes:** Setting up the system.
 
-## 📉 Current Mood / Headspace
-(What is occupying your mind *right now*)
+## 📖 The Narrative (Latest Chapter)
+The story begins here. The user has just initialized their Life Log, ready to capture the unfolding journey of their life.
 
-## 🕰️ Recovered Memories
-(Recently logged memories from the past)
-
-## 🏆 Life Milestones & Eras
-(Timeline of major events)
-
-## 🧵 Recurring Themes
-(Patterns across your life)`;
+## 🕯️ Recovered Memories
+*(No memories logged yet.)*`;
 
 async function customAppendToFile(path: string, content: string, message: string) {
   let existingContent = "";
@@ -115,7 +111,7 @@ export async function handler(event: APIGatewayProxyEventV2): Promise<APIGateway
       await customAppendToFile(memoryPath, contentWithHeader, `memory: ${isoDate}`);
     }
 
-    // 4. The "Biographer" Logic (Gemini 2.5 Flash)
+    // 4. The "Biographer" Logic (Gemini 2.0 Flash)
     // Step A: Recall
     const similarEntries = await queryPinecone(PINECONE_INDEX_NAME, vector, 5, BIOGRAPHY_NAMESPACE);
     const contextEntries = similarEntries.matches
@@ -128,70 +124,44 @@ export async function handler(event: APIGatewayProxyEventV2): Promise<APIGateway
         lifeLogContent = initialLifeLogContent;
     }
 
-    let systemPrompt: string;
-    switch (tag) {
-      case 'JOURNAL':
-        systemPrompt = `You are a Daily Reflector.
-1. **Reflect:** Briefly identify the mood and key events of this entry.
-2. **Update Dashboard:**
-   - Update 
-## 📅 The Daily Pulse
-: Add a 1-line summary of today's vibe.
-   - Update 
-## 📉 Current Mood
-: Adjust the sentiment tracker based on this entry.
+    const systemPrompt = `
+    You are The Biographer. You are rewriting the current chapter of the user's autobiography based on a new event.
 
-**Current Life Log:**
-${lifeLogContent}
+    **Goal:** Update the "Life Log" to reflect the user's *current* state of mind and weave the new entry into a cohesive narrative. 
+    **Do NOT just append text.** Reformulate the existing text to flow naturally with the new information.
 
-**New Journal Entry:**
-"${content}"
+    **Input Data:**
+    - **Current Date:** ${isoDate}
+    - **New Entry (${tag}):** "${content}"
+    - **Context (Similar Past Entries):** \n${contextEntries}
 
-**Context from similar entries:**
-${contextEntries}
+    **Current Dashboard State:**
+    ${lifeLogContent}
 
-**Instructions:**
-- Integrate the new entry's themes into the existing Life Log.
-- Update the "The Daily Pulse" and "Current Mood / Headspace" sections.
-- Keep the analysis concise.
-- Maintain the markdown structure.
-- CRITICAL: The output must be RAW MARKDOWN ONLY. Do not wrap the output in \`\`\`markdown \`\`\` code blocks.`;
-        break;
-      case 'MEMORY':
-        systemPrompt = `You are a Family Archivist.
-1. **Analyze:** Identify the people, the era (childhood, college, etc.), and the lesson.
-2. **Update Dashboard:**
-   - Add to 
-## 🕰️ Recovered Memories
-: 
-[Era] - [Summary]
-.
-   - Update 
-## 🏆 Life Milestones
- if this is a significant event.
-   - Update 
-## 🧵 Recurring Themes
- if this connects to other entries in the Context."
+    **Instructions for Updates:**
 
-**Current Life Log:**
-${lifeLogContent}
+    1.  **## 📊 State of Mind:** 
+        - Update **Mood** and **Focus** to match the *new entry*.
+        - Update **Active Themes**: If a theme from the past is no longer relevant, remove it. Add new themes that emerge from this entry.
 
-**New Memory:**
-"${content}"
+    2.  **## 📖 The Narrative (Latest Chapter):**
+        - This section should read like a story (3-4 paragraphs max).
+        - **Rewrite** this section to include the events/thoughts from the New Entry.
+        - Connect it to the recent past (existing text). 
+        - If the narrative is getting too long, summarize the oldest details and focus on the "now".
+        - Use a third-person or first-person perspective consistently (match the existing style).
 
-**Context from similar entries:**
-${contextEntries}
+    3.  **## 🕯️ Recovered Memories:**
+        - ONLY update this if the New Entry is a 'MEMORY'. 
+        - If it is, add a concise summary of the memory.
+        - If not, keep the existing memories (unless they are very old/stale, then you can prune them).
 
-**Instructions:**
-- Integrate the new memory's themes and symbols into the existing Life Log.
-- Update the "Recovered Memories", "Life Milestones & Eras", and "Recurring Themes" sections.
-- Keep the analysis concise and focused on symbolic meaning.
-- Maintain the markdown structure.
-- CRITICAL: The output must be RAW MARKDOWN ONLY. Do not wrap the output in \`\`\`markdown \`\`\` code blocks.`;
-        break;
-    }
+    **Output:**
+    - Return the **FULL** Markdown file content.
+    - Do not use markdown code blocks (\`\`\`markdown).
+    `;
 
-    const generativeModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    const generativeModel = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
     const result = await generativeModel.generateContent(systemPrompt);
     const newLifeLogContent = result.response.text();
 
