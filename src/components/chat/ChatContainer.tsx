@@ -4,10 +4,12 @@ import { getCurrentUser, fetchAuthSession, signOut } from "aws-amplify/auth";
 import { MessageList } from "./MessageList";
 import { ChatInput } from "./ChatInput";
 import { Login } from "./Login";
+import { DashboardViewer } from "../dashboard/DashboardViewer";
 import type { MessageProps } from "./Message";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { API_URL } from "@/lib/amplify";
+import { LayoutDashboard } from "lucide-react";
 
 export const ChatContainer: React.FC = () => {
   const [messages, setMessages] = useState<MessageProps[]>([
@@ -16,6 +18,7 @@ export const ChatContainer: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isAuthChecking, setIsAuthChecking] = useState(true);
+  const [showDashboard, setShowDashboard] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -190,12 +193,18 @@ Here is how you can use the system:
     <div className="flex justify-center items-center h-screen bg-neutral-100 dark:bg-neutral-900 p-4">
       <Card className="w-full max-w-2xl h-[80vh] flex flex-col shadow-xl relative">
         <div className="p-4 border-b font-semibold text-lg flex justify-between items-center">
-          <span>Constellation Chat</span>
+          <div className="flex items-center gap-2">
+            <span>Constellation Chat</span>
+            <Button variant="ghost" size="icon" onClick={() => setShowDashboard(true)} title="Open Office">
+                <LayoutDashboard className="w-5 h-5" />
+            </Button>
+          </div>
           <Button variant="ghost" size="sm" onClick={handleLogout}>Sign Out</Button>
         </div>
         <MessageList messages={messages} isLoading={isLoading} />
         <ChatInput onSend={handleSend} isLoading={isLoading} />
       </Card>
+      {showDashboard && <DashboardViewer onClose={() => setShowDashboard(false)} />}
     </div>
   );
 };

@@ -291,6 +291,18 @@ export default $config({
       },
     });
 
+    api.route("GET /dashboard", {
+      handler: "src/functions/dashboard.handler",
+      link: [GITHUB_TOKEN, GITHUB_OWNER, GITHUB_REPO],
+      timeout: "30 seconds",
+    }, {
+      auth: {
+        jwt: {
+          authorizer: authorizer.id,
+        },
+      },
+    });
+
     // DEPLOY FRONTEND
     const site = new sst.aws.Astro("Web", {
       link: [api, auth, webClient], // Link API and Auth to the frontend
