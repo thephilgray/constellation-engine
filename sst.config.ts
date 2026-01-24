@@ -187,6 +187,13 @@ export default $config({
     });
     // LIBRARIAN WORKFLOW END
 
+    // ASYNC WORKERS
+    const biographerAsync = new sst.aws.Function("BiographerAsync", {
+        handler: "src/biographerAsync.handler",
+        link: [GEMINI_API_KEY, PINECONE_API_KEY, PINECONE_INDEX_HOST, GITHUB_TOKEN, GITHUB_OWNER, GITHUB_REPO, INGEST_API_KEY, table, bucket],
+        timeout: "120 seconds", // Give it plenty of time
+    });
+
     // Fix: Function URL does not support JWT authorizer directly. 
     // We switch to ApiGatewayV2 (HTTP API) to enable JWT Auth via Cognito.
     const api = new sst.aws.ApiGatewayV2("IngestApi");
@@ -241,8 +248,8 @@ export default $config({
 
     api.route("POST /reflect", {
       handler: "src/biographer.handler",
-      link: [GEMINI_API_KEY, PINECONE_API_KEY, PINECONE_INDEX_HOST, GITHUB_TOKEN, GITHUB_OWNER, GITHUB_REPO, INGEST_API_KEY, table, bucket],
-      timeout: "60 seconds",
+      link: [GEMINI_API_KEY, PINECONE_API_KEY, PINECONE_INDEX_HOST, GITHUB_TOKEN, GITHUB_OWNER, GITHUB_REPO, INGEST_API_KEY, table, bucket, biographerAsync],
+      timeout: "30 seconds",
     }, {
       auth: {
         jwt: {

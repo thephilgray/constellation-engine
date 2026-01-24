@@ -6,45 +6,24 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import type { ConstellationRecord, IntentRouterOutput, PineconeMetadata } from "../src/lib/schemas";
 import KSUID from "ksuid";
 import { getEmbedding } from "../src/utils";
+import { Resource } from "sst";
 
 // --- CONFIGURATION ---
-// In SST v3 `sst shell`, secrets are passed as JSON strings in `SST_RESOURCE_*`.
-function getSecret(name: string): string {
-  const envVar = process.env[`SST_RESOURCE_${name}`];
-  if (!envVar) return "";
-  try {
-    const parsed = JSON.parse(envVar);
-    return parsed.value || "";
-  } catch (e) {
-    return envVar; // Fallback if not JSON
-  }
-}
-
-function getResource(name: string): string {
-    const envVar = process.env[`SST_RESOURCE_${name}`];
-    if (!envVar) return "";
-    try {
-      const parsed = JSON.parse(envVar);
-      return parsed.name || "";
-    } catch (e) {
-      return envVar;
-    }
-}
-
-const GITHUB_TOKEN = getSecret("GITHUB_TOKEN");
-const GITHUB_REPO_OWNER = getSecret("GITHUB_OWNER");
-const GITHUB_REPO_NAME = getSecret("GITHUB_REPO");
-const GEMINI_API_KEY = getSecret("GEMINI_API_KEY");
-const PINECONE_API_KEY = getSecret("PINECONE_API_KEY");
-const PINECONE_INDEX_HOST = getSecret("PINECONE_INDEX_HOST");
-const DYNAMODB_TABLE_NAME = getResource("UnifiedLake");
-const AWS_REGION = "us-east-1";
+// Access resources directly from the SST Resource object
+const GITHUB_TOKEN = Resource.GITHUB_TOKEN.value;
+const GITHUB_REPO_OWNER = Resource.GITHUB_OWNER.value;
+const GITHUB_REPO_NAME = Resource.GITHUB_REPO.value;
+const GEMINI_API_KEY = Resource.GEMINI_API_KEY.value;
+const PINECONE_API_KEY = Resource.PINECONE_API_KEY.value;
+const PINECONE_INDEX_HOST = Resource.PINECONE_INDEX_HOST.value;
+const DYNAMODB_TABLE_NAME = Resource.UnifiedLake.name;
+const AWS_REGION = "us-east-1"; // Hardcoded for now, can be made dynamic if needed
 
 // Validate
 if (!GITHUB_TOKEN || !GITHUB_REPO_OWNER || !GITHUB_REPO_NAME || !GEMINI_API_KEY || !PINECONE_API_KEY || !DYNAMODB_TABLE_NAME) {
   throw new Error(
-    "One or more required environment variables are missing. " +
-    "Ensure you are running this script with `sst run` and that all secrets are configured."
+    "One or more required resources could not be loaded. " +
+    "Ensure you are running this script with `sst shell` and that all secrets are configured."
   );
 }
 
@@ -55,7 +34,7 @@ const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
 const PINECONE_INDEX_NAME = "brain-dump"; // Assuming this is your index name
 
-// Set Host for Serverless
+// Set Host for Serverless - this is still necessary for the Pinecone client to pick it up
 process.env.PINECONE_INDEX_HOST = PINECONE_INDEX_HOST;
 
 const INTENT_ROUTER_PROMPT = `
@@ -134,7 +113,7 @@ async function fetchLegacyFiles(): Promise<{ path: string, content: string }[]> 
     }
   }
 
-  await traverse("_Archive"); // Start from _Archive or root as needed
+  await traverse(""); // Start from the root of the repo
   console.log(`Found ${files.length} markdown files.`);
   return files;
 }
@@ -149,6 +128,12 @@ export async function runLazarusMigration() {
   for (const file of legacyFiles) {
     console.log(`Migrating: ${file.path}`);
     try {
+      // 0. Validate Content
+      if (!file.content || !file.content.trim()) {
+        console.log(`  -> SKIPPING: Content is empty.`);
+        continue;
+      }
+
       // 1. Process Content
       const metadata = await generateUnifiedMetadata(file.content);
       const id = (await KSUID.random()).string;
@@ -165,12 +150,12 @@ export async function runLazarusMigration() {
         updatedAt: now,
         lastAccessed: now,
         content: metadata.content,
-        isOriginal: metadata.isOriginal,
+        isOriginal: metadata.isOriginal ?? false, // Ensure boolean
         sourceURL: metadata.sourceURL || undefined,
         sourceTitle: metadata.sourceTitle || undefined,
         sourceAuthor: metadata.sourceAuthor || undefined,
-        mediaType: metadata.mediaType,
-        tags: metadata.tags,
+        mediaType: metadata.mediaType || "text",
+        tags: metadata.tags || [],
         skipBackup: true,
       };
       
@@ -186,10 +171,10 @@ export async function runLazarusMigration() {
       const pineconeMetadata: PineconeMetadata = {
         id,
         userId,
-        isOriginal: metadata.isOriginal,
-        mediaType: metadata.mediaType,
+        isOriginal: metadata.isOriginal ?? false, // Ensure boolean (no nulls for Pinecone)
+        mediaType: metadata.mediaType || "text",
         createdAt: now,
-        tags: metadata.tags,
+        tags: metadata.tags || [],
       };
 
       await index.upsert([

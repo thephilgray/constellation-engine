@@ -13,6 +13,10 @@ declare module "sst" {
       "id": string
       "type": "sst.aws.CognitoUserPool"
     }
+    "BiographerAsync": {
+      "name": string
+      "type": "sst.aws.Function"
+    }
     "DialecticalLibrarian": {
       "arn": string
       "type": "sst.aws.StepFunctions"

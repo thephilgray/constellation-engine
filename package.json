@@ -11,6 +11,7 @@
   "dependencies": {
     "@astrojs/react": "^4.4.2",
     "@aws-sdk/client-dynamodb": "^3.974.0",
+    "@aws-sdk/client-lambda": "^3.975.0",
     "@aws-sdk/client-sfn": "^3.958.0",
     "@aws-sdk/lib-dynamodb": "^3.974.0",
     "@aws-sdk/util-dynamodb": "^3.974.0",
