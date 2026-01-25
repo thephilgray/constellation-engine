@@ -26,18 +26,23 @@ The core architecture is unified. Now we focus on long-term sustainability (arch
 
 **Prioritized Tasks:**
 
-1.  **Archive Strategy (Pruning) - NEXT:**
+1.  **CRITICAL BUG: Reading Dashboard Conflict - NEXT:**
+    *   **Issue:** The `/read` command (Dialectical Librarian) and the "Log Reading" feature (`src/librarian/logBook.ts`) generate incompatible dashboard formats. They overwrite each other instead of merging.
+    *   **Symptom:** `/read` generates a fresh "Dialectical Librarian Recommendations" file, wiping out the "Current Reading" and "Archive" sections maintained by the logging feature.
+    *   **Fix:** Refactor `src/librarian/synthesizeInsights.ts` (or `persistRecs.ts`) to *fetch* the existing `reading_list` dashboard and *merge* the new recommendations into the "## 🌟 Top Recommendations" section, strictly preserving the "Current Reading" and "Archive" sections.
+
+2.  **Archive Strategy (Pruning):**
     *   **Problem:** Dashboards like "Life Log" (Daily Pulse) and "Reading List" (Archive) will grow indefinitely.
     *   **Goal:** Implement a periodic "Gardener" job (or extend existing agents) to move old items from the Dashboard *content* (Markdown) into a separate "Archive" file/record, keeping the main dashboard fresh and lightweight.
     *   *Note:* The `githubBackup` worker already saves individual entries to `Archive/YYYY/MM`, but the *Dashboards* themselves need content pruning.
 
-2.  **Voice Interface:**
+3.  **Voice Interface:**
     *   **Goal:** Add a microphone button to the Chat UI.
     *   **Status:** Backend ready (`mediaType: 'audio'`), frontend implementation needed.
 
-3.  **Frontend Polish:**
+4.  **Frontend Polish:**
     *   **Dashboards:** Render Markdown with proper styling (currently raw text/simple markdown).
     *   **Tabs:** Consider a tabbed view for switching between Chat and specific Dashboards (Life Log, Ideas, Books) instead of a single modal.
 
 **Immediate Next Step:**
-Start with **Task 1 (Archive Strategy)**. Design a standard "pruning" mechanism. For example, when `biographerAsync` runs, if "The Daily Pulse" has > 10 items, move the oldest to `DASHBOARD#life_log_archive_2026` (or similar).
+Start with **Task 1 (Reading Dashboard Conflict)**. We must ensure that generating recommendations does not destroy the user's manual reading logs. Verify the merging logic in `persistRecs.ts` or `synthesizeInsights.ts`.
