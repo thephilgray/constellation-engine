@@ -117,12 +117,7 @@ export default $config({
           sort: "{% $states.input.sort %}",
           rationale: "{% $states.input.rationale %}"
         }
-      }),
-      output: {
-        "fetchContextResult": "{% $states.input.fetchContextResult %}",
-        "strategicAnalysisResult": "{% $states.input.strategicAnalysisResult %}",
-        "mapResult": "{% $states.result %}"
-      }
+      })
     });
 
     const fetchArticlesState = sst.aws.StepFunctions.lambdaInvoke({
@@ -135,7 +130,8 @@ export default $config({
             "existingUrls": "{% $states.input.fetchContextResult.allIngestedUrls %}"
         },
         output: {
-            "articles": "{% $states.result.Payload %}"
+            "articles": "{% $states.result.Payload %}",
+            "recentEntries": "{% $states.input.fetchContextResult.recentEntries %}"
         }
     });
 
@@ -149,9 +145,9 @@ export default $config({
       name: "SynthesizeInsights",
       function: librarianFunctions.synthesizeInsights,
       payload: {
-        "books": "{% $states.input[0].mapResult %}",
+        "mapResult": "{% $states.input[0] %}",
         "articles": "{% $states.input[1].articles %}",
-        "recentEntries": "{% $states.input[0].fetchContextResult.recentEntries %}"
+        "recentEntries": "{% $states.input[1].recentEntries %}"
       },
        output: {
         "insightsResult": "{% $states.result.Payload %}",
