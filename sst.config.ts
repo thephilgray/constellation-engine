@@ -81,7 +81,7 @@ export default $config({
       }),
       persistRecs: new sst.aws.Function("LibrarianPersistRecs", {
         handler: "src/librarian/persistRecs.handler",
-        link: [GITHUB_TOKEN, GITHUB_OWNER, GITHUB_REPO, table],
+        link: [GITHUB_TOKEN, GITHUB_OWNER, GITHUB_REPO, table, GEMINI_API_KEY],
         timeout: "30 seconds",
       }),
     };
