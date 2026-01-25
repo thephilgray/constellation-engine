@@ -1,15 +1,18 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from "aws-lambda";
 import { Resource } from "sst";
-import { getEmbedding, upsertToPinecone, appendToFile, getFile, createOrUpdateFile, queryPinecone, sanitizeMarkdown } from "./utils";
+import { getEmbedding, upsertToPinecone, queryPinecone, sanitizeMarkdown } from "./utils";
+import { saveRecord, getRecord } from "./lib/dynamo";
+import type { ConstellationRecord } from "./lib/schemas";
+import KSUID from "ksuid";
 
 // Initialize Gemini client
 const genAI = new GoogleGenerativeAI(Resource.GEMINI_API_KEY.value);
 
 const PINECONE_INDEX_NAME = "brain-dump";
-const SONG_SEEDS_PATH = "00_Song_Seeds.md";
 const LYRICS_NAMESPACE = "lyrics";
-const LYRICS_FOLDER = "Lyrics/Snippets";
+const DASHBOARD_PK = "DASHBOARD#song_seeds";
+const DASHBOARD_SK = "STATE";
 
 const INITIAL_SONG_SEEDS_CONTENT = `# 🎵 Song Seeds
 *Waiting for inspiration...*
@@ -39,6 +42,9 @@ export async function handler(event: APIGatewayProxyEventV2): Promise<APIGateway
       return { statusCode: 401, body: JSON.stringify({ message: "Unauthorized" }) };
     }
 
+    // Extract User ID
+    const userId = event.requestContext.authorizer?.jwt?.claims?.sub as string || "default-user";
+
     if (!event.body) {
       return { statusCode: 400, body: JSON.stringify({ message: "Request body is empty." }) };
     }
@@ -51,18 +57,32 @@ export async function handler(event: APIGatewayProxyEventV2): Promise<APIGateway
 
     const timestamp = Date.now();
     const date = new Date(timestamp);
-    const yearMonth = date.toISOString().slice(0, 7); // YYYY-MM
+    const isoDate = date.toISOString();
+    const entryId = (await KSUID.random()).string;
 
     await upsertToPinecone(
       PINECONE_INDEX_NAME,
-      `lyric-${timestamp}`,
+      entryId,
       vector,
-      { text: newLyric, timestamp },
+      { text: newLyric, timestamp, userId },
       LYRICS_NAMESPACE
     );
 
-    const lyricArchivePath = `${LYRICS_FOLDER}/${yearMonth}.md`;
-    await appendToFile(lyricArchivePath, newLyric, `lyric: ${yearMonth}`);
+    // Save Entry to DynamoDB
+    const entryRecord: ConstellationRecord = {
+        PK: `USER#${userId}`,
+        SK: `ENTRY#${entryId}`,
+        id: entryId,
+        type: "Entry",
+        createdAt: isoDate,
+        updatedAt: isoDate,
+        content: newLyric,
+        isOriginal: true,
+        mediaType: "text",
+        tags: ["lyrics"],
+        lastAccessed: isoDate,
+    };
+    await saveRecord(entryRecord);
 
     // 3. Recall (Context)
     const similarLyrics = await queryPinecone(PINECONE_INDEX_NAME, vector, 15, LYRICS_NAMESPACE);
@@ -71,16 +91,11 @@ export async function handler(event: APIGatewayProxyEventV2): Promise<APIGateway
       .join("\n");
 
     // 4. Synthesize (The Songwriter Persona)
-    let currentSongSeeds = "";
-    try {
-        const file = await getFile(SONG_SEEDS_PATH);
-        currentSongSeeds = file.content;
-    } catch (error) {
-        // If the file does not exist, initialize it.
-        await createOrUpdateFile(SONG_SEEDS_PATH, INITIAL_SONG_SEEDS_CONTENT, "feat: Initialize Song Seeds");
-        currentSongSeeds = INITIAL_SONG_SEEDS_CONTENT;
+    let currentSongSeeds = INITIAL_SONG_SEEDS_CONTENT;
+    const existingDashboard = await getRecord(DASHBOARD_PK, DASHBOARD_SK);
+    if (existingDashboard && existingDashboard.content) {
+        currentSongSeeds = existingDashboard.content;
     }
-
 
     const systemPrompt = `You are an expert Songwriting Assistant.
 
@@ -110,8 +125,20 @@ IMPORTANT: Output RAW markdown only. Do not wrap the output in markdown code blo
     // 🧹 SANITIZE: Remove the wrapping ```markdown blocks
     newSongSeeds = sanitizeMarkdown(newSongSeeds);
 
-    // 5. Update
-    await createOrUpdateFile(SONG_SEEDS_PATH, newSongSeeds, "chore: Update song seeds");
+    // 5. Update Dashboard in DynamoDB
+    const dashboardRecord: ConstellationRecord = {
+        PK: DASHBOARD_PK as any,
+        SK: DASHBOARD_SK as any,
+        id: "song_seeds",
+        type: "Dashboard",
+        createdAt: existingDashboard?.createdAt || isoDate,
+        updatedAt: isoDate,
+        content: newSongSeeds,
+        isOriginal: false,
+        mediaType: "text",
+        lastAccessed: isoDate,
+    };
+    await saveRecord(dashboardRecord);
 
     return {
       statusCode: 200,

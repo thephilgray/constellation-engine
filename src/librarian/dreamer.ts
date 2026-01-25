@@ -1,37 +1,18 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, GetCommand, PutCommand } from "@aws-sdk/lib-dynamodb";
 import { Resource } from "sst";
 import KSUID from "ksuid";
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from "aws-lambda";
-import { getEmbedding, queryPinecone, upsertToPinecone, appendToFile, createOrUpdateFile, getFile, sanitizeMarkdown } from "../utils";
+import { getEmbedding, queryPinecone, upsertToPinecone, sanitizeMarkdown } from "../utils";
+import { saveRecord, getRecord } from "../lib/dynamo";
 import type { ConstellationRecord, PineconeMetadata } from "../lib/schemas";
 
 const genAI = new GoogleGenerativeAI(Resource.GEMINI_API_KEY.value);
-const dynamoClient = DynamoDBDocumentClient.from(new DynamoDBClient({}));
-const TABLE_NAME = Resource.UnifiedLake.name;
 const PINECONE_INDEX_NAME = "brain-dump";
 
 // Constants for Dream Logging
 const DREAMS_NAMESPACE = "dreams";
-const DREAM_JOURNAL_ANALYSIS_PATH = "00_Dream_Journal_Analysis.md";
-const DREAMS_FOLDER = "Dreams";
-
-async function getRecord(userId: string, entryId: string): Promise<ConstellationRecord | null> {
-    try {
-        const response = await dynamoClient.send(new GetCommand({
-            TableName: TABLE_NAME,
-            Key: {
-                PK: `USER#${userId}`,
-                SK: `ENTRY#${entryId}`
-            }
-        }));
-        return (response.Item as ConstellationRecord) || null;
-    } catch (error) {
-        console.error(`Error fetching record ${entryId}:`, error);
-        return null;
-    }
-}
+const DASHBOARD_PK = "DASHBOARD#dream_analysis";
+const DASHBOARD_SK = "STATE";
 
 export const handler = async (event?: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2 | void> => {
     console.log("Dreamer started...");
@@ -62,18 +43,32 @@ export const handler = async (event?: APIGatewayProxyEventV2): Promise<APIGatewa
             const vector = await getEmbedding(newDream);
             const timestamp = Date.now();
             const date = new Date(timestamp);
-            const isoDate = date.toISOString().split('T')[0];
+            const isoDate = date.toISOString();
+            const entryId = (await KSUID.random()).string;
 
             await upsertToPinecone(
                 PINECONE_INDEX_NAME,
-                `dream-${timestamp}`,
+                entryId,
                 vector,
                 { text: newDream, timestamp, date: isoDate, userId: userId || "system" },
                 DREAMS_NAMESPACE
             );
 
-            const dreamArchivePath = `${DREAMS_FOLDER}/${isoDate}.md`;
-            await appendToFile(dreamArchivePath, newDream, `dream: ${isoDate}`);
+            // Save Entry to DynamoDB
+            const entryRecord: ConstellationRecord = {
+                PK: `USER#${userId || 'system'}`,
+                SK: `ENTRY#${entryId}`,
+                id: entryId,
+                type: "Entry",
+                createdAt: isoDate,
+                updatedAt: isoDate,
+                content: newDream,
+                isOriginal: true,
+                mediaType: "text",
+                tags: ["dream"],
+                lastAccessed: isoDate,
+            };
+            await saveRecord(entryRecord);
 
             // 2. Recall (Context)
             // Filter by userId if available
@@ -85,11 +80,9 @@ export const handler = async (event?: APIGatewayProxyEventV2): Promise<APIGatewa
 
             // 3. Synthesize (Gemini 2.5 Flash)
             let currentAnalysis = "";
-            try {
-                const file = await getFile(DREAM_JOURNAL_ANALYSIS_PATH);
-                currentAnalysis = file.content;
-            } catch (e) {
-                console.log("No existing analysis found.");
+            const existingDashboard = await getRecord(DASHBOARD_PK, DASHBOARD_SK);
+            if (existingDashboard && existingDashboard.content) {
+                currentAnalysis = existingDashboard.content;
             }
 
             const systemPrompt = `
@@ -120,8 +113,20 @@ export const handler = async (event?: APIGatewayProxyEventV2): Promise<APIGatewa
             // 🧹 SANITIZE
             newAnalysis = sanitizeMarkdown(newAnalysis);
 
-            // 4. Update Analysis File
-            await createOrUpdateFile(DREAM_JOURNAL_ANALYSIS_PATH, newAnalysis, "chore: Update dream journal analysis");
+            // 4. Update Analysis Dashboard in DynamoDB
+            const dashboardRecord: ConstellationRecord = {
+                PK: DASHBOARD_PK as any,
+                SK: DASHBOARD_SK as any,
+                id: "dream_analysis",
+                type: "Dashboard",
+                createdAt: existingDashboard?.createdAt || isoDate,
+                updatedAt: isoDate,
+                content: newAnalysis,
+                isOriginal: false,
+                mediaType: "text",
+                lastAccessed: isoDate,
+            };
+            await saveRecord(dashboardRecord);
 
             return {
                 statusCode: 200,
@@ -166,7 +171,7 @@ export const handler = async (event?: APIGatewayProxyEventV2): Promise<APIGatewa
         }
 
         console.log(`Selected Seed Entry: ${seedId} (User: ${seedUserId})`);
-        const seedRecord = await getRecord(seedUserId, seedId);
+        const seedRecord = await getRecord(`USER#${seedUserId}`, `ENTRY#${seedId}`);
 
         if (!seedRecord) {
             console.log("Could not fetch seed record from DynamoDB.");
@@ -205,7 +210,7 @@ export const handler = async (event?: APIGatewayProxyEventV2): Promise<APIGatewa
         const distantMatch = candidates[distantIndex];
         console.log(`Selected Distant Entry: ${distantMatch.id} (Score: ${distantMatch.score})`);
 
-        const distantRecord = await getRecord(seedUserId, distantMatch.id);
+        const distantRecord = await getRecord(`USER#${seedUserId}`, `ENTRY#${distantMatch.id}`);
 
         if (!distantRecord) {
             console.log("Could not fetch distant record from DynamoDB.");
@@ -258,10 +263,7 @@ export const handler = async (event?: APIGatewayProxyEventV2): Promise<APIGatewa
             lastAccessed: now
         };
 
-        await dynamoClient.send(new PutCommand({
-            TableName: TABLE_NAME,
-            Item: sparkRecord
-        }));
+        await saveRecord(sparkRecord);
 
         const sparkVector = await getEmbedding(sparkContent);
         const pineconeMetadata: PineconeMetadata = {

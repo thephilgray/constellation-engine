@@ -40,6 +40,18 @@ export const handler = async (event: DynamoDBStreamEvent) => {
                  filePath = "00_Book_Recommendations.md";
                  fileContent = item.content;
                  console.log(`Updating Dashboard: ${filePath}`);
+             } else if (item.id === 'story_bible') {
+                 filePath = "00_Story_Bible.md";
+                 fileContent = item.content;
+                 console.log(`Updating Dashboard: ${filePath}`);
+             } else if (item.id === 'song_seeds') {
+                 filePath = "00_Song_Seeds.md";
+                 fileContent = item.content;
+                 console.log(`Updating Dashboard: ${filePath}`);
+             } else if (item.id === 'dream_analysis') {
+                 filePath = "00_Dream_Journal_Analysis.md";
+                 fileContent = item.content;
+                 console.log(`Updating Dashboard: ${filePath}`);
              } else {
                  console.log(`Skipping unknown dashboard id: ${item.id}`);
                  continue;

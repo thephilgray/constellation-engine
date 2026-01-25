@@ -1,15 +1,18 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from "aws-lambda";
 import { Resource } from "sst";
-import { getEmbedding, upsertToPinecone, appendToFile, getFile, createOrUpdateFile, queryPinecone, sanitizeMarkdown } from "./utils";
+import { getEmbedding, upsertToPinecone, queryPinecone, sanitizeMarkdown } from "./utils";
+import { saveRecord, getRecord } from "./lib/dynamo";
+import type { ConstellationRecord } from "./lib/schemas";
+import KSUID from "ksuid";
 
 // Initialize Gemini client
 const genAI = new GoogleGenerativeAI(Resource.GEMINI_API_KEY.value);
 
 const PINECONE_INDEX_NAME = "brain-dump";
-const STORY_BIBLE_PATH = "00_Story_Bible.md";
 const FICTION_NAMESPACE = "fiction";
-const FICTION_FOLDER = "Fiction";
+const DASHBOARD_PK = "DASHBOARD#story_bible";
+const DASHBOARD_SK = "STATE";
 
 const STORY_BIBLE_TEMPLATE = `# 📖 Story Bible
 *The current state of the universe.*
@@ -44,6 +47,9 @@ export async function handler(event: APIGatewayProxyEventV2): Promise<APIGateway
     if (!isApiKeyValid && !isCognitoValid) {
       return { statusCode: 401, body: JSON.stringify({ message: "Unauthorized" }) };
     }
+    
+    // Extract User ID
+    const userId = event.requestContext.authorizer?.jwt?.claims?.sub as string || "default-user";
 
     if (!event.body) {
       return { statusCode: 400, body: JSON.stringify({ message: "Request body is empty." }) };
@@ -56,29 +62,33 @@ export async function handler(event: APIGatewayProxyEventV2): Promise<APIGateway
     const vector = await getEmbedding(content);
     const timestamp = Date.now();
     const date = new Date(timestamp);
-    const isoDate = date.toISOString().split('T')[0];
+    const isoDate = date.toISOString();
+    const entryId = (await KSUID.random()).string;
 
     await upsertToPinecone(
       PINECONE_INDEX_NAME,
-      `fiction-${timestamp}`,
+      entryId,
       vector,
-      { text: content, tag, timestamp, date: isoDate },
+      { text: content, tag, timestamp, date: isoDate, userId },
       FICTION_NAMESPACE
     );
 
-    // 3. Conditional File System Storage
-    const month = date.toISOString().slice(0, 7); // YYYY-MM
-    let archivePath: string;
-
-    if (tag === 'SCENE') {
-      archivePath = `${FICTION_FOLDER}/Scenes/${month}.md`;
-      const time = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
-      const sceneHeader = `## [${time}] Scene Draft`;
-      await appendToFile(archivePath, `${sceneHeader}\n${content}`, `feat: Draft new scene for ${month}`);
-    } else { // IDEA or CHARACTER
-      archivePath = `${FICTION_FOLDER}/Ideas/${month}.md`;
-      await appendToFile(archivePath, content, `feat: Add new fiction idea for ${month}`);
-    }
+    // 3. Save Entry to Unified Lake (DynamoDB)
+    // This replaces the old file-based archiving.
+    const entryRecord: ConstellationRecord = {
+        PK: `USER#${userId}`,
+        SK: `ENTRY#${entryId}`,
+        id: entryId,
+        type: "Entry",
+        createdAt: isoDate,
+        updatedAt: isoDate,
+        content: content,
+        isOriginal: true,
+        mediaType: "text",
+        tags: ["fiction", tag.toLowerCase()],
+        lastAccessed: isoDate,
+    };
+    await saveRecord(entryRecord);
 
     // 4. "Lore Keeper" Logic
     // Step A: Recall
@@ -87,17 +97,11 @@ export async function handler(event: APIGatewayProxyEventV2): Promise<APIGateway
       .map(m => `- "${m.metadata?.text}" (Tag: ${m.metadata?.tag})`)
       .join("\n");
 
-    let storyBibleContent: string;
-    try {
-      const bibleFile = await getFile(STORY_BIBLE_PATH);
-      storyBibleContent = bibleFile.content;
-    } catch (error: any) {
-      if (error.status === 404) {
-        console.log("Story Bible not found, creating a new one.");
-        storyBibleContent = STORY_BIBLE_TEMPLATE;
-      } else {
-        throw error;
-      }
+    // Fetch Story Bible from DynamoDB
+    let storyBibleContent = STORY_BIBLE_TEMPLATE;
+    const existingDashboard = await getRecord(DASHBOARD_PK, DASHBOARD_SK);
+    if (existingDashboard && existingDashboard.content) {
+        storyBibleContent = existingDashboard.content;
     }
 
     // Step B: System Prompt (Dynamic based on Tag)
@@ -163,8 +167,20 @@ export async function handler(event: APIGatewayProxyEventV2): Promise<APIGateway
     // 🧹 SANITIZE: Remove the wrapping ```markdown blocks
     newBibleContent = sanitizeMarkdown(newBibleContent);
 
-    // 5. Update Story Bible
-    await createOrUpdateFile(STORY_BIBLE_PATH, newBibleContent, "chore: Update story bible");
+    // 5. Update Story Bible in DynamoDB
+    const dashboardRecord: ConstellationRecord = {
+        PK: DASHBOARD_PK as any,
+        SK: DASHBOARD_SK as any,
+        id: "story_bible",
+        type: "Dashboard",
+        createdAt: existingDashboard?.createdAt || isoDate,
+        updatedAt: isoDate,
+        content: newBibleContent,
+        isOriginal: false,
+        mediaType: "text",
+        lastAccessed: isoDate,
+    };
+    await saveRecord(dashboardRecord);
 
     return {
       statusCode: 200,
