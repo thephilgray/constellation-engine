@@ -36,6 +36,10 @@ export const handler = async (event: DynamoDBStreamEvent) => {
                  filePath = "00_Idea_Garden.md";
                  fileContent = item.content;
                  console.log(`Updating Dashboard: ${filePath}`);
+             } else if (item.id === 'reading_list') {
+                 filePath = "00_Book_Recommendations.md";
+                 fileContent = item.content;
+                 console.log(`Updating Dashboard: ${filePath}`);
              } else {
                  console.log(`Skipping unknown dashboard id: ${item.id}`);
                  continue;

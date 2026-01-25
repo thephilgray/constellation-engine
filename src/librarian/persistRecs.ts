@@ -1,13 +1,12 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, PutCommand } from "@aws-sdk/lib-dynamodb";
+import { DynamoDBDocumentClient, PutCommand, GetCommand } from "@aws-sdk/lib-dynamodb";
 import { Resource } from "sst";
-import KSUID from "ksuid";
 import type { ConstellationRecord } from "../lib/schemas";
-import { createOrUpdateFile } from "../utils";
 
 const dynamoClient = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 const TABLE_NAME = Resource.UnifiedLake.name;
-const RECOMMENDATIONS_PATH = "00_Book_Recommendations.md";
+const DASHBOARD_PK = "DASHBOARD#reading_list";
+const DASHBOARD_SK = "STATE";
 
 export const handler = async (event: { markdownContent: string }): Promise<{ success: boolean }> => {
   const { markdownContent } = event;
@@ -17,26 +16,34 @@ export const handler = async (event: { markdownContent: string }): Promise<{ suc
   }
 
   try {
-    // 1. Update GitHub Dashboard
-    await createOrUpdateFile(RECOMMENDATIONS_PATH, markdownContent, "chore: Update reading recommendations");
-    
-    // 2. Persist to DynamoDB
-    const id = (await KSUID.random()).string;
-    const now = new Date().toISOString();
-    const userId = "SYSTEM"; 
+    // Fetch existing record to preserve createdAt if possible
+    let createdAt = new Date().toISOString();
+    try {
+        const getCmd = new GetCommand({
+            TableName: TABLE_NAME,
+            Key: { PK: DASHBOARD_PK, SK: DASHBOARD_SK }
+        });
+        const { Item } = await dynamoClient.send(getCmd);
+        if (Item && Item.createdAt) {
+            createdAt = Item.createdAt;
+        }
+    } catch (e) {
+        console.warn("Could not fetch existing dashboard:", e);
+    }
+
+    const isoDate = new Date().toISOString();
 
     const record: ConstellationRecord = {
-      PK: `USER#${userId}`,
-      SK: `ENTRY#${id}`,
-      id,
-      type: "Recommendation",
-      createdAt: now,
-      updatedAt: now,
+      PK: DASHBOARD_PK as any,
+      SK: DASHBOARD_SK as any,
+      id: "reading_list",
+      type: "Dashboard",
+      createdAt: createdAt,
+      updatedAt: isoDate,
       content: markdownContent,
-      isOriginal: true, 
+      isOriginal: false,
       mediaType: 'text',
-      tags: ['recommendations', 'librarian'],
-      lastAccessed: now,
+      lastAccessed: isoDate,
     };
 
     await dynamoClient.send(new PutCommand({
@@ -44,7 +51,7 @@ export const handler = async (event: { markdownContent: string }): Promise<{ suc
       Item: record,
     }));
 
-    console.log(`Successfully persisted recommendations to DynamoDB (ID: ${id}) and GitHub.`);
+    console.log(`Successfully persisted Reading List Dashboard to DynamoDB.`);
     return { success: true };
 
   } catch (error) {
