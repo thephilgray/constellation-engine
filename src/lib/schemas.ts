@@ -38,7 +38,7 @@ export interface PineconeMetadata {
 }
 
 export interface IntentRouterOutput {
-  intent: 'save' | 'query';
+  intent: 'save' | 'query' | 'log_reading';
   isOriginal: boolean;
   sourceURL?: string;
   sourceTitle?: string;

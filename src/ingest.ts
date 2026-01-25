@@ -7,6 +7,7 @@ import KSUID from "ksuid";
 import { getEmbedding, upsertToPinecone, queryPinecone } from "./utils";
 import { INTENT_ROUTER_SYSTEM_PROMPT, RAG_SYSTEM_PROMPT } from "./lib/prompts";
 import type { ConstellationRecord, IntentRouterOutput, PineconeMetadata } from "./lib/schemas";
+import { updateReadingList } from "./librarian/logBook";
 
 // Initialize Clients
 const genAI = new GoogleGenerativeAI(Resource.GEMINI_API_KEY.value);
@@ -144,9 +145,8 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
     }
 
     // ---------------------------------------------------------
-    // BRANCH B: SAVE (The Recorder)
+    // BRANCH B: SAVE / LOG_READING
     // ---------------------------------------------------------
-    // Default to 'save' if intent is missing or explicitly 'save'
     
     // 3. ID Generation
     const id = (await KSUID.random()).string;
@@ -201,6 +201,20 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
       vector,
       pineconeMetadata as unknown as Record<string, any>
     );
+
+    // --- SUB-BRANCH: LOG READING ---
+    if (routerOutput.intent === 'log_reading') {
+        await updateReadingList(finalContent);
+        return {
+            statusCode: 200,
+            body: JSON.stringify({
+                message: "Reading log updated successfully",
+                intent: 'log_reading',
+                id,
+                routerOutput
+            })
+        };
+    }
 
     return {
       statusCode: 200,
