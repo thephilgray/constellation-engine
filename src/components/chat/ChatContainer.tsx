@@ -59,6 +59,7 @@ export const ChatContainer: React.FC = () => {
 Here is how you can use the system:
 
 *   **Save a Note:** Just type your thought, idea, or paste an article. The system detects "saving" intent automatically.
+*   **Log Reading:** Type "I am reading [Book]" or "Finished [Book]" to automatically update your Reading List.
 *   **Ask a Question:** Ask anything! The "Incubator" will search your saved knowledge to provide an answer with citations.
 *   **Slash Commands:**
     *   \`/reflect <entry>\`: Log a journal entry and update your Life Log narrative.
@@ -166,6 +167,8 @@ Here is how you can use the system:
             if (data.intent === 'query' && data.answer) {
                  responseContent = data.answer;
                  sources = data.contextSources;
+            } else if (data.intent === 'log_reading') {
+                 responseContent = "📚 Reading List updated!";
             } else if (data.intent === 'save') {
                  responseContent = `Saved! (ID: ${data.id})`;
             } else {
