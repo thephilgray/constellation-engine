@@ -1,45 +1,43 @@
 I am building "Constellation Engine," a Second Brain application using SST v3, DynamoDB, Pinecone, and Gemini 2.5 Flash.
 
-**Current System Status (2026-01-24):**
-1.  **Unified Lake Architecture (ACHIEVED):**
-    *   **Writes:** All new entries (`/reflect`, etc.) are written directly to **DynamoDB** and indexed in **Pinecone**.
-    *   **Backups:** A DynamoDB Stream triggers a `githubBackup` worker to asynchronously save Markdown files to the GitHub repo.
-    *   **Legacy Data:** **MIGRATION COMPLETE.** All 50+ legacy Markdown files have been successfully ingested into DynamoDB and Pinecone, utilizing the `biography` namespace and correct historical dating.
-2.  **Command Center:**
-    *   **Agents:** Fully operational on Gemini 2.5 Flash.
-    *   **Reflect:** `/reflect` creates structured records in the Unified Lake.
-3.  **Dashboards:**
-    *   **Read:** Refactored `src/functions/dashboard.ts` to fetch `DASHBOARD#<type>` records from DynamoDB.
-    *   **Write:** **Refactored.** Agents (`biographerAsync`) now write generated dashboard content directly to DynamoDB (`DASHBOARD#life_log`, `STATE`).
-    *   **Backup:** The `githubBackup` worker handles backing up the dashboard state to `00_Life_Log.md` via DynamoDB Streams.
+**Current System Status (2026-01-25):**
+1.  **Unified Lake Architecture (COMPLETE):**
+    *   **Writes:** All entries (`/reflect`, `/think`, `/fic`, `/lyrics`, `/dream`, `/read`) write to **DynamoDB** and **Pinecone**.
+    *   **Dashboards:** ALL dashboards (`life_log`, `idea_garden`, `story_bible`, `song_seeds`, `dream_analysis`, `reading_list`) are now persisted as `DASHBOARD#<type>` records in DynamoDB.
+    *   **Backups:** `src/workers/githubBackup.ts` handles backing up *all* dashboards to their respective Markdown files in the repo (`00_Story_Bible.md`, etc.), decoupled from the write path.
+    *   **Legacy:** All legacy file-based writes in handlers (`philosopher`, `fiction`, `lyrics`, `dreamer`) have been replaced with DynamoDB calls.
+
+2.  **Reading List & Librarian:**
+    *   **Dialectical Librarian:** Fixed Step Function data mapping (Parallel state output) and `GEMINI_API_KEY` linking. `/read` command now correctly synthesizes book recommendations.
+    *   **Log Reading:** Implemented `log_reading` intent. Users can chat "I am reading [Book]" to automatically update the "Current Reading" section of the dashboard via `src/librarian/logBook.ts`.
+
+3.  **Command Center:**
+    *   **Help:** Updated `/help` to include new commands and the "Log Reading" feature.
+    *   **Feedback:** Chat UI provides specific feedback ("Reading List updated!", "Saved!", etc.).
 
 **The Goal for This Session:**
-"Dashboard Optimization & Unification."
-With the data foundation solid and fully migrated, we must now ensure the "View" layer is as fast and robust as the "Data" layer.
+"System Refinement & Archival."
+The core architecture is unified. Now we focus on long-term sustainability (archiving/pruning) and interaction polish.
 
-**Potential Tasks:**
+**Completed Tasks:**
+1.  **Unified Dashboard Read/Write:** Refactored all 6 agents/handlers to use DynamoDB.
+2.  **Dashboard Content Intelligence:** "Life Log" and "Idea Garden" use recent history context. "Reading List" is updateable via natural language.
+3.  **Infrastructure Fixes:** Resolved Step Function and Lambda config issues for the Librarian workflow.
 
-1.  **Unified Dashboard Read (COMPLETE):**
-    *   **Refactored:** `dashboard.ts` now fetches from DynamoDB.
-    *   **Schema:** Added support for `DASHBOARD#` PK and `Dashboard` type in `schemas.ts`.
-    *   **Infra:** Updated `sst.config.ts` to link the table to the dashboard endpoint.
+**Prioritized Tasks:**
 
-2.  **Unified Dashboard Write (COMPLETE):**
-    *   **Action:** Updated `src/biographerAsync.ts` to read/write `DASHBOARD#life_log` from DynamoDB.
-    *   **Action:** Updated `src/workers/githubBackup.ts` to handle `Dashboard` type and update `00_Life_Log.md`.
-    *   **Result:** Dashboards are now fully decoupled from synchronous GitHub API calls.
+1.  **Archive Strategy (Pruning) - NEXT:**
+    *   **Problem:** Dashboards like "Life Log" (Daily Pulse) and "Reading List" (Archive) will grow indefinitely.
+    *   **Goal:** Implement a periodic "Gardener" job (or extend existing agents) to move old items from the Dashboard *content* (Markdown) into a separate "Archive" file/record, keeping the main dashboard fresh and lightweight.
+    *   *Note:* The `githubBackup` worker already saves individual entries to `Archive/YYYY/MM`, but the *Dashboards* themselves need content pruning.
 
-3.  **Dashboard Content Intelligence (Refinement) (COMPLETE):**
-    *   **Action:** Implemented `queryRecentEntries` in `dynamo.ts` to fetch "last 5 active days".
-    *   **Action:** Updated `biographerAsync.ts` to inject recent history into the prompt.
-    *   **Result:** "Daily Pulse" and "State of Mind" now use accurate, retrieved context. Constraints applied.
-
-4.  **Archive Strategy - NEXT:**
-    *   Automate moving old "Daily Pulse" items to archive files to keep the main dashboards lightweight.
-
-5.  **Voice Interface (Nice to Have):**
+2.  **Voice Interface:**
     *   **Goal:** Add a microphone button to the Chat UI.
-    *   **Status:** Backend ready (`mediaType: 'audio'`), but deprioritized in favor of core architectural performance (Dashboards).
+    *   **Status:** Backend ready (`mediaType: 'audio'`), frontend implementation needed.
+
+3.  **Frontend Polish:**
+    *   **Dashboards:** Render Markdown with proper styling (currently raw text/simple markdown).
+    *   **Tabs:** Consider a tabbed view for switching between Chat and specific Dashboards (Life Log, Ideas, Books) instead of a single modal.
 
 **Immediate Next Step:**
-Proceed to **Task 4 (Archive Strategy)**. We need to implement a mechanism to periodically prune the "Daily Pulse" and move older items to an archive (e.g., `01_Archive_2026.md` or a dedicated DynamoDB archive structure).
+Start with **Task 1 (Archive Strategy)**. Design a standard "pruning" mechanism. For example, when `biographerAsync` runs, if "The Daily Pulse" has > 10 items, move the oldest to `DASHBOARD#life_log_archive_2026` (or similar).
