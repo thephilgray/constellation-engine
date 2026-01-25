@@ -1,15 +1,17 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from "aws-lambda";
 import { Resource } from "sst";
-import { getEmbedding, upsertToPinecone, getFile, createOrUpdateFile, queryPinecone, appendToFile, sanitizeMarkdown } from "./utils";
+import { getEmbedding, upsertToPinecone, queryPinecone, sanitizeMarkdown } from "./utils";
+import { saveRecord, getRecord } from "./lib/dynamo";
+import type { ConstellationRecord } from "./lib/schemas";
 
 // Initialize Gemini client
 const genAI = new GoogleGenerativeAI(Resource.GEMINI_API_KEY.value);
 
 const PINECONE_INDEX_NAME = "brain-dump";
 const IDEAS_NAMESPACE = "ideas";
-const IDEA_GARDEN_PATH = "00_Idea_Garden.md";
-const IDEAS_FOLDER = "Ideas/Log";
+const DASHBOARD_PK = "DASHBOARD#idea_garden";
+const DASHBOARD_SK = "STATE";
 
 const initialIdeaGardenContent = `# 🧠 The Idea Garden
 *A living synthesis of your intellectual evolution.*
@@ -36,6 +38,9 @@ export async function handler(event: APIGatewayProxyEventV2): Promise<APIGateway
       return { statusCode: 401, body: JSON.stringify({ message: "Unauthorized" }) };
     }
 
+    // Extract User ID (if Cognito)
+    const userId = event.requestContext.authorizer?.jwt?.claims?.sub as string || "default-user";
+
     if (!event.body) {
       return { statusCode: 400, body: JSON.stringify({ message: "Request body is empty." }) };
     }
@@ -51,20 +56,32 @@ export async function handler(event: APIGatewayProxyEventV2): Promise<APIGateway
     const vector = await getEmbedding(content);
     const timestamp = Date.now();
     const date = new Date(timestamp);
-    const isoDate = date.toISOString().split('T')[0];
-    const yearMonth = isoDate.slice(0, 7);
+    const isoDate = date.toISOString();
+    const entryId = `idea-${timestamp}`;
 
     await upsertToPinecone(
       PINECONE_INDEX_NAME,
-      `idea-${timestamp}`,
+      entryId,
       vector,
-      { text: content, tag: "THOUGHT", date: isoDate },
+      { text: content, tag: "THOUGHT", date: isoDate, userId },
       IDEAS_NAMESPACE
     );
 
-    // Archive to file system
-    const archivePath = `${IDEAS_FOLDER}/${yearMonth}.md`;
-    await appendToFile(archivePath, `### ${isoDate}\n${content}`, `feat: Log idea for ${isoDate}`);
+    // Save Entry to DynamoDB (Unified Lake)
+    const entryRecord: ConstellationRecord = {
+        PK: `USER#${userId}`,
+        SK: `ENTRY#${entryId}`,
+        id: entryId,
+        type: "Entry",
+        createdAt: isoDate,
+        updatedAt: isoDate,
+        content: content,
+        isOriginal: true,
+        mediaType: "text",
+        tags: ["thought"],
+        lastAccessed: isoDate,
+    };
+    await saveRecord(entryRecord);
 
     // 3. Recall Context
     const similarEntries = await queryPinecone(PINECONE_INDEX_NAME, vector, 5, IDEAS_NAMESPACE);
@@ -73,9 +90,12 @@ export async function handler(event: APIGatewayProxyEventV2): Promise<APIGateway
       .join("\n");
 
     // 4. The Architect Logic (Gemini 2.0 Flash)
-    let { content: gardenContent } = await getFile(IDEA_GARDEN_PATH);
-    if (!gardenContent) {
-        gardenContent = initialIdeaGardenContent;
+    // Fetch current dashboard state from DynamoDB
+    let gardenContent = initialIdeaGardenContent;
+    const existingDashboard = await getRecord(DASHBOARD_PK, DASHBOARD_SK);
+    
+    if (existingDashboard && existingDashboard.content) {
+        gardenContent = existingDashboard.content;
     }
 
     const systemPrompt = `
@@ -117,8 +137,20 @@ ${contextEntries}
     const result = await generativeModel.generateContent(systemPrompt);
     const newGardenContent = sanitizeMarkdown(result.response.text());
 
-    // 5. Update Dashboard
-    await createOrUpdateFile(IDEA_GARDEN_PATH, newGardenContent, "chore: Update Idea Garden");
+    // 5. Update Dashboard in Unified Lake (DynamoDB)
+    const dashboardRecord: ConstellationRecord = {
+        PK: DASHBOARD_PK as any,
+        SK: DASHBOARD_SK as any,
+        id: "idea_garden",
+        type: "Dashboard",
+        createdAt: existingDashboard?.createdAt || isoDate,
+        updatedAt: isoDate,
+        content: newGardenContent,
+        isOriginal: false,
+        mediaType: "text",
+        lastAccessed: isoDate,
+    };
+    await saveRecord(dashboardRecord);
 
     return {
       statusCode: 200,

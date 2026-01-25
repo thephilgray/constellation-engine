@@ -32,6 +32,10 @@ export const handler = async (event: DynamoDBStreamEvent) => {
                  filePath = "00_Life_Log.md";
                  fileContent = item.content; // No frontmatter for the main dashboard view
                  console.log(`Updating Dashboard: ${filePath}`);
+             } else if (item.id === 'idea_garden') {
+                 filePath = "00_Idea_Garden.md";
+                 fileContent = item.content;
+                 console.log(`Updating Dashboard: ${filePath}`);
              } else {
                  console.log(`Skipping unknown dashboard id: ${item.id}`);
                  continue;
