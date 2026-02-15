@@ -17,7 +17,7 @@ const GITHUB_REPO = Resource.GITHUB_REPO.value;
  * @param model The model to use for embedding.
  * @returns The embedding vector.
  */
-export async function getEmbedding(content: string, model = "text-embedding-004"): Promise<number[]> {
+export async function getEmbedding(content: string, model = "embedding-001"): Promise<number[]> {
   const embeddingModel = genAI.getGenerativeModel({ model });
   const embeddingResult = await embeddingModel.embedContent(content);
   return embeddingResult.embedding.values;

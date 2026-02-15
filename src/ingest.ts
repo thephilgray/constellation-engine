@@ -35,7 +35,7 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
     }
 
     // 2. Intent Router (Classification & Extraction)
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" }); // Fast model for routing
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" }); // Fast model for routing
     const result = await model.generateContent(`${INTENT_ROUTER_SYSTEM_PROMPT}\n\nINPUT:\n${rawInput}`);
     const responseText = result.response.text().replace(/```json\n?|\n?```/g, '').trim();
     const routerOutput = JSON.parse(responseText) as IntentRouterOutput;
@@ -127,7 +127,7 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
       const contextText = contextEntries.join("\n\n");
 
       // 4. Synthesize Answer with Gemini
-      const ragModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+      const ragModel = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
       const ragPrompt = `${RAG_SYSTEM_PROMPT}\n\nUSER QUESTION:\n${routerOutput.content}\n\nRETRIEVED CONTEXT:\n${contextText || "No relevant context found."}`;
       
       const ragResult = await ragModel.generateContent(ragPrompt);

@@ -118,7 +118,7 @@ INSTRUCTIONS:
 CONSTRAINT: Do not alter the raw text of the lyrics. Only group and arrange them.
 IMPORTANT: Output RAW markdown only. Do not wrap the output in markdown code blocks. Do not include any conversational text.`;
 
-    const generativeModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    const generativeModel = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     const result = await generativeModel.generateContent(systemPrompt);
     let newSongSeeds = result.response.text();
 

@@ -83,7 +83,7 @@ export const handler = async (event: HandlerInput): Promise<string> => {
     return `## No new recommendations were found in this run.`;
   }
 
-  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
   // Format entries for the prompt
   const entriesContext = recentEntries.map(entry => {

@@ -53,7 +53,7 @@ export const handler = async (event: { recentEntries: ConstellationRecord[] }): 
   }).join("\n\n---\n\n");
 
   const model = genAI.getGenerativeModel({
-    model: "gemini-2.5-flash",
+    model: "gemini-1.5-flash",
     systemInstruction: `Analyze the user's recent entries (notes, saved articles, thoughts). Identify the core topics and interests.
     Pay attention to the metadata (tags, media types).
     

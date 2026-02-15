@@ -90,7 +90,7 @@ function extractDateFromMetadata(filePath: string, content: string): string | nu
 }
 
 async function generateUnifiedMetadata(content: string): Promise<ExtendedIntentRouterOutput> {
-  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
   const result = await model.generateContent(`${INTENT_ROUTER_PROMPT}\n\nINPUT:\n${content}`);
   const jsonText = result.response.text().replace(/```json\n?|\n?```/g, '').trim();
   return JSON.parse(jsonText) as ExtendedIntentRouterOutput;

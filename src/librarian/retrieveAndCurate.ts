@@ -107,7 +107,7 @@ export const handler = async (event: HandlerInput): Promise<Book | null> => {
   }
 
   // 2. Curate & Dedupe: Call Gemini
-  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
   const prompt = `You are a curator. Review this list of 20 books. Your task is to select the single best book that fits the provided rationale.
 
 **Rationale:** ${rationale}
