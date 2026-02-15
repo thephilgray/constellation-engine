@@ -57,7 +57,7 @@ export interface IntentRouterOutput {
 ```
 
 ### **Step 2: Define "Intent Router" System Prompt**
-This prompt will be used by a `gemini-2.5-flash` model to process and classify all incoming data.
+This prompt will be used by a `gemini-1.5-flash` model to process and classify all incoming data.
 
 ```text
 # System Prompt: Constellation Engine Intent Router

@@ -187,7 +187,7 @@ This phase implements the logic for getting new data into the Unified Lake.
 
 **2.1. Technical Specification: Intent Router**
 
-*   **Objective:** Create a system prompt for `gemini-2.5-flash` to classify and structure incoming data.
+*   **Objective:** Create a system prompt for `gemini-1.5-flash` to classify and structure incoming data.
 *   **Content:**
     ```text
     # System Prompt: Constellation Engine Intent Router
@@ -276,7 +276,7 @@ This phase focuses on migrating existing data from the GitHub repository into th
      * Uses the Intent Router prompt to process raw text content.
      */
     async function generateUnifiedMetadata(content: string): Promise<IntentRouterOutput> {
-      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" }); // Or your fine-tuned model
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" }); // Or your fine-tuned model
       const prompt = `# System Prompt: Constellation Engine Intent Router
     ... The Intent Router System Prompt ...\n\nINPUT:\n${content}`; // Replace with actual prompt from phase 2
       

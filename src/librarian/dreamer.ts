@@ -106,7 +106,7 @@ export const handler = async (event?: APIGatewayProxyEventV2): Promise<APIGatewa
               - Output RAW markdown only. Do not wrap the output in markdown code blocks.
             `;
 
-            const generativeModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" }); // Using 2.0 Flash for consistency
+            const generativeModel = genAI.getGenerativeModel({ model: "gemini-1.5-flash" }); // Using 2.0 Flash for consistency
             const result = await generativeModel.generateContent(systemPrompt);
             let newAnalysis = result.response.text();
 
@@ -221,7 +221,7 @@ export const handler = async (event?: APIGatewayProxyEventV2): Promise<APIGatewa
         }
 
         // 3. Synthesize Connection (The Spark)
-        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" }); 
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
         const prompt = `
         You are a serendipity engine. I will present two seemingly disparate entries from the user's second brain.
         Your task is to find a creative, insightful, or surprising connection between them.
