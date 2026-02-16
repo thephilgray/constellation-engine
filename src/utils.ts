@@ -3,13 +3,37 @@ import { Pinecone } from "@pinecone-database/pinecone";
 import { Octokit } from "@octokit/rest";
 import { Resource } from "sst";
 
-// Initialize clients
-const genAI = new GoogleGenerativeAI(Resource.GEMINI_API_KEY.value);
-const pinecone = new Pinecone({ apiKey: Resource.PINECONE_API_KEY.value });
-const octokit = new Octokit({ auth: Resource.GITHUB_TOKEN.value });
+// Lazy initialization wrappers
+let genAI: GoogleGenerativeAI;
+function getGenAI() {
+  if (!genAI) {
+    genAI = new GoogleGenerativeAI(Resource.GEMINI_API_KEY.value);
+  }
+  return genAI;
+}
 
-const GITHUB_OWNER = Resource.GITHUB_OWNER.value;
-const GITHUB_REPO = Resource.GITHUB_REPO.value;
+let pinecone: Pinecone;
+function getPinecone() {
+  if (!pinecone) {
+    pinecone = new Pinecone({ apiKey: Resource.PINECONE_API_KEY.value });
+  }
+  return pinecone;
+}
+
+let octokit: Octokit;
+function getOctokit() {
+  if (!octokit) {
+    octokit = new Octokit({ auth: Resource.GITHUB_TOKEN.value });
+  }
+  return octokit;
+}
+
+function getGithubConfig() {
+  return {
+    owner: Resource.GITHUB_OWNER.value,
+    repo: Resource.GITHUB_REPO.value,
+  };
+}
 
 /**
  * Generates an embedding for the given content using the specified model.
@@ -17,8 +41,8 @@ const GITHUB_REPO = Resource.GITHUB_REPO.value;
  * @param model The model to use for embedding.
  * @returns The embedding vector.
  */
-export async function getEmbedding(content: string, model = "text-embedding-004"): Promise<number[]> {
-  const embeddingModel = genAI.getGenerativeModel({ model });
+export async function getEmbedding(content: string, model = "gemini-embedding-001"): Promise<number[]> {
+  const embeddingModel = getGenAI().getGenerativeModel({ model });
   const embeddingResult = await embeddingModel.embedContent(content);
   return embeddingResult.embedding.values;
 }
@@ -38,7 +62,7 @@ export async function upsertToPinecone(
   metadata: Record<string, any>,
   namespace?: string
 ) {
-  const index = pinecone.Index(indexName);
+  const index = getPinecone().Index(indexName);
   const pineconeNamespace = namespace ? index.namespace(namespace) : index;
   await pineconeNamespace.upsert([{ id, values, metadata }]);
 }
@@ -50,11 +74,13 @@ export async function upsertToPinecone(
  * @param message The commit message.
  */
 export async function createOrUpdateFile(path: string, content: string, message: string) {
+  const { owner, repo } = getGithubConfig();
+  const ok = getOctokit();
   let fileSha: string | undefined;
   try {
-    const { data: file } = await octokit.repos.getContent({
-      owner: GITHUB_OWNER,
-      repo: GITHUB_REPO,
+    const { data: file } = await ok.repos.getContent({
+      owner,
+      repo,
       path,
     });
     if ("content" in file) {
@@ -65,9 +91,9 @@ export async function createOrUpdateFile(path: string, content: string, message:
     // If file doesn't exist, it will be created.
   }
 
-  await octokit.repos.createOrUpdateFileContents({
-    owner: GITHUB_OWNER,
-    repo: GITHUB_REPO,
+  await ok.repos.createOrUpdateFileContents({
+    owner,
+    repo,
     path,
     message,
     content: Buffer.from(content).toString("base64"),
@@ -82,12 +108,14 @@ export async function createOrUpdateFile(path: string, content: string, message:
  * @param message The commit message.
  */
 export async function appendToFile(path: string, content: string, message: string) {
+  const { owner, repo } = getGithubConfig();
+  const ok = getOctokit();
   const { content: existingContent, sha: fileSha } = await getFile(path);
   const newContent = existingContent ? `${existingContent}\n\n---\n\n${content}` : content;
 
-  await octokit.repos.createOrUpdateFileContents({
-    owner: GITHUB_OWNER,
-    repo: GITHUB_REPO,
+  await ok.repos.createOrUpdateFileContents({
+    owner,
+    repo,
     path,
     message,
     content: Buffer.from(newContent).toString("base64"),
@@ -103,10 +131,12 @@ export async function appendToFile(path: string, content: string, message: strin
  */
 export async function getFile(path: string): Promise<{ content: string; sha: string | undefined }> {
   console.log(`[getFile] Fetching: ${path}`);
+  const { owner, repo } = getGithubConfig();
+  const ok = getOctokit();
   try {
-    const { data: file } = await octokit.request("GET /repos/{owner}/{repo}/contents/{path}", {
-      owner: GITHUB_OWNER,
-      repo: GITHUB_REPO,
+    const { data: file } = await ok.request("GET /repos/{owner}/{repo}/contents/{path}", {
+      owner,
+      repo,
       path: path,
     });
     console.log(`[getFile] Fetched successfully: ${path}`);
@@ -156,7 +186,7 @@ export async function queryPinecone(
   namespace?: string,
   filter?: Record<string, any>
 ) {
-  const index = pinecone.Index(indexName);
+  const index = getPinecone().Index(indexName);
   const pineconeNamespace = namespace ? index.namespace(namespace) : index;
   return await pineconeNamespace.query({
     vector,

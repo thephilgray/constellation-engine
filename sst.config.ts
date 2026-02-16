@@ -332,7 +332,7 @@ export default $config({
       schedule: "rate(1 day)",
       job: {
         handler: "src/librarian/dreamer.handler",
-        link: [GEMINI_API_KEY, PINECONE_API_KEY, PINECONE_INDEX_HOST, table],
+        link: [GEMINI_API_KEY, PINECONE_API_KEY, PINECONE_INDEX_HOST, table, GITHUB_TOKEN, GITHUB_OWNER, GITHUB_REPO],
         timeout: "90 seconds",
       }
     });
