@@ -6,7 +6,8 @@
     "astro": "astro",
     "build": "astro build",
     "dev": "astro dev",
-    "preview": "astro preview"
+    "preview": "astro preview",
+    "deploy:prod": "PATH=$(echo $PATH | sed 's|/opt/homebrew/bin:||') sst deploy --stage prod"
   },
   "dependencies": {
     "@astrojs/react": "^4.4.2",
