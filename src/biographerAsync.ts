@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 import { Resource } from "sst";
 import { getEmbedding, upsertToPinecone, queryPinecone, sanitizeMarkdown } from "./utils";
 import { saveRecord, getRecord, queryRecentEntries } from "./lib/dynamo";
@@ -6,7 +6,7 @@ import type { ConstellationRecord } from "./lib/schemas";
 import { randomUUID } from "crypto";
 
 // Initialize Gemini client
-const genAI = new GoogleGenerativeAI(Resource.GEMINI_API_KEY.value);
+const genAI = new GoogleGenAI({ apiKey: Resource.GEMINI_API_KEY.value });
 
 const PINECONE_INDEX_NAME = "brain-dump";
 const BIOGRAPHY_NAMESPACE = "biography";
@@ -184,9 +184,11 @@ export async function handler(event: AsyncPayload) {
     - Do not use markdown code blocks (\`\`\`markdown).
     `;
 
-    const generativeModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-    const result = await generativeModel.generateContent(systemPrompt);
-    const newLifeLogContent = sanitizeMarkdown(result.response.text());
+    const result = await genAI.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: [{ text: systemPrompt }]
+    });
+    const newLifeLogContent = sanitizeMarkdown(result.text || '');
 
     // 5. Update Dashboard in Unified Lake (DynamoDB)
     const dashboardRecord: ConstellationRecord = {

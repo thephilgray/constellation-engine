@@ -1,10 +1,10 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 import { Resource } from "sst";
 import axios from "axios";
 import { z } from "zod";
 import { Octokit } from "@octokit/rest";
 
-const genAI = new GoogleGenerativeAI(Resource.GEMINI_API_KEY.value);
+const genAI = new GoogleGenAI({ apiKey: Resource.GEMINI_API_KEY.value });
 const googleBooksApiKey = Resource.GOOGLE_BOOKS_API_KEY.value;
 
 const octokit = new Octokit({ auth: Resource.GITHUB_TOKEN.value });
@@ -107,7 +107,6 @@ export const handler = async (event: HandlerInput): Promise<Book | null> => {
   }
 
   // 2. Curate & Dedupe: Call Gemini
-  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
   const prompt = `You are a curator. Review this list of 20 books. Your task is to select the single best book that fits the provided rationale.
 
 **Rationale:** ${rationale}
@@ -123,8 +122,11 @@ ${JSON.stringify(books, null, 2)}
 `;
 
   try {
-    const result = await model.generateContent(prompt);
-    const text = result.response.text();
+    const result = await genAI.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: [{ text: prompt }]
+    });
+    const text = result.text || '';
     const jsonText = text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1);
     const selectedBookJson = JSON.parse(jsonText);
 

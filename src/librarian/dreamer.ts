@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 import { Resource } from "sst";
 import KSUID from "ksuid";
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from "aws-lambda";
@@ -6,7 +6,7 @@ import { getEmbedding, queryPinecone, upsertToPinecone, sanitizeMarkdown } from 
 import { saveRecord, getRecord } from "../lib/dynamo";
 import type { ConstellationRecord, PineconeMetadata } from "../lib/schemas";
 
-const genAI = new GoogleGenerativeAI(Resource.GEMINI_API_KEY.value);
+const genAI = new GoogleGenAI({ apiKey: Resource.GEMINI_API_KEY.value });
 const PINECONE_INDEX_NAME = "brain-dump";
 
 // Constants for Dream Logging
@@ -19,7 +19,7 @@ export const handler = async (event?: APIGatewayProxyEventV2): Promise<APIGatewa
 
     try {
         // Determine Context (API vs Cron)
-        const userId = event?.requestContext?.authorizer?.jwt?.claims?.sub as string | undefined;
+        const userId = (event?.requestContext as any)?.authorizer?.jwt?.claims?.sub as string | undefined;
         const isApiRequest = !!userId;
         let contentToLog: string | undefined;
 
@@ -106,9 +106,11 @@ export const handler = async (event?: APIGatewayProxyEventV2): Promise<APIGatewa
               - Output RAW markdown only. Do not wrap the output in markdown code blocks.
             `;
 
-            const generativeModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" }); // Using 2.0 Flash for consistency
-            const result = await generativeModel.generateContent(systemPrompt);
-            let newAnalysis = result.response.text();
+            const result = await genAI.models.generateContent({
+              model: "gemini-2.5-flash",
+              contents: [{ text: systemPrompt }]
+            });
+            let newAnalysis = result.text || '';
 
             // 🧹 SANITIZE
             newAnalysis = sanitizeMarkdown(newAnalysis);
@@ -221,8 +223,7 @@ export const handler = async (event?: APIGatewayProxyEventV2): Promise<APIGatewa
         }
 
         // 3. Synthesize Connection (The Spark)
-        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" }); 
-        const prompt = `
+                const prompt = `
         You are a serendipity engine. I will present two seemingly disparate entries from the user's second brain.
         Your task is to find a creative, insightful, or surprising connection between them.
         
@@ -238,9 +239,11 @@ export const handler = async (event?: APIGatewayProxyEventV2): Promise<APIGatewa
         3. Write a short "Spark" entry (1-2 paragraphs) synthesizing this new insight.
         4. Give it a title starting with "Spark: ".
         `;
-
-        const result = await model.generateContent(prompt);
-        const sparkContent = result.response.text();
+        const result = await genAI.models.generateContent({
+          model: "gemini-2.5-flash",
+          contents: [{ text: prompt }]
+        });
+        const sparkContent = result.text || '';
 
         console.log("Generated Spark:", sparkContent);
 

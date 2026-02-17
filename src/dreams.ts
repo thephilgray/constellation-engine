@@ -1,10 +1,10 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 import type { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
 import { Resource } from "sst";
 import { getEmbedding, upsertToPinecone, appendToFile, getFile, createOrUpdateFile, queryPinecone, sanitizeMarkdown } from "./utils";
 
 // Initialize Gemini client
-const genAI = new GoogleGenerativeAI(Resource.GEMINI_API_KEY.value);
+const genAI = new GoogleGenAI({ apiKey: Resource.GEMINI_API_KEY.value });
 
 const PINECONE_INDEX_NAME = "brain-dump";
 const DREAM_JOURNAL_ANALYSIS_PATH = "00_Dream_Journal_Analysis.md";
@@ -75,9 +75,11 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
       - Output RAW markdown only. Do not wrap the output in markdown code blocks.
     `;
 
-    const generativeModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-    const result = await generativeModel.generateContent(systemPrompt);
-    let newAnalysis = result.response.text();
+    const result = await genAI.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: [{ text: systemPrompt }]
+    });
+    let newAnalysis = result.text || '';
 
     // 🧹 SANITIZE: Remove the wrapping ```markdown blocks
     newAnalysis = sanitizeMarkdown(newAnalysis);

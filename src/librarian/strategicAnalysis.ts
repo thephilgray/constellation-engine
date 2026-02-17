@@ -1,9 +1,9 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 import { Resource } from "sst";
 import { z } from "zod";
 import type { ConstellationRecord } from "../lib/schemas";
 
-const genAI = new GoogleGenerativeAI(Resource.GEMINI_API_KEY.value);
+const genAI = new GoogleGenAI({ apiKey: Resource.GEMINI_API_KEY.value });
 
 // Zod schema for the expected output structure from the AI
 const StrategicQuerySchema = z.object({
@@ -52,41 +52,43 @@ export const handler = async (event: { recentEntries: ConstellationRecord[] }): 
       return `Entry (${meta.join(" | ")}):\n${entry.content.substring(0, 1000)}`; // Truncate content slightly to save tokens if very long
   }).join("\n\n---\n\n");
 
-  const model = genAI.getGenerativeModel({
-    model: "gemini-2.5-flash",
-    systemInstruction: `Analyze the user's recent entries (notes, saved articles, thoughts). Identify the core topics and interests.
-    Pay attention to the metadata (tags, media types).
-    
-    1. Generate 3 "Book Lenses" (Data, Counterpoint, Orthogonal).
-    2. Generate "Article Queries" for Dev.to, Hacker News, and arXiv.
-
-    Output a JSON object wrapped in markdown (e.g. \`\`\`json { "bookQueries": [...], "articleQueries": {...} } \`\`\`):
-    
-    Structure:
-    {
-      "bookQueries": [
-        { "query": "...", "sort": "...", "rationale": "..." }, // Data Lens
-        { "query": "...", "sort": "...", "rationale": "..." }, // Counterpoint Lens
-        { "query": "...", "sort": "...", "rationale": "..." }  // Orthogonal Lens
-      ],
-      "articleQueries": {
-        "devToTag": "...", // single word tag (no #)
-        "hnQuery": "...",
-        "arxivQuery": "..."
-      }
-    }
-    
-    For each book lens, provide:
-    - query: The Google Books search query.
-    - sort: 'newest' (if topic is tech/science/news) or 'relevance').
-    - rationale: A brief explanation of why this query is a useful lens for the user's writing.`
-  });
-
   const prompt = `Here are the user's recent entries:\n\n${entriesContext}`;
 
   try {
-    const result = await model.generateContent(prompt);
-    const text = result.response.text();
+    const result = await genAI.models.generateContent({
+      model: "gemini-2.5-flash",
+          config: {
+            systemInstruction: `Analyze the user's recent entries (notes, saved articles, thoughts). Identify the core topics and interests.
+          Pay attention to the metadata (tags, media types).
+          
+          1. Generate 3 "Book Lenses" (Data, Counterpoint, Orthogonal).
+          2. Generate "Article Queries" for Dev.to, Hacker News, and arXiv.
+      
+          Output a JSON object wrapped in markdown (e.g. \`\`\`json { "bookQueries": [...], "articleQueries": {...} } \`\`\`):
+          
+          Structure:
+          {
+            "bookQueries": [
+              { "query": "...", "sort": "...", "rationale": "..." }, // Data Lens
+              { "query": "...", "sort": "...", "rationale": "..." }, // Counterpoint Lens
+              { "query": "...", "sort": "...", "rationale": "..." }  // Orthogonal Lens
+            ],
+            "articleQueries": {
+              "devToTag": "...", // single word tag (no #)
+              "hnQuery": "...",
+              "arxivQuery": "..."
+            }
+          }
+          
+          For each book lens, provide:
+          - query: The Google Books search query.
+          - sort: 'newest' (if topic is tech/science/news) or 'relevance').
+          - rationale: A brief explanation of why this query is a useful lens for the user's writing.`
+          },
+          contents: [{ text: prompt }]
+    });
+
+    const text = result.text || '';
     
     if (!text) {
         console.error("AI returned an empty response.");

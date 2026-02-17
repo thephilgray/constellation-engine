@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from "aws-lambda";
 import { Resource } from "sst";
 import { getEmbedding, upsertToPinecone, queryPinecone, sanitizeMarkdown } from "./utils";
@@ -6,7 +6,7 @@ import { saveRecord, getRecord } from "./lib/dynamo";
 import type { ConstellationRecord } from "./lib/schemas";
 
 // Initialize Gemini client
-const genAI = new GoogleGenerativeAI(Resource.GEMINI_API_KEY.value);
+const genAI = new GoogleGenAI({ apiKey: Resource.GEMINI_API_KEY.value });
 
 const PINECONE_INDEX_NAME = "brain-dump";
 const IDEAS_NAMESPACE = "ideas";
@@ -32,14 +32,14 @@ export async function handler(event: APIGatewayProxyEventV2): Promise<APIGateway
     const authHeader = event.headers?.authorization || event.headers?.Authorization;
     const expectedApiKey = `Bearer ${Resource.INGEST_API_KEY.value}`;
     const isApiKeyValid = authHeader === expectedApiKey;
-    const isCognitoValid = !!event.requestContext.authorizer?.jwt;
+    const isCognitoValid = !!(event.requestContext as any).authorizer?.jwt;
 
     if (!isApiKeyValid && !isCognitoValid) {
       return { statusCode: 401, body: JSON.stringify({ message: "Unauthorized" }) };
     }
 
     // Extract User ID (if Cognito)
-    const userId = event.requestContext.authorizer?.jwt?.claims?.sub as string || "default-user";
+    const userId = (event.requestContext as any).authorizer?.jwt?.claims?.sub as string || "default-user";
 
     if (!event.body) {
       return { statusCode: 400, body: JSON.stringify({ message: "Request body is empty." }) };
@@ -133,9 +133,11 @@ ${contextEntries}
     - Do not use markdown code blocks (
     `;
 
-    const generativeModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-    const result = await generativeModel.generateContent(systemPrompt);
-    const newGardenContent = sanitizeMarkdown(result.response.text());
+    const result = await genAI.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: [{ text: systemPrompt }]
+    });
+    const newGardenContent = sanitizeMarkdown(result.text || '');
 
     // 5. Update Dashboard in Unified Lake (DynamoDB)
     const dashboardRecord: ConstellationRecord = {

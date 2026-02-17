@@ -1,10 +1,10 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, PutCommand, GetCommand } from "@aws-sdk/lib-dynamodb";
 import { Resource } from "sst";
 import type { ConstellationRecord } from "../lib/schemas";
 
-const genAI = new GoogleGenerativeAI(Resource.GEMINI_API_KEY.value);
+const genAI = new GoogleGenAI({ apiKey: Resource.GEMINI_API_KEY.value });
 const dynamoClient = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 const TABLE_NAME = Resource.UnifiedLake.name;
 const DASHBOARD_PK = "DASHBOARD#reading_list";
@@ -78,9 +78,11 @@ export async function updateReadingList(newLog: string) {
         - Do not use markdown code blocks.
         `;
 
-        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-        const result = await model.generateContent(systemPrompt);
-        const newContent = sanitizeMarkdown(result.response.text());
+        const result = await genAI.models.generateContent({
+          model: "gemini-2.5-flash",
+          contents: [{ text: systemPrompt }]
+        });
+        const newContent = sanitizeMarkdown(result.text || '');
 
         // 3. Save to DynamoDB
         const isoDate = new Date().toISOString();

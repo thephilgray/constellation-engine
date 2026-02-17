@@ -10,7 +10,7 @@ export async function handler(event: APIGatewayProxyEventV2): Promise<APIGateway
     const authHeader = event.headers?.authorization || event.headers?.Authorization;
     const expectedApiKey = `Bearer ${Resource.INGEST_API_KEY.value}`;
     const isApiKeyValid = authHeader === expectedApiKey;
-    const isCognitoValid = !!event.requestContext.authorizer?.jwt;
+    const isCognitoValid = !!(event.requestContext as any).authorizer?.jwt;
 
     if (!isApiKeyValid && !isCognitoValid) {
       return { statusCode: 401, body: JSON.stringify({ message: "Unauthorized" }) };
@@ -19,7 +19,7 @@ export async function handler(event: APIGatewayProxyEventV2): Promise<APIGateway
     // 1. Parse Input Payload & Get User ID
     const payload = event.body ? JSON.parse(event.body) : {};
     // Extract userId from the Cognito token if available
-    const userId = event.requestContext.authorizer?.jwt.claims.sub as string | undefined;
+    const userId = (event.requestContext as any).authorizer?.jwt.claims.sub as string | undefined;
     
     // We will pass the userId to the async worker
     const asyncPayload = { ...payload, userId };

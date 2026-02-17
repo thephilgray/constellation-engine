@@ -1,13 +1,13 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 import { Pinecone } from "@pinecone-database/pinecone";
 import { Octokit } from "@octokit/rest";
 import { Resource } from "sst";
 
 // Lazy initialization wrappers
-let genAI: GoogleGenerativeAI;
+let genAI: GoogleGenAI;
 function getGenAI() {
   if (!genAI) {
-    genAI = new GoogleGenerativeAI(Resource.GEMINI_API_KEY.value);
+    genAI = new GoogleGenAI({ apiKey: Resource.GEMINI_API_KEY.value });
   }
   return genAI;
 }
@@ -42,9 +42,15 @@ function getGithubConfig() {
  * @returns The embedding vector.
  */
 export async function getEmbedding(content: string, model = "gemini-embedding-001"): Promise<number[]> {
-  const embeddingModel = getGenAI().getGenerativeModel({ model });
-  const embeddingResult = await embeddingModel.embedContent(content);
-  return embeddingResult.embedding.values;
+  const ai = getGenAI();
+  const embeddingResult = await ai.models.embedContent({
+    model: model,
+    contents: [{ text: content }],
+    config: {
+      outputDimensionality: 768,
+    },
+  });
+  return embeddingResult.embeddings?.[0]?.values || [];
 }
 
 /**

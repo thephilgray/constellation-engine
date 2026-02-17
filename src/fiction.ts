@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from "aws-lambda";
 import { Resource } from "sst";
 import { getEmbedding, upsertToPinecone, queryPinecone, sanitizeMarkdown } from "./utils";
@@ -7,7 +7,7 @@ import type { ConstellationRecord } from "./lib/schemas";
 import KSUID from "ksuid";
 
 // Initialize Gemini client
-const genAI = new GoogleGenerativeAI(Resource.GEMINI_API_KEY.value);
+const genAI = new GoogleGenAI({ apiKey: Resource.GEMINI_API_KEY.value });
 
 const PINECONE_INDEX_NAME = "brain-dump";
 const FICTION_NAMESPACE = "fiction";
@@ -42,14 +42,14 @@ export async function handler(event: APIGatewayProxyEventV2): Promise<APIGateway
     const authHeader = event.headers?.authorization || event.headers?.Authorization;
     const expectedApiKey = `Bearer ${Resource.INGEST_API_KEY.value}`;
     const isApiKeyValid = authHeader === expectedApiKey;
-    const isCognitoValid = !!event.requestContext.authorizer?.jwt;
+    const isCognitoValid = !!(event.requestContext as any).authorizer?.jwt;
 
     if (!isApiKeyValid && !isCognitoValid) {
       return { statusCode: 401, body: JSON.stringify({ message: "Unauthorized" }) };
     }
     
     // Extract User ID
-    const userId = event.requestContext.authorizer?.jwt?.claims?.sub as string || "default-user";
+    const userId = (event.requestContext as any).authorizer?.jwt?.claims?.sub as string || "default-user";
 
     if (!event.body) {
       return { statusCode: 400, body: JSON.stringify({ message: "Request body is empty." }) };
@@ -160,9 +160,11 @@ export async function handler(event: APIGatewayProxyEventV2): Promise<APIGateway
       `;
     }
 
-    const generativeModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-    const result = await generativeModel.generateContent(systemPrompt);
-    let newBibleContent = result.response.text();
+    const result = await genAI.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: [{ text: systemPrompt }]
+    });
+    let newBibleContent = result.text || '';
 
     // 🧹 SANITIZE: Remove the wrapping ```markdown blocks
     newBibleContent = sanitizeMarkdown(newBibleContent);

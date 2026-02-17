@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, PutCommand, BatchGetCommand } from "@aws-sdk/lib-dynamodb";
 import type { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
@@ -10,7 +10,7 @@ import type { ConstellationRecord, IntentRouterOutput, PineconeMetadata } from "
 import { updateReadingList } from "./librarian/logBook";
 
 // Initialize Clients
-const genAI = new GoogleGenerativeAI(Resource.GEMINI_API_KEY.value);
+const genAI = new GoogleGenAI({ apiKey: Resource.GEMINI_API_KEY.value });
 const dynamoClient = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 
 // Environment
@@ -35,9 +35,11 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
     }
 
     // 2. Intent Router (Classification & Extraction)
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" }); // Fast model for routing
-    const result = await model.generateContent(`${INTENT_ROUTER_SYSTEM_PROMPT}\n\nINPUT:\n${rawInput}`);
-    const responseText = result.response.text().replace(/```json\n?|\n?```/g, '').trim();
+    const result = await genAI.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: [{ text: `${INTENT_ROUTER_SYSTEM_PROMPT}\n\nINPUT:\n${rawInput}` }]
+    });
+    const responseText = (result.text || '').replace(/```json\n?|\n?```/g, '').trim();
     const routerOutput = JSON.parse(responseText) as IntentRouterOutput;
 
     // ---------------------------------------------------------
@@ -127,11 +129,11 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
       const contextText = contextEntries.join("\n\n");
 
       // 4. Synthesize Answer with Gemini
-      const ragModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-      const ragPrompt = `${RAG_SYSTEM_PROMPT}\n\nUSER QUESTION:\n${routerOutput.content}\n\nRETRIEVED CONTEXT:\n${contextText || "No relevant context found."}`;
-      
-      const ragResult = await ragModel.generateContent(ragPrompt);
-      const answer = ragResult.response.text();
+      const ragResult = await genAI.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: [{ text: `${RAG_SYSTEM_PROMPT}\n\nUSER QUESTION:\n${routerOutput.content}\n\nRETRIEVED CONTEXT:\n${contextText || "No relevant context found."}` }]
+      });
+      const answer = ragResult.text || '';
 
       return {
         statusCode: 200,

@@ -1,10 +1,10 @@
 
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 import { Resource } from "sst";
 import { z } from "zod";
 import type { ConstellationRecord } from "../lib/schemas";
 
-const genAI = new GoogleGenerativeAI(Resource.GEMINI_API_KEY.value);
+const genAI = new GoogleGenAI({ apiKey: Resource.GEMINI_API_KEY.value });
 
 const BookSchema = z.object({
   id: z.string(),
@@ -83,8 +83,6 @@ export const handler = async (event: HandlerInput): Promise<string> => {
     return `## No new recommendations were found in this run.`;
   }
 
-  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-
   // Format entries for the prompt
   const entriesContext = recentEntries.map(entry => {
       const meta = [];
@@ -131,8 +129,11 @@ Provide a response in Markdown. Group by source type (Books vs Articles) or by T
 `;
 
   try {
-    const result = await model.generateContent(prompt);
-    const markdownOutput = result.response.text();
+    const result = await genAI.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: [{ text: prompt }]
+    });
+    const markdownOutput = result.text || '';
 
     // Prepend a timestamped header to the final output
     const timestamp = new Date().toLocaleString('en-US', {

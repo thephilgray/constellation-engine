@@ -1,8 +1,10 @@
 import { Octokit } from "@octokit/rest";
-import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, PutCommand, QueryCommand, DeleteCommand } from "@aws-sdk/lib-dynamodb";
+import { DynamoDBClient, QueryCommand } from "@aws-sdk/client-dynamodb";
+import type { AttributeValue } from "@aws-sdk/client-dynamodb";
+import { DynamoDBDocumentClient, PutCommand, DeleteCommand } from "@aws-sdk/lib-dynamodb";
+import type { QueryCommandOutput } from "@aws-sdk/lib-dynamodb";
 import { Pinecone } from "@pinecone-database/pinecone";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 import type { ConstellationRecord, IntentRouterOutput, PineconeMetadata } from "../src/lib/schemas";
 import KSUID from "ksuid";
 import { getEmbedding } from "../src/utils";
@@ -32,7 +34,7 @@ if (!GITHUB_TOKEN || !GITHUB_REPO_OWNER || !GITHUB_REPO_NAME || !GEMINI_API_KEY 
 const octokit = new Octokit({ auth: GITHUB_TOKEN });
 const dynamoClient = DynamoDBDocumentClient.from(new DynamoDBClient({ region: AWS_REGION }));
 const pinecone = new Pinecone({ apiKey: PINECONE_API_KEY });
-const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+const genAI = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
 const INTENT_ROUTER_PROMPT = `
 # System Prompt: Constellation Engine Intent Router
@@ -90,9 +92,11 @@ function extractDateFromMetadata(filePath: string, content: string): string | nu
 }
 
 async function generateUnifiedMetadata(content: string): Promise<ExtendedIntentRouterOutput> {
-  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-  const result = await model.generateContent(`${INTENT_ROUTER_PROMPT}\n\nINPUT:\n${content}`);
-  const jsonText = result.response.text().replace(/```json\n?|\n?```/g, '').trim();
+  const result = await genAI.models.generateContent({
+    model: "gemini-2.5-flash",
+    contents: [{ text: `${INTENT_ROUTER_PROMPT}\n\nINPUT:\n${content}` }]
+  });
+  const jsonText = (result.text || '').replace(/```json\n?|\n?```/g, '').trim();
   return JSON.parse(jsonText) as ExtendedIntentRouterOutput;
 }
 
@@ -146,10 +150,10 @@ async function cleanupPreviousMigration() {
         const command = new QueryCommand({
             TableName: DYNAMODB_TABLE_NAME,
             KeyConditionExpression: "PK = :pk",
-            ExpressionAttributeValues: { ":pk": `USER#${TARGET_USER_ID}` },
+            ExpressionAttributeValues: { ":pk": { S: `USER#${TARGET_USER_ID}` } },
             ExclusiveStartKey: lastEvaluatedKey
         });
-        const result = await dynamoClient.send(command);
+        const result: QueryCommandOutput = await dynamoClient.send(command);
         if (result.Items) itemsToDelete.push(...result.Items);
         lastEvaluatedKey = result.LastEvaluatedKey;
     } while (lastEvaluatedKey);
@@ -255,4 +259,7 @@ export async function runLazarusMigration() {
   }
 }
 
-runLazarusMigration();
+
+if (import.meta.url === `file://${process.argv[1]}`) {
+  runLazarusMigration();
+}
