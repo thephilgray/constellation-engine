@@ -290,6 +290,37 @@ export default $config({
       },
     });
 
+    // SHORTCUT ENDPOINTS (API Key authenticated inside Lambda, NO API Gateway JWT auth)
+    api.route("POST /shortcut/ingest", {
+      handler: "src/ingest.handler",
+      link: [GEMINI_API_KEY, PINECONE_API_KEY, PINECONE_INDEX_HOST, GITHUB_TOKEN, GITHUB_OWNER, GITHUB_REPO, INGEST_API_KEY, table, bucket, auth],
+      timeout: "60 seconds",
+    });
+
+    api.route("POST /shortcut/reflect", {
+      handler: "src/biographer.handler",
+      link: [GEMINI_API_KEY, PINECONE_API_KEY, PINECONE_INDEX_HOST, GITHUB_TOKEN, GITHUB_OWNER, GITHUB_REPO, INGEST_API_KEY, table, bucket, biographerAsync],
+      timeout: "30 seconds",
+    });
+
+    api.route("POST /shortcut/fiction", {
+      handler: "src/fiction.handler",
+      link: [GEMINI_API_KEY, PINECONE_API_KEY, PINECONE_INDEX_HOST, GITHUB_TOKEN, GITHUB_OWNER, GITHUB_REPO, INGEST_API_KEY, table, bucket],
+      timeout: "60 seconds",
+    });
+
+    api.route("POST /shortcut/lyrics", {
+      handler: "src/lyrics.handler",
+      link: [GEMINI_API_KEY, PINECONE_API_KEY, PINECONE_INDEX_HOST, GITHUB_TOKEN, GITHUB_OWNER, GITHUB_REPO, INGEST_API_KEY, table, bucket],
+      timeout: "60 seconds",
+    });
+
+    api.route("POST /shortcut/think", {
+      handler: "src/philosopher.handler",
+      link: [GEMINI_API_KEY, PINECONE_API_KEY, PINECONE_INDEX_HOST, GITHUB_TOKEN, GITHUB_OWNER, GITHUB_REPO, INGEST_API_KEY, table, bucket],
+      timeout: "60 seconds",
+    });
+
     api.route("POST /read", {
       handler: "src/librarian/trigger.handler",
       link: [dialecticalLibrarian],

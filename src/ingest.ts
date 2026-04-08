@@ -20,10 +20,16 @@ const TABLE_NAME = Resource.UnifiedLake.name;
 export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
   try {
     // 1. Authentication
-    const userId = event.requestContext.authorizer?.jwt?.claims?.sub;
-    if (!userId) {
+    const authHeader = event.headers?.authorization || event.headers?.Authorization;
+    const expectedApiKey = `Bearer ${Resource.INGEST_API_KEY.value}`;
+    const isApiKeyValid = authHeader === expectedApiKey;
+    const isCognitoValid = !!event.requestContext.authorizer?.jwt;
+
+    if (!isApiKeyValid && !isCognitoValid) {
       return { statusCode: 401, body: JSON.stringify({ message: "Unauthorized" }) };
     }
+
+    const userId = event.requestContext.authorizer?.jwt?.claims?.sub || "default-user";
 
     if (!event.body) {
       return { statusCode: 400, body: JSON.stringify({ message: "Request body is empty." }) };

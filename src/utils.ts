@@ -41,7 +41,7 @@ function getGithubConfig() {
  * @param model The model to use for embedding.
  * @returns The embedding vector.
  */
-export async function getEmbedding(content: string, model = "gemini-embedding-001"): Promise<number[]> {
+export async function getEmbedding(content: string, model = "text-embedding-004"): Promise<number[]> {
   const ai = getGenAI();
   const embeddingResult = await ai.models.embedContent({
     model: model,
