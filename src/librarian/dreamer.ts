@@ -19,8 +19,22 @@ export const handler = async (event?: APIGatewayProxyEventV2): Promise<APIGatewa
 
     try {
         // Determine Context (API vs Cron)
-        const userId = (event?.requestContext as any)?.authorizer?.jwt?.claims?.sub as string | undefined;
-        const isApiRequest = !!userId;
+        const isApiRequest = !!event?.requestContext;
+        let userId: string | undefined = undefined;
+
+        if (isApiRequest) {
+            const authHeader = event.headers?.authorization || event.headers?.Authorization;
+            const expectedApiKey = `Bearer ${Resource.INGEST_API_KEY.value}`;
+            const isApiKeyValid = authHeader === expectedApiKey;
+            const isCognitoValid = !!(event.requestContext as any).authorizer?.jwt;
+
+            if (!isApiKeyValid && !isCognitoValid) {
+                 return { statusCode: 401, body: JSON.stringify({ message: "Unauthorized" }) };
+            }
+            
+            userId = (event.requestContext as any).authorizer?.jwt?.claims?.sub as string | undefined || "default-user";
+        }
+
         let contentToLog: string | undefined;
 
         if (event?.body) {

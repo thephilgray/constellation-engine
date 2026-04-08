@@ -41,7 +41,7 @@ function getGithubConfig() {
  * @param model The model to use for embedding.
  * @returns The embedding vector.
  */
-export async function getEmbedding(content: string, model = "text-embedding-004"): Promise<number[]> {
+export async function getEmbedding(content: string, model = "gemini-embedding-001"): Promise<number[]> {
   const ai = getGenAI();
   const embeddingResult = await ai.models.embedContent({
     model: model,
@@ -50,7 +50,10 @@ export async function getEmbedding(content: string, model = "text-embedding-004"
       outputDimensionality: 768,
     },
   });
-  return embeddingResult.embeddings?.[0]?.values || [];
+  
+  // Guarantee exact dimension match via Matryoshka dimension slicing if the API ignores outputDimensionality
+  const vals = embeddingResult.embeddings?.[0]?.values || [];
+  return vals.slice(0, 768);
 }
 
 /**

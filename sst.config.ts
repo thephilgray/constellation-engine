@@ -232,7 +232,7 @@ export default $config({
 
     api.route("POST /dream", {
       handler: "src/librarian/dreamer.handler",
-      link: [GEMINI_API_KEY, PINECONE_API_KEY, PINECONE_INDEX_HOST, table, auth],
+      link: [GEMINI_API_KEY, PINECONE_API_KEY, PINECONE_INDEX_HOST, table, auth, INGEST_API_KEY],
       timeout: "90 seconds",
     }, {
       auth: {
@@ -295,6 +295,12 @@ export default $config({
       handler: "src/ingest.handler",
       link: [GEMINI_API_KEY, PINECONE_API_KEY, PINECONE_INDEX_HOST, GITHUB_TOKEN, GITHUB_OWNER, GITHUB_REPO, INGEST_API_KEY, table, bucket, auth],
       timeout: "60 seconds",
+    });
+
+    api.route("POST /shortcut/dream", {
+      handler: "src/librarian/dreamer.handler",
+      link: [GEMINI_API_KEY, PINECONE_API_KEY, PINECONE_INDEX_HOST, table, auth, INGEST_API_KEY],
+      timeout: "90 seconds",
     });
 
     api.route("POST /shortcut/reflect", {
@@ -363,7 +369,7 @@ export default $config({
       schedule: "rate(1 day)",
       job: {
         handler: "src/librarian/dreamer.handler",
-        link: [GEMINI_API_KEY, PINECONE_API_KEY, PINECONE_INDEX_HOST, table, GITHUB_TOKEN, GITHUB_OWNER, GITHUB_REPO],
+        link: [GEMINI_API_KEY, PINECONE_API_KEY, PINECONE_INDEX_HOST, table, GITHUB_TOKEN, GITHUB_OWNER, GITHUB_REPO, INGEST_API_KEY],
         timeout: "90 seconds",
       }
     });
