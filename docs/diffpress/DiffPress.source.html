@@ -1,0 +1,1251 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style data-omelette-injected>html,body{background:transparent}</style><script data-omelette-injected>(()=>{var j=[];var x=false;var S=30000;var f=3000;document.addEventListener("DOMContentLoaded",()=>{const H=window.Babel;const G="om-src-id";if(H&&H.registerPlugin&&!(H.availablePlugins&&H.availablePlugins[G])){H.registerPlugin(G,({types:Y})=>({visitor:{JSXOpeningElement(U,Q){const J=U.node;if(J.name&&J.name.type==="JSXMemberExpression")return;for(let V=0;V<J.attributes.length;V++){const L=J.attributes[V];if(L.type==="JSXAttribute"&&L.name&&L.name.name==="data-om-id")return}const W=Q.file&&Q.file.opts&&Q.file.opts.filename||"?";const Z=J.loc&&J.loc.start;const z=`jsx:${W}:${J.start??0}:${Z?Z.line:0}:${Z?Z.column+1:0}`;J.attributes.push(Y.jsxAttribute(Y.jsxIdentifier("data-om-id"),Y.stringLiteral(z)))}}}))}const k="om-text-extract";let A=false;if(x&&H&&H.registerPlugin&&!(H.availablePlugins&&H.availablePlugins[k])){const Y=window.React;if(Y&&Y.useSyncExternalStore&&Y.createElement){A=true;const U={};const Q=new Set;let J=0;window.__omTextO=U;window.__omTextSet=(z)=>{for(const V in z){const L=z[V];if(L==null)delete U[V];else U[V]=L}J++;Q.forEach((V)=>V())};const W=(z)=>{Q.add(z);return()=>Q.delete(z)};const Z=()=>J;window.__OmT=function z(V){Y.useSyncExternalStore(W,Z,Z);return Y.createElement("span",{"data-om-text":V.i,className:"__om-t"},V.i in U?U[V.i]:V.children)};H.registerPlugin(k,({types:z})=>{const V={style:1,script:1,noscript:1,textarea:1,title:1,option:1,text:1,tspan:1,textPath:1};const L={placeholder:1,alt:1,title:1,label:1,"aria-label":1,"aria-description":1,"aria-placeholder":1};const _=($,C)=>z.logicalExpression("??",z.memberExpression(z.logicalExpression("||",z.memberExpression(z.identifier("window"),z.identifier("__omTextO")),z.objectExpression([])),z.stringLiteral($),true),C);const E=($)=>$.file&&$.file.opts&&$.file.opts.filename||"?";const B=($)=>$.file&&$.file.code||"";const b=($,C)=>{const X=(F)=>F&&F.start!=null&&F.end!=null&&(F.type==="StringLiteral"||F.type==="TemplateLiteral"&&F.expressions.length===0)?[F.start,F.end]:null;const N=X(C);if(N)return N;if(C&&C.type==="Identifier"){const F=$.scope.getBinding(C.name);if(F&&F.constant&&F.path.node.type==="VariableDeclarator"){return X(F.path.node.init)}}return null};const M=($,C,X)=>{const N=$.node;let F=false;const w=(K,q)=>{F=true;return z.jsxElement(z.jsxOpeningElement(z.jsxIdentifier("__OmT"),[z.jsxAttribute(z.jsxIdentifier("i"),z.stringLiteral(K))],false),z.jsxClosingElement(z.jsxIdentifier("__OmT")),[q],false)};const D=N.children.map((K)=>{if(K.type==="JSXText"){if(K.start==null||K.end==null)return K;const q=X.slice(K.start,K.end);const R=q.length-q.trimStart().length;const m=q.length-q.trimEnd().length;if(R+m>=q.length)return K;return w(`txt:${C}:${K.start+R}:${K.end-m}`,K)}if(K.type==="JSXExpressionContainer"){const q=b($,K.expression);if(q)return w(`str:${C}:${q[0]}:${q[1]}`,K)}return K});if(F)N.children=D};return{visitor:{JSXOpeningElement($,C){const X=$.node;const N=E(C);const F={};for(let w=0;w<X.attributes.length;w++){const D=X.attributes[w];if(D.type!=="JSXAttribute"||!D.name)continue;const K=D.name.name;if(!L[K])continue;if(!D.value||D.value.type!=="StringLiteral")continue;if(D.value.start==null||D.value.end==null)continue;const q=`txt:${N}:${D.value.start}:${D.value.end}`;F[K]=q;D.value=z.jsxExpressionContainer(_(q,z.stringLiteral(D.value.value)))}if(Object.keys(F).length){X.attributes.push(z.jsxAttribute(z.jsxIdentifier("data-om-text-attrs"),z.stringLiteral(JSON.stringify(F))))}},JSXElement($,C){const X=$.node.openingElement;const N=X&&X.name&&X.name.name;if(N==="__OmT")return;if(typeof N==="string"&&V[N])return;M($,E(C),B(C))},JSXFragment($,C){M($,E(C),B(C))}}}})}}const u=A?["transform-react-jsx-source",G,k]:["transform-react-jsx-source",G];document.querySelectorAll('script[type="text/babel"],script[type="text/jsx"]').forEach((Y,U)=>{const Q=Y.getAttribute("data-plugins")||"";const J=u.filter((W)=>Q.indexOf(W)<0);if(J.length){Y.setAttribute("data-plugins",Q?`${Q},${J.join(",")}`:J.join(","))}if(!Y.hasAttribute("data-filename")){Y.setAttribute("data-filename",Y.getAttribute("src")||`inline-${U}`)}})});var y=window.parent;if(y&&y!==window){const H=(Q,J)=>{try{y.postMessage({__omelette_log:true,type:Q,data:J},"*")}catch{}};["log","warn","error"].forEach((Q)=>{const J=console[Q];console[Q]=(...W)=>{const Z=W.map((z)=>{try{return typeof z==="object"?JSON.stringify(z):String(z)}catch{try{return String(z)}catch{return"[unstringifiable]"}}}).join(" ");H(Q,Z);J.apply(console,W)}});window.addEventListener("error",(Q)=>{const J=Q.target;if(J&&J!==window&&J.tagName){const W=J.src||J.href||"";H("resource_error",`${J.tagName} failed to load: ${W}`)}else{H("error",`${Q.message||"Unknown error"} at ${Q.filename||"?"}:${Q.lineno||0}:${Q.colno||0}`)}},true);window.addEventListener("unhandledrejection",(Q)=>{const J=Q.reason;const W=J instanceof Error?`${J.message} ${J.stack}`:String(J);H("error",`Unhandled rejection: ${W}`)});const G=()=>{try{y.postMessage({type:"omelette:height",height:document.documentElement.scrollHeight},"*")}catch{}};if(document.readyState==="complete")G();else window.addEventListener("load",G);if(window.ResizeObserver)new ResizeObserver(G).observe(document.documentElement);const k={};let A=0;window.claude={complete(Q){return new Promise((J,W)=>{if(!j.length){W(new Error("claude.complete: no parent origin"));return}const Z=`c${++A}`;const z=()=>setTimeout(()=>{delete k[Z];W(new Error(`claude.complete: no data for ${S/1000}s`))},S);const V=z();k[Z]={resolve:J,reject:W,text:"",t:V,arm:z};try{for(const L of j){y.postMessage({__om_api:true,id:Z,body:Q},L)}}catch(L){clearTimeout(V);delete k[Z];W(L)}})}};const u={};let Y=0;window.omelette={writeFile:(Q,J)=>new Promise((W,Z)=>{if(!j.length){W();return}const z=`f${++Y}`;const V=setTimeout(()=>{delete u[z];W()},f);u[z]={resolve:W,reject:Z,t:V};try{for(const L of j){y.postMessage({__om_file:true,id:z,op:"write",path:Q,content:J},L)}}catch{clearTimeout(V);delete u[z];W()}})};const U=(Q)=>{try{return JSON.stringify(Q)}catch{return JSON.stringify(String(Q))}};window.addEventListener("message",(Q)=>{if(j.indexOf(Q.origin)<0)return;if(Q.source!==y)return;const J=Q.data;if(!J)return;if(J.type==="omelette-preview-refresh"){if(typeof J.token!=="string"||!/^[0-9a-f.-]+(\.(rc|pr-[0-9]+))?(\.[0-9]+\.[0-9a-f]{16})?$/.test(J.token))return;const z=Math.max(1,Math.floor((J.expiresAt||0)-Date.now()/1000));document.cookie="__Host-omelette-preview="+J.token+"; Path=/; Secure; SameSite=None; Partitioned; Max-Age="+z;return}if(J.__om_file_r){const z=u[J.id];if(!z)return;clearTimeout(z.t);delete u[J.id];if(J.ok)z.resolve();else z.reject(new Error(J.error||"write failed"));return}if(J.__om_api_r){const z=k[J.id];if(!z)return;if(J.error!=null){clearTimeout(z.t);delete k[J.id];z.reject(new Error(J.error));return}if(J.chunk!=null){clearTimeout(z.t);z.t=z.arm();z.text+=J.chunk;return}if(J.done){clearTimeout(z.t);delete k[J.id];z.resolve(J.text!=null?J.text:z.text);return}return}if(!J.__om_eval)return;const W=J;const Z=(z)=>{Q.source.postMessage({...z,__om_eval_r:1,id:W.id},Q.origin)};try{const z=(0,eval)(W.code);if(z&&typeof z.then==="function"){z.then((V)=>Z({ok:1,v:U(V)}),(V)=>Z({ok:0,e:String(V)}))}else{Z({ok:1,v:U(z)})}}catch(z){Z({ok:0,e:String(z)})}})}})();
+</script>
+
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  input, textarea, button { font-family: inherit; color: inherit; }
+  textarea { resize: none; }
+  ::selection { background: #e7e3d8; }
+  @keyframes dpFadeUp { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: none; } }
+  @keyframes dpFade { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes dpSlide { from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: none; } }
+  @keyframes dpPulse { 0%, 100% { opacity: .3; } 50% { opacity: 1; } }
+  @keyframes dpTrack { 0% { transform: translateX(-110%); } 100% { transform: translateX(360%); } }
+  @keyframes dpSheet { from { opacity: 0; transform: translateY(100%); } to { opacity: 1; transform: none; } }
+  *::-webkit-scrollbar { height: 9px; width: 9px; }
+  *::-webkit-scrollbar-thumb { background: #e3e0d8; border-radius: 9px; }
+  *::-webkit-scrollbar-track { background: transparent; }
+  /* ---- live draft editor ---- */
+  [data-dp-editable] { outline: none; font-size: 16px; }
+  [data-dp-editable] *::selection { background: #e7e3d8; }
+  [data-dp-editable] .dp-meta { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #a3a09a; letter-spacing: 0.01em; margin-bottom: 18px; }
+  [data-dp-editable] h1 { font-size: clamp(30px, 4vw, 40px); font-weight: 600; letter-spacing: -0.03em; line-height: 1.12; margin: 0 0 16px; }
+  [data-dp-editable] .dp-lead { font-size: 18px; line-height: 1.5; color: #6d6a64; font-weight: 450; margin: 0 0 34px; text-wrap: pretty; }
+  [data-dp-editable] p { font-size: 19px; line-height: 1.78; margin: 0 0 26px; text-wrap: pretty; }
+  [data-dp-editable] h2 { font-size: 23px; font-weight: 600; letter-spacing: -0.02em; margin: 44px 0 18px; }
+  [data-dp-editable] h3 { font-size: 19px; font-weight: 600; letter-spacing: -0.01em; margin: 32px 0 14px; }
+  [data-dp-editable] a { color: #5a6178; text-decoration: underline; text-underline-offset: 2px; text-decoration-color: #c2c5cf; }
+  [data-dp-editable] code, [data-dp-editable] .dp-icode { font-family: 'JetBrains Mono', monospace; font-size: 0.82em; background: #efeee8; padding: 1px 5px; border-radius: 4px; }
+  [data-dp-editable] pre { font-family: 'JetBrains Mono', monospace; font-size: 13.5px; line-height: 1.65; background: #faf9f6; color: #2c2a26; border-radius: 10px; padding: 18px 20px; margin: 0 0 26px; overflow-x: auto; white-space: pre; }
+  [data-dp-editable] pre code { background: none; padding: 0; font-size: inherit; }
+  [data-dp-editable] blockquote { margin: 0 0 26px; padding: 4px 0 4px 22px; border-left: 3px solid #d4d7df; color: #4a4843; font-style: italic; font-size: 20px; line-height: 1.66; }
+  [data-dp-editable] hr.dp-hr { border: none; height: 1px; background: #e3e0d8; margin: 34px 0; }
+  [data-dp-editable] .dp-embed { margin: 6px 0 28px; }
+  [data-dp-editable] .dp-embed-media { position: relative; border-radius: 12px; height: 196px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; background-color: #f3f1ea; background-image: repeating-linear-gradient(135deg, #ece8de 0 9px, #f5f3ec 9px 18px); border: 1px solid #e6e3da; }
+  [data-dp-editable] .dp-embed-ico { display: flex; align-items: center; justify-content: center; height: 22px; }
+  [data-dp-editable] .dp-play { width: 0; height: 0; border-style: solid; border-width: 8px 0 8px 13px; border-color: transparent transparent transparent #8a877f; }
+  [data-dp-editable] .dp-imgmark { width: 17px; height: 14px; border: 2px solid #8a877f; border-radius: 2px; }
+  [data-dp-editable] .dp-embed-tag { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; letter-spacing: 0.14em; color: #8a877f; border: 1px solid #cfccc3; border-radius: 5px; padding: 3px 9px; background: #faf9f6; }
+  [data-dp-editable] .dp-embed-hint { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #a8a59e; }
+  [data-dp-editable] .dp-cap { font-size: 16px; color: #a3a09a; text-align: center; margin-top: 10px; font-style: italic; }
+  [data-dp-editable] .dp-cap:focus { color: #46443f; font-style: normal; }
+</style>
+</helmet>
+
+<div style="min-height: 100vh; background: #f6f5f2; color: #1b1a18; font-family: 'Inter', system-ui, sans-serif; font-size: 15px; line-height: 1.5; letter-spacing: -0.006em; display: flex; flex-direction: column; overflow-x: clip; -webkit-font-smoothing: antialiased;">
+
+  <!-- ===================== TOP BAR ===================== -->
+  <header style="position: sticky; top: 0; z-index: 40; display: flex; align-items: center; gap: clamp(10px, 2.4vw, 20px); padding: 0 clamp(16px, 4vw, 40px); height: 62px; background: rgba(246,245,242,0.82); backdrop-filter: saturate(1.1) blur(14px); -webkit-backdrop-filter: saturate(1.1) blur(14px);">
+
+    <!-- wordmark -->
+    <div style="display: flex; align-items: center; gap: 10px; flex: 0 0 auto;">
+      <div style="display: flex; flex-direction: column; gap: 2.5px; width: 15px;">
+        <span style="height: 2px; width: 15px; background: #1b1a18; border-radius: 2px;"></span>
+        <span style="height: 2px; width: 9px; background: #5a6178; border-radius: 2px;"></span>
+        <span style="height: 2px; width: 13px; background: #c9c6bd; border-radius: 2px;"></span>
+      </div>
+      <sc-if value="{{ notMobile }}" hint-placeholder-val="{{ true }}">
+        <span style="font-weight: 600; font-size: 15px; letter-spacing: -0.02em;">DiffPress</span>
+      </sc-if>
+    </div>
+
+    <!-- center nav -->
+    <nav style="flex: 1 1 auto; min-width: 0; display: flex; justify-content: center; align-items: center; gap: clamp(18px, 4vw, 26px);">
+      <button onClick="{{ goDashboard }}" style="{{ navDashStyle }}" style-hover="opacity: 1;">
+        Dashboard
+        <sc-if value="{{ isDashboard }}" hint-placeholder-val="{{ true }}">
+          <span style="position: absolute; left: 0; right: 0; bottom: -3px; height: 1.5px; background: #5a6178; border-radius: 2px;"></span>
+        </sc-if>
+      </button>
+      <button onClick="{{ goEditor }}" style="{{ navEditStyle }}" style-hover="opacity: 1;">
+        Editor
+        <sc-if value="{{ isEditor }}" hint-placeholder-val="{{ true }}">
+          <span style="position: absolute; left: 0; right: 0; bottom: -3px; height: 1.5px; background: #5a6178; border-radius: 2px;"></span>
+        </sc-if>
+      </button>
+    </nav>
+
+    <!-- contextual right: engine status on dashboard, mode toggle on editor -->
+    <div style="flex: 0 0 auto; display: flex; align-items: center; justify-content: flex-end; min-width: 0;">
+      <sc-if value="{{ isDashboard }}" hint-placeholder-val="{{ true }}">
+        <button onClick="{{ toggleCmd }}" style="{{ cmdTriggerStyle }}" style-hover="background: rgba(0,0,0,0.045);">
+          <span style="{{ engineDotStyle }}"></span>
+          <sc-if value="{{ notMobile }}" hint-placeholder-val="{{ true }}">
+            <span style="font-size: 12.5px; color: #46443f; font-weight: 500; white-space: nowrap;">{{ engineLabel }}</span>
+          </sc-if>
+          <sc-if value="{{ notMobile }}" hint-placeholder-val="{{ true }}">
+            <span style="font-size: 12.5px; color: #a3a09a; font-family: 'JetBrains Mono', monospace; letter-spacing: -0.01em; white-space: nowrap;">{{ engineModeLabel }}</span>
+          </sc-if>
+          <span style="{{ cmdCaretStyle }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></span>
+        </button>
+      </sc-if>
+      <sc-if value="{{ isEditor }}" hint-placeholder-val="{{ true }}">
+        <div style="display: flex; align-items: center; gap: 18px;">
+          <button onClick="{{ setDraft }}" style="{{ modeDraftStyle }}" style-hover="opacity: 1;">
+            Draft
+            <sc-if value="{{ isDraft }}" hint-placeholder-val="{{ true }}">
+              <span style="position: absolute; left: 0; right: 0; bottom: -3px; height: 1.5px; background: #5a6178; border-radius: 2px;"></span>
+            </sc-if>
+          </button>
+          <button onClick="{{ setReview }}" style="{{ modeReviewStyle }}" style-hover="opacity: 1;">
+            Review
+            <sc-if value="{{ isReview }}" hint-placeholder-val="{{ true }}">
+              <span style="position: absolute; left: 0; right: 0; bottom: -3px; height: 1.5px; background: #5a6178; border-radius: 2px;"></span>
+            </sc-if>
+          </button>
+        </div>
+      </sc-if>
+    </div>
+  </header>
+
+  <!-- ===================== DASHBOARD ===================== -->
+  <sc-if value="{{ isDashboard }}" hint-placeholder-val="{{ true }}">
+    <main data-screen-label="Dashboard" style="flex: 1 1 auto; padding: clamp(28px, 4vw, 52px) clamp(18px, 4vw, 48px) 80px;">
+      <div style="max-width: 1240px; margin: 0 auto;">
+
+        <!-- section intro -->
+        <div style="margin-bottom: clamp(28px, 4vw, 44px); max-width: 640px;">
+          <h1 style="font-size: clamp(26px, 3.4vw, 34px); font-weight: 600; letter-spacing: -0.025em; margin: 0 0 10px;">Pipeline</h1>
+          <p style="margin: 0; font-size: 15.5px; line-height: 1.6; color: #6d6a64;">Emerging repositories move left-to-right through the Step Functions workflow — from discovery to a finished, critic-edited article.</p>
+        </div>
+
+        <!-- command center -->
+        <sc-if value="{{ cmdOpen }}" hint-placeholder-val="{{ false }}">
+          <div style="background: #ffffff; border-radius: 16px; padding: clamp(22px, 3vw, 30px); margin-bottom: 36px; box-shadow: 0 1px 2px rgba(26,24,20,0.05); animation: dpFadeUp .3s cubic-bezier(.2,0,0,1);">
+            <div style="display: flex; align-items: center; gap: 9px; margin-bottom: 26px;">
+              <span style="display: flex; color: #908d86;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><line x1="21" x2="14" y1="4" y2="4"></line><line x1="10" x2="3" y1="4" y2="4"></line><line x1="21" x2="12" y1="12" y2="12"></line><line x1="8" x2="3" y1="12" y2="12"></line><line x1="21" x2="16" y1="20" y2="20"></line><line x1="12" x2="3" y1="20" y2="20"></line><line x1="14" x2="14" y1="2" y2="6"></line><line x1="8" x2="8" y1="10" y2="14"></line><line x1="16" x2="16" y1="18" y2="22"></line></svg></span>
+              <span style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #908d86;">Pipeline Command Center</span>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: clamp(24px, 3vw, 44px);">
+
+              <div>
+                <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #a3a09a; margin-bottom: 13px;">Engine State</div>
+                <div style="display: inline-flex; background: #f1f0ea; border-radius: 9px; padding: 3px; gap: 2px;">
+                  <button onClick="{{ setEngineActive }}" style="{{ segEngineActiveStyle }}">Active</button>
+                  <button onClick="{{ setEnginePaused }}" style="{{ segEnginePausedStyle }}">Paused</button>
+                </div>
+              </div>
+
+              <div>
+                <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #a3a09a; margin-bottom: 13px;">Discovery Mode</div>
+                <div style="display: inline-flex; background: #f1f0ea; border-radius: 9px; padding: 3px; gap: 2px; flex-wrap: wrap;">
+                  <button onClick="{{ setModeFrontier }}" style="{{ segModeFrontier }}">Frontier</button>
+                  <button onClick="{{ setModeBalanced }}" style="{{ segModeBalanced }}">Balanced</button>
+                  <button onClick="{{ setModeEcosystem }}" style="{{ segModeEcosystem }}">Ecosystem</button>
+                </div>
+                <div style="font-size: 12.5px; color: #908d86; margin-top: 11px; line-height: 1.5;">{{ modeHelp }}</div>
+              </div>
+
+              <div>
+                <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #a3a09a; margin-bottom: 13px;">Target Candidates / Week</div>
+                <div style="display: flex; align-items: center; gap: 16px;">
+                  <input type="range" min="1" max="20" value="{{ velocity }}" onInput="{{ onVelocity }}" style="flex: 1; accent-color: #5a6178; height: 4px;" />
+                  <span style="font-family: 'JetBrains Mono', monospace; font-size: 16px; font-weight: 500; min-width: 26px; text-align: right;">{{ velocity }}</span>
+                </div>
+                <div style="font-size: 12.5px; color: #908d86; margin-top: 11px;">repositories entering Discovery weekly</div>
+              </div>
+
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- board -->
+        <div style="{{ boardStyle }}">
+
+          <!-- COLUMN A — Discovery -->
+          <section data-screen-label="Discovery column" style="min-width: 0;">
+            <div style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 14px; padding: 0 2px;">
+              <span style="font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.09em; color: #908d86;">Discovery</span>
+              <span style="font-size: 12px; color: #b3b0a8; font-family: 'JetBrains Mono', monospace;">3</span>
+            </div>
+            <div style="{{ colStyle }}">
+              <article style="{{ cardStyle }}">
+                <div style="font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 500; color: #1b1a18; margin-bottom: 7px;">helix-labs/helix</div>
+                <p style="margin: 0 0 14px; font-size: 14px; line-height: 1.5; color: #6d6a64;">Durable orchestration runtime for LLM agents.</p>
+                <div style="display: flex; gap: 16px; font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: #a3a09a;">
+                  <span>★ Δ +2.1k</span><span>cov 0.82</span>
+                </div>
+              </article>
+              <article style="{{ cardStyle }}">
+                <div style="font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 500; color: #1b1a18; margin-bottom: 7px;">volta-ai/loom</div>
+                <p style="margin: 0 0 14px; font-size: 14px; line-height: 1.5; color: #6d6a64;">Declarative agent graphs, defined as code.</p>
+                <div style="display: flex; gap: 16px; font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: #a3a09a;">
+                  <span>★ Δ +1.4k</span><span>cov 0.71</span>
+                </div>
+              </article>
+              <article style="{{ cardStyle }}">
+                <div style="font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 500; color: #1b1a18; margin-bottom: 7px;">tau/agentmesh</div>
+                <p style="margin: 0 0 14px; font-size: 14px; line-height: 1.5; color: #6d6a64;">A message bus for multi-agent systems.</p>
+                <div style="display: flex; gap: 16px; font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: #a3a09a;">
+                  <span>★ Δ +0.9k</span><span>cov 0.64</span>
+                </div>
+              </article>
+            </div>
+          </section>
+
+          <!-- COLUMN B — Ready for Dev -->
+          <section data-screen-label="Ready for Dev column" style="min-width: 0;">
+            <div style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 14px; padding: 0 2px;">
+              <span style="font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.09em; color: #908d86;">Ready for Dev</span>
+              <span style="font-size: 12px; color: #b3b0a8; font-family: 'JetBrains Mono', monospace;">2</span>
+            </div>
+            <div style="{{ colStyle }}">
+              <article onClick="{{ openDrawerRelay }}" style="{{ cardActionStyle }}" style-hover="box-shadow: 0 4px 18px rgba(26,24,20,0.07); transform: translateY(-1px);">
+                <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 7px;">
+                  <div style="font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 500; color: #1b1a18; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;">relay-systems/relay</div>
+                  <span style="color: #b3b0a8; flex: 0 0 auto; margin-top: 1px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg></span>
+                </div>
+                <p style="margin: 0 0 14px; font-size: 14px; line-height: 1.5; color: #6d6a64;">Durable workflows with deterministic replay.</p>
+                <div style="font-size: 11.5px; color: #5a6178; font-weight: 500;">Open handoff →</div>
+              </article>
+              <article onClick="{{ openDrawerSigil }}" style="{{ cardActionStyle }}" style-hover="box-shadow: 0 4px 18px rgba(26,24,20,0.07); transform: translateY(-1px);">
+                <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 7px;">
+                  <div style="font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 500; color: #1b1a18;">forge/sigil</div>
+                  <span style="color: #b3b0a8; flex: 0 0 auto; margin-top: 1px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg></span>
+                </div>
+                <p style="margin: 0 0 14px; font-size: 14px; line-height: 1.5; color: #6d6a64;">A typed tool-calling layer for agents.</p>
+                <div style="font-size: 11.5px; color: #5a6178; font-weight: 500;">Open handoff →</div>
+              </article>
+            </div>
+          </section>
+
+          <!-- COLUMN C — Drafting -->
+          <section data-screen-label="Drafting column" style="min-width: 0;">
+            <div style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 14px; padding: 0 2px;">
+              <span style="font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.09em; color: #908d86;">Drafting</span>
+              <span style="font-size: 12px; color: #b3b0a8; font-family: 'JetBrains Mono', monospace;">2</span>
+            </div>
+            <div style="{{ colStyle }}">
+              <article style="{{ cardStyle }}">
+                <div style="font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 500; color: #1b1a18; margin-bottom: 7px;">cortex/orchard</div>
+                <p style="margin: 0 0 14px; font-size: 14px; line-height: 1.5; color: #6d6a64;">Synthesizing the State-of-the-Art draft.</p>
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 11px;">
+                  <span style="display: flex; gap: 4px;">
+                    <span style="width: 5px; height: 5px; border-radius: 50%; background: #5a6178; animation: dpPulse 1.3s ease-in-out infinite;"></span>
+                    <span style="width: 5px; height: 5px; border-radius: 50%; background: #5a6178; animation: dpPulse 1.3s ease-in-out infinite .2s;"></span>
+                    <span style="width: 5px; height: 5px; border-radius: 50%; background: #5a6178; animation: dpPulse 1.3s ease-in-out infinite .4s;"></span>
+                  </span>
+                  <span style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: #8a877f;">model pass 2 / 3</span>
+                </div>
+                <div style="height: 2px; background: #ecebe5; border-radius: 2px; overflow: hidden;">
+                  <div style="width: 32%; height: 100%; background: #c2c5cf; border-radius: 2px; animation: dpTrack 1.7s cubic-bezier(.5,0,.5,1) infinite;"></div>
+                </div>
+              </article>
+              <article style="{{ cardStyle }}">
+                <div style="font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 500; color: #1b1a18; margin-bottom: 7px;">nine/atlas</div>
+                <p style="margin: 0 0 14px; font-size: 14px; line-height: 1.5; color: #6d6a64;">Outlining the architecture teardown.</p>
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 11px;">
+                  <span style="display: flex; gap: 4px;">
+                    <span style="width: 5px; height: 5px; border-radius: 50%; background: #5a6178; animation: dpPulse 1.3s ease-in-out infinite;"></span>
+                    <span style="width: 5px; height: 5px; border-radius: 50%; background: #5a6178; animation: dpPulse 1.3s ease-in-out infinite .2s;"></span>
+                    <span style="width: 5px; height: 5px; border-radius: 50%; background: #5a6178; animation: dpPulse 1.3s ease-in-out infinite .4s;"></span>
+                  </span>
+                  <span style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: #8a877f;">outline pass 1 / 3</span>
+                </div>
+                <div style="height: 2px; background: #ecebe5; border-radius: 2px; overflow: hidden;">
+                  <div style="width: 32%; height: 100%; background: #c2c5cf; border-radius: 2px; animation: dpTrack 2.1s cubic-bezier(.5,0,.5,1) infinite;"></div>
+                </div>
+              </article>
+            </div>
+          </section>
+
+          <!-- COLUMN D — In Review -->
+          <section data-screen-label="In Review column" style="min-width: 0;">
+            <div style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 14px; padding: 0 2px;">
+              <span style="font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.09em; color: #908d86;">In Review</span>
+              <span style="font-size: 12px; color: #b3b0a8; font-family: 'JetBrains Mono', monospace;">2</span>
+            </div>
+            <div style="{{ colStyle }}">
+              <article onClick="{{ goEditor }}" style="{{ cardActionStyle }}" style-hover="box-shadow: 0 4px 18px rgba(26,24,20,0.07); transform: translateY(-1px);">
+                <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 8px;">
+                  <div style="font-size: 15px; font-weight: 600; letter-spacing: -0.015em; line-height: 1.3;">State of the Art: Helix</div>
+                  <span style="color: #b3b0a8; flex: 0 0 auto; margin-top: 2px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg></span>
+                </div>
+                <div style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: #a3a09a; margin-bottom: 13px;">helix-labs/helix</div>
+                <div style="font-size: 11.5px; color: #5a6178; font-weight: 500;">Edit article →</div>
+              </article>
+              <article style="{{ cardStyle }}">
+                <div style="font-size: 15px; font-weight: 600; letter-spacing: -0.015em; line-height: 1.3; margin-bottom: 8px;">Field Notes: agentmesh</div>
+                <div style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: #a3a09a; margin-bottom: 13px;">tau/agentmesh</div>
+                <div style="font-size: 11.5px; color: #b3b0a8;">Awaiting editor</div>
+              </article>
+            </div>
+          </section>
+
+        </div>
+      </div>
+    </main>
+  </sc-if>
+
+  <!-- ===================== EDITOR ===================== -->
+  <sc-if value="{{ isEditor }}" hint-placeholder-val="{{ true }}">
+    <main data-screen-label="Editor" style="flex: 1 1 auto; overflow-y: auto; padding: clamp(40px, 6vw, 72px) clamp(20px, 5vw, 40px) 200px;">
+      <div style="{{ reviewWrapStyle }}">
+        <div style="{{ proseStyle }}">
+
+          <!-- ===== DRAFT: live editor ===== -->
+          <sc-if value="{{ isDraft }}" hint-placeholder-val="{{ false }}">
+            <div style="display: flex; align-items: center; gap: 9px; margin-bottom: 28px; font-size: 12.5px; line-height: 1.5; color: #a3a09a;">
+              <span style="display: flex; color: #b3b0a8; flex: 0 0 auto;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19 7-7 3 3-7 7-3-3z"></path><path d="m18 13-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path><path d="m2 2 7.586 7.586"></path><circle cx="11" cy="11" r="2"></circle></svg></span>
+              <span>Live editor — select text to format, click <strong style="color: #6d6a64; font-weight: 600;">+</strong> to insert a block, or type Markdown (<code style="font-family: 'JetBrains Mono', monospace; background: #efeee8; padding: 0 4px; border-radius: 4px;">## </code> <code style="font-family: 'JetBrains Mono', monospace; background: #efeee8; padding: 0 4px; border-radius: 4px;">&gt; </code> <code style="font-family: 'JetBrains Mono', monospace; background: #efeee8; padding: 0 4px; border-radius: 4px;">`</code>).</span>
+            </div>
+
+            {{ editableEl }}
+
+            <!-- block-insert "+" -->
+            <sc-if value="{{ plusShow }}" hint-placeholder-val="{{ false }}">
+              <button onClick="{{ openInsert }}" onMouseDown="{{ preventBlur }}" style="{{ plusBtnStyle }}" style-hover="background: #5a6178; color: #ffffff; border-color: #5a6178;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"></path></svg></button>
+            </sc-if>
+
+            <!-- block-insert menu — DESKTOP popover -->
+            <sc-if value="{{ insertPopover }}" hint-placeholder-val="{{ false }}">
+              <div onClick="{{ closeInsert }}" style="position: fixed; inset: 0; z-index: 84;"></div>
+              <div style="{{ insertMenuStyle }}">
+                <div style="font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.11em; color: #a3a09a; padding: 5px 10px 8px;">Insert block</div>
+                <button onMouseDown="{{ preventBlur }}" onClick="{{ insHeading }}" style="display: flex; align-items: center; gap: 11px; width: 100%; border: none; background: transparent; cursor: pointer; padding: 8px 10px; border-radius: 8px; font-family: inherit; font-size: 14px; color: #1b1a18; text-align: left;" style-hover="background: #f4f3ee;"><span style="display: flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 6px; background: #f1f0ea; color: #6d6a64; font-size: 12.5px; font-weight: 700; flex: 0 0 auto;">H</span>Heading</button>
+                <button onMouseDown="{{ preventBlur }}" onClick="{{ insQuote }}" style="display: flex; align-items: center; gap: 11px; width: 100%; border: none; background: transparent; cursor: pointer; padding: 8px 10px; border-radius: 8px; font-family: inherit; font-size: 14px; color: #1b1a18; text-align: left;" style-hover="background: #f4f3ee;"><span style="display: flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 6px; background: #f1f0ea; color: #6d6a64; flex: 0 0 auto;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21c3 0 7-1 7-8V5a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"></path><path d="M14 21c3 0 7-1 7-8V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"></path></svg></span>Quote</button>
+                <button onMouseDown="{{ preventBlur }}" onClick="{{ insCode }}" style="display: flex; align-items: center; gap: 11px; width: 100%; border: none; background: transparent; cursor: pointer; padding: 8px 10px; border-radius: 8px; font-family: inherit; font-size: 14px; color: #1b1a18; text-align: left;" style-hover="background: #f4f3ee;"><span style="display: flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 6px; background: #f1f0ea; color: #6d6a64; flex: 0 0 auto;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg></span>Code block</button>
+                <button onMouseDown="{{ preventBlur }}" onClick="{{ insImage }}" style="display: flex; align-items: center; gap: 11px; width: 100%; border: none; background: transparent; cursor: pointer; padding: 8px 10px; border-radius: 8px; font-family: inherit; font-size: 14px; color: #1b1a18; text-align: left;" style-hover="background: #f4f3ee;"><span style="display: flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 6px; background: #f1f0ea; color: #6d6a64; flex: 0 0 auto;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="9" cy="9" r="2"></circle><path d="m21 15-3.6-3.6a2 2 0 0 0-2.8 0L6 21"></path></svg></span>Image</button>
+                <button onMouseDown="{{ preventBlur }}" onClick="{{ insVideo }}" style="display: flex; align-items: center; gap: 11px; width: 100%; border: none; background: transparent; cursor: pointer; padding: 8px 10px; border-radius: 8px; font-family: inherit; font-size: 14px; color: #1b1a18; text-align: left;" style-hover="background: #f4f3ee;"><span style="display: flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 6px; background: #f1f0ea; color: #6d6a64; flex: 0 0 auto;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m22 8-6 4 6 4V8Z"></path><rect x="2" y="6" width="14" height="12" rx="2"></rect></svg></span>Video</button>
+                <button onMouseDown="{{ preventBlur }}" onClick="{{ insDivider }}" style="display: flex; align-items: center; gap: 11px; width: 100%; border: none; background: transparent; cursor: pointer; padding: 8px 10px; border-radius: 8px; font-family: inherit; font-size: 14px; color: #1b1a18; text-align: left;" style-hover="background: #f4f3ee;"><span style="display: flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 6px; background: #f1f0ea; color: #6d6a64; flex: 0 0 auto;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="12" x2="20" y2="12"></line></svg></span>Divider</button>
+              </div>
+            </sc-if>
+
+            <!-- block-insert menu — MOBILE bottom sheet, pinned above the keyboard -->
+            <sc-if value="{{ insertSheet }}" hint-placeholder-val="{{ false }}">
+              <div onClick="{{ closeInsert }}" style="position: fixed; inset: 0; z-index: 86; background: rgba(26,24,20,0.12); animation: dpFade .18s ease;"></div>
+              <div style="{{ insertSheetStyle }}">
+                <div style="display: flex; justify-content: center; padding: 4px 0 12px;"><span style="width: 38px; height: 4px; border-radius: 4px; background: #e0ddd4;"></span></div>
+                <div style="display: flex; align-items: center; justify-content: space-between; margin: 0 2px 12px;">
+                  <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.11em; color: #a3a09a;">Insert block</span>
+                  <button onMouseDown="{{ preventBlur }}" onClick="{{ closeInsert }}" style="border: none; background: transparent; cursor: pointer; font-family: inherit; font-size: 13px; color: #908d86; padding: 4px 6px;">Cancel</button>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
+                  <button onMouseDown="{{ preventBlur }}" onClick="{{ insText }}" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 9px; min-height: 80px; border: 1px solid #ecebe5; background: #faf9f6; cursor: pointer; padding: 12px 6px; border-radius: 12px; font-family: inherit; font-size: 13px; color: #1b1a18;" style-active="background: #f1f0ea;"><span style="display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 8px; background: #f1f0ea; color: #6d6a64;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 7 4 4 20 4 20 7"></polyline><line x1="9" y1="20" x2="15" y2="20"></line><line x1="12" y1="4" x2="12" y2="20"></line></svg></span>Text</button>
+                  <button onMouseDown="{{ preventBlur }}" onClick="{{ insHeading }}" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 9px; min-height: 80px; border: 1px solid #ecebe5; background: #faf9f6; cursor: pointer; padding: 12px 6px; border-radius: 12px; font-family: inherit; font-size: 13px; color: #1b1a18;" style-active="background: #f1f0ea;"><span style="display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 8px; background: #f1f0ea; color: #6d6a64; font-size: 14px; font-weight: 700;">H</span>Heading</button>
+                  <button onMouseDown="{{ preventBlur }}" onClick="{{ insQuote }}" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 9px; min-height: 80px; border: 1px solid #ecebe5; background: #faf9f6; cursor: pointer; padding: 12px 6px; border-radius: 12px; font-family: inherit; font-size: 13px; color: #1b1a18;" style-active="background: #f1f0ea;"><span style="display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 8px; background: #f1f0ea; color: #6d6a64;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21c3 0 7-1 7-8V5a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"></path><path d="M14 21c3 0 7-1 7-8V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"></path></svg></span>Quote</button>
+                  <button onMouseDown="{{ preventBlur }}" onClick="{{ insCode }}" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 9px; min-height: 80px; border: 1px solid #ecebe5; background: #faf9f6; cursor: pointer; padding: 12px 6px; border-radius: 12px; font-family: inherit; font-size: 13px; color: #1b1a18;" style-active="background: #f1f0ea;"><span style="display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 8px; background: #f1f0ea; color: #6d6a64;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg></span>Code</button>
+                  <button onMouseDown="{{ preventBlur }}" onClick="{{ insImage }}" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 9px; min-height: 80px; border: 1px solid #ecebe5; background: #faf9f6; cursor: pointer; padding: 12px 6px; border-radius: 12px; font-family: inherit; font-size: 13px; color: #1b1a18;" style-active="background: #f1f0ea;"><span style="display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 8px; background: #f1f0ea; color: #6d6a64;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="9" cy="9" r="2"></circle><path d="m21 15-3.6-3.6a2 2 0 0 0-2.8 0L6 21"></path></svg></span>Image</button>
+                  <button onMouseDown="{{ preventBlur }}" onClick="{{ insVideo }}" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 9px; min-height: 80px; border: 1px solid #ecebe5; background: #faf9f6; cursor: pointer; padding: 12px 6px; border-radius: 12px; font-family: inherit; font-size: 13px; color: #1b1a18;" style-active="background: #f1f0ea;"><span style="display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 8px; background: #f1f0ea; color: #6d6a64;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m22 8-6 4 6 4V8Z"></path><rect x="2" y="6" width="14" height="12" rx="2"></rect></svg></span>Video</button>
+                  <button onMouseDown="{{ preventBlur }}" onClick="{{ insDivider }}" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 9px; min-height: 80px; border: 1px solid #ecebe5; background: #faf9f6; cursor: pointer; padding: 12px 6px; border-radius: 12px; font-family: inherit; font-size: 13px; color: #1b1a18;" style-active="background: #f1f0ea;"><span style="display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 8px; background: #f1f0ea; color: #6d6a64;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="12" x2="20" y2="12"></line></svg></span>Divider</button>
+                </div>
+              </div>
+            </sc-if>
+
+            <!-- selection toolbar -->
+            <sc-if value="{{ selBarShow }}" hint-placeholder-val="{{ false }}">
+              <div style="{{ selBarStyle }}">
+                <button onMouseDown="{{ preventBlur }}" onClick="{{ doBold }}" style="display: flex; align-items: center; justify-content: center; min-width: 32px; height: 30px; padding: 0 9px; border: none; background: transparent; color: #e8e6e0; border-radius: 7px; cursor: pointer; font-family: inherit; font-size: 14px; font-weight: 700;" style-hover="background: rgba(255,255,255,0.14);">B</button>
+                <button onMouseDown="{{ preventBlur }}" onClick="{{ doItalic }}" style="display: flex; align-items: center; justify-content: center; min-width: 30px; height: 30px; padding: 0 9px; border: none; background: transparent; color: #e8e6e0; border-radius: 7px; cursor: pointer; font-family: 'Inter', serif; font-size: 15px; font-style: italic;" style-hover="background: rgba(255,255,255,0.14);">i</button>
+                <button onMouseDown="{{ preventBlur }}" onClick="{{ doCode }}" style="display: flex; align-items: center; justify-content: center; min-width: 32px; height: 30px; padding: 0 9px; border: none; background: transparent; color: #e8e6e0; border-radius: 7px; cursor: pointer;" style-hover="background: rgba(255,255,255,0.14);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg></button>
+                <button onMouseDown="{{ preventBlur }}" onClick="{{ doLink }}" style="display: flex; align-items: center; justify-content: center; min-width: 32px; height: 30px; padding: 0 9px; border: none; background: transparent; color: #e8e6e0; border-radius: 7px; cursor: pointer;" style-hover="background: rgba(255,255,255,0.14);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></button>
+                <span style="width: 1px; height: 18px; background: rgba(255,255,255,0.16); margin: 0 4px; flex: 0 0 auto;"></span>
+                <button onMouseDown="{{ preventBlur }}" onClick="{{ doText }}" style="display: flex; align-items: center; justify-content: center; min-width: 32px; height: 30px; padding: 0 9px; border: none; background: transparent; color: #e8e6e0; border-radius: 7px; cursor: pointer; font-family: inherit; font-size: 12.5px; font-weight: 600;" style-hover="background: rgba(255,255,255,0.14);">Text</button>
+                <button onMouseDown="{{ preventBlur }}" onClick="{{ doH2 }}" style="display: flex; align-items: center; justify-content: center; min-width: 32px; height: 30px; padding: 0 9px; border: none; background: transparent; color: #e8e6e0; border-radius: 7px; cursor: pointer; font-family: inherit; font-size: 12.5px; font-weight: 600;" style-hover="background: rgba(255,255,255,0.14);">H2</button>
+                <button onMouseDown="{{ preventBlur }}" onClick="{{ doQuote }}" style="display: flex; align-items: center; justify-content: center; min-width: 32px; height: 30px; padding: 0 9px; border: none; background: transparent; color: #e8e6e0; border-radius: 7px; cursor: pointer;" style-hover="background: rgba(255,255,255,0.14);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21c3 0 7-1 7-8V5a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"></path><path d="M14 21c3 0 7-1 7-8V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"></path></svg></button>
+              </div>
+            </sc-if>
+          </sc-if>
+
+          <!-- ===== REVIEW: marked-up read view ===== -->
+          <sc-if value="{{ isReview }}" hint-placeholder-val="{{ true }}">
+
+          <!-- article head -->
+          <div style="margin-bottom: 38px;">
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #a3a09a; letter-spacing: 0.01em; margin-bottom: 18px;">helix-labs/helix&nbsp;&nbsp;·&nbsp;&nbsp;★ 14.2k&nbsp;&nbsp;·&nbsp;&nbsp;+2.1k this week</div>
+            <h1 style="font-size: clamp(30px, 4vw, 40px); font-weight: 600; letter-spacing: -0.03em; line-height: 1.12; margin: 0 0 16px;">State of the Art: Helix</h1>
+            <p style="font-size: 18px; line-height: 1.5; color: #6d6a64; margin: 0; font-weight: 450; text-wrap: pretty;">A code-critic deep dive into the durable orchestration runtime that wants to make every agent step a database transaction.</p>
+          </div>
+
+          <p style="font-size: 19px; line-height: 1.78; margin: 0 0 26px; text-wrap: pretty;">Every few months a project arrives claiming to make LLM agents "production-ready." Most are wrappers around a chat loop. Helix is not a wrapper — it is a runtime that treats every agent step as a durable, replayable unit of work. After a week with it, that distinction turns out to matter more than the README suggests.</p>
+
+          <h2 style="font-size: 23px; font-weight: 600; letter-spacing: -0.02em; margin: 44px 0 18px;">The premise</h2>
+
+          <!-- NOTE 1 paragraph -->
+          <div style="position: relative;">
+            <p style="font-size: 19px; line-height: 1.78; margin: 0 0 26px; text-wrap: pretty;">On the surface the API is disarmingly simple. You decorate a function with <code style="font-family: 'JetBrains Mono', monospace; font-size: 0.82em; background: #efeee8; padding: 1px 5px; border-radius: 4px;">@step</code>, and Helix compiles it into a state machine that survives process restarts, redeploys, and the occasional model timeout. The promise on the front page is that "your agent loop becomes a database transaction."</p>
+            <sc-if value="{{ isReview }}" hint-placeholder-val="{{ true }}">
+              <sc-if value="{{ useMargin }}" hint-placeholder-val="{{ true }}">
+                <button onClick="{{ toggleN1 }}" style="{{ dotMarginStyle }}" style-hover="transform: scale(1.35);"><span style="{{ n1DotInner }}"></span></button>
+              </sc-if>
+              <sc-if value="{{ narrowMargin }}" hint-placeholder-val="{{ true }}">
+                <button onClick="{{ toggleN1 }}" style="{{ dotInlineStyle }}"><span style="{{ n1DotInner }}"></span>{{ n1Label }}</button>
+              </sc-if>
+            </sc-if>
+            <sc-if value="{{ n1Open }}" hint-placeholder-val="{{ false }}">
+              <div style="{{ noteCardStyle }}">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                  <span style="width: 6px; height: 6px; border-radius: 50%; background: #5a6178;"></span>
+                  <span style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #908d86;">AI Tech Editor</span>
+                </div>
+                <p style="margin: 0 0 14px; font-size: 14px; line-height: 1.62; color: #46443f; text-wrap: pretty;">"Compiles it into a state machine" overstates what happens at decoration time — registration is lazy. Hedge to a <em>resumable step</em> and keep the transaction line as the punchline.</p>
+                <div style="font-family: 'JetBrains Mono', monospace; font-size: 12.5px; line-height: 1.75; background: #faf9f6; border-radius: 8px; padding: 11px 13px; margin-bottom: 14px;">
+                  <div style="color: #8a877f;">…decorate a function with @step, and Helix</div>
+                  <div style="color: #a3a09a; text-decoration: line-through; text-decoration-color: #c4c1b8; opacity: 0.8;">− compiles it into a state machine that survives</div>
+                  <div style="background: #eef0f4; color: #3a3f4d; font-weight: 500; border-radius: 4px; padding: 0 4px; margin: 2px -4px;">+ registers it as a resumable step whose state survives</div>
+                  <div style="color: #8a877f;">process restarts, redeploys, and timeouts.</div>
+                </div>
+                <div style="border-top: 1px solid #efeee8; padding-top: 11px;">
+                  <sc-for list="{{ n1Msgs }}" as="m" hint-placeholder-count="0">
+                    <div style="font-size: 13px; line-height: 1.5; color: #46443f; margin-bottom: 8px;"><span style="color: #a3a09a; font-weight: 500;">You&nbsp;·&nbsp;</span>{{ m }}</div>
+                  </sc-for>
+                  <input onKeyDown="{{ chatN1 }}" placeholder="Push back on this note…" style="width: 100%; border: none; outline: none; background: transparent; font-size: 16px; padding: 2px 0; color: #1b1a18;" />
+                </div>
+                <button onClick="{{ resolveN1 }}" style="{{ n1ResolveStyle }}" style-hover="opacity: 0.85;">{{ n1ResolveLabel }}</button>
+              </div>
+            </sc-if>
+          </div>
+
+          <h2 style="font-size: 23px; font-weight: 600; letter-spacing: -0.02em; margin: 44px 0 18px;">Architecture</h2>
+
+          <p style="font-size: 19px; line-height: 1.78; margin: 0 0 26px; text-wrap: pretty;">Underneath, Helix is event-sourced. Each step appends to an append-only log, and recovery is simply a replay of that log against your code. It is the pattern that powers Temporal and durable functions, adapted for the non-determinism of model calls.</p>
+
+          <pre style="font-family: 'JetBrains Mono', monospace; font-size: 13.5px; line-height: 1.65; background: #faf9f6; color: #2c2a26; border-radius: 10px; padding: 18px 20px; margin: 0 0 26px; overflow-x: auto;"><span style="color: #8a877f;">@step(retries=3)</span>
+async def research(topic: str) -> Brief:
+    sources = await search(topic)          <span style="color: #8a877f;"># checkpointed</span>
+    draft   = await model.summarize(sources) <span style="color: #8a877f;"># checkpointed</span>
+    return Brief(draft=draft, sources=sources)</pre>
+
+          <!-- NOTE 2 paragraph -->
+          <div style="position: relative;">
+            <p style="font-size: 19px; line-height: 1.78; margin: 0 0 26px; text-wrap: pretty;">The elegance has a cost. Because recovery replays your function from the top, every line above a checkpoint must be deterministic. The developer log records the exact moment this leaks: a stray <code style="font-family: 'JetBrains Mono', monospace; font-size: 0.82em; background: #efeee8; padding: 1px 5px; border-radius: 4px;">datetime.now()</code> inside a step produced a different branch on replay, and the agent quietly redid four minutes of work.</p>
+            <sc-if value="{{ isReview }}" hint-placeholder-val="{{ true }}">
+              <sc-if value="{{ useMargin }}" hint-placeholder-val="{{ true }}">
+                <button onClick="{{ toggleN2 }}" style="{{ dotMarginStyle }}" style-hover="transform: scale(1.35);"><span style="{{ n2DotInner }}"></span></button>
+              </sc-if>
+              <sc-if value="{{ narrowMargin }}" hint-placeholder-val="{{ true }}">
+                <button onClick="{{ toggleN2 }}" style="{{ dotInlineStyle }}"><span style="{{ n2DotInner }}"></span>{{ n2Label }}</button>
+              </sc-if>
+            </sc-if>
+            <sc-if value="{{ n2Open }}" hint-placeholder-val="{{ false }}">
+              <div style="{{ noteCardStyle }}">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                  <span style="width: 6px; height: 6px; border-radius: 50%; background: #5a6178;"></span>
+                  <span style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #908d86;">AI Tech Editor</span>
+                </div>
+                <p style="margin: 0 0 14px; font-size: 14px; line-height: 1.62; color: #46443f; text-wrap: pretty;">Sharp observation, but "every line" is too strong — pure logic replays fine. Only side-effects above the checkpoint are dangerous. Scope the claim so readers don't over-correct.</p>
+                <div style="font-family: 'JetBrains Mono', monospace; font-size: 12.5px; line-height: 1.75; background: #faf9f6; border-radius: 8px; padding: 11px 13px; margin-bottom: 14px;">
+                  <div style="color: #8a877f;">…replays your function from the top,</div>
+                  <div style="color: #a3a09a; text-decoration: line-through; text-decoration-color: #c4c1b8; opacity: 0.8;">− every line above a checkpoint must be deterministic.</div>
+                  <div style="background: #eef0f4; color: #3a3f4d; font-weight: 500; border-radius: 4px; padding: 0 4px; margin: 2px -4px;">+ every side-effect above a checkpoint must be deterministic</div>
+                  <div style="background: #eef0f4; color: #3a3f4d; font-weight: 500; border-radius: 4px; padding: 0 4px; margin: 2px -4px;">+ (pure logic is free to re-run).</div>
+                </div>
+                <div style="border-top: 1px solid #efeee8; padding-top: 11px;">
+                  <sc-for list="{{ n2Msgs }}" as="m" hint-placeholder-count="0">
+                    <div style="font-size: 13px; line-height: 1.5; color: #46443f; margin-bottom: 8px;"><span style="color: #a3a09a; font-weight: 500;">You&nbsp;·&nbsp;</span>{{ m }}</div>
+                  </sc-for>
+                  <input onKeyDown="{{ chatN2 }}" placeholder="Push back on this note…" style="width: 100%; border: none; outline: none; background: transparent; font-size: 16px; padding: 2px 0; color: #1b1a18;" />
+                </div>
+                <button onClick="{{ resolveN2 }}" style="{{ n2ResolveStyle }}" style-hover="opacity: 0.85;">{{ n2ResolveLabel }}</button>
+              </div>
+            </sc-if>
+          </div>
+
+          <h2 style="font-size: 23px; font-weight: 600; letter-spacing: -0.02em; margin: 44px 0 18px;">The developer experience</h2>
+
+          <!-- NOTE 3 paragraph -->
+          <div style="position: relative;">
+            <p style="font-size: 19px; line-height: 1.78; margin: 0 0 26px; text-wrap: pretty;">Setup is the weakest seam. The Food Critic developer log clocks a clean-clone-to-first-run at just under forty minutes, most of it spent discovering that the CLI silently assumes a running Postgres. The error, when it finally surfaces, points at a connection string rather than the missing dependency.</p>
+            <sc-if value="{{ isReview }}" hint-placeholder-val="{{ true }}">
+              <sc-if value="{{ useMargin }}" hint-placeholder-val="{{ true }}">
+                <button onClick="{{ toggleN3 }}" style="{{ dotMarginStyle }}" style-hover="transform: scale(1.35);"><span style="{{ n3DotInner }}"></span></button>
+              </sc-if>
+              <sc-if value="{{ narrowMargin }}" hint-placeholder-val="{{ true }}">
+                <button onClick="{{ toggleN3 }}" style="{{ dotInlineStyle }}"><span style="{{ n3DotInner }}"></span>{{ n3Label }}</button>
+              </sc-if>
+            </sc-if>
+            <sc-if value="{{ n3Open }}" hint-placeholder-val="{{ false }}">
+              <div style="{{ noteCardStyle }}">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                  <span style="width: 6px; height: 6px; border-radius: 50%; background: #5a6178;"></span>
+                  <span style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #908d86;">AI Tech Editor</span>
+                </div>
+                <p style="margin: 0 0 14px; font-size: 14px; line-height: 1.62; color: #46443f; text-wrap: pretty;">Cite the log precisely — the forty-minute figure is the p50 across the three machines in the log, not one heroic bad run. The qualifier protects us if a maintainer disputes it.</p>
+                <div style="font-family: 'JetBrains Mono', monospace; font-size: 12.5px; line-height: 1.75; background: #faf9f6; border-radius: 8px; padding: 11px 13px; margin-bottom: 14px;">
+                  <div style="color: #8a877f;">…log clocks a clean-clone-to-first-run at</div>
+                  <div style="color: #a3a09a; text-decoration: line-through; text-decoration-color: #c4c1b8; opacity: 0.8;">− just under forty minutes,</div>
+                  <div style="background: #eef0f4; color: #3a3f4d; font-weight: 500; border-radius: 4px; padding: 0 4px; margin: 2px -4px;">+ a p50 of 38 minutes across three machines,</div>
+                  <div style="color: #8a877f;">most of it spent discovering Postgres.</div>
+                </div>
+                <div style="border-top: 1px solid #efeee8; padding-top: 11px;">
+                  <sc-for list="{{ n3Msgs }}" as="m" hint-placeholder-count="0">
+                    <div style="font-size: 13px; line-height: 1.5; color: #46443f; margin-bottom: 8px;"><span style="color: #a3a09a; font-weight: 500;">You&nbsp;·&nbsp;</span>{{ m }}</div>
+                  </sc-for>
+                  <input onKeyDown="{{ chatN3 }}" placeholder="Push back on this note…" style="width: 100%; border: none; outline: none; background: transparent; font-size: 16px; padding: 2px 0; color: #1b1a18;" />
+                </div>
+                <button onClick="{{ resolveN3 }}" style="{{ n3ResolveStyle }}" style-hover="opacity: 0.85;">{{ n3ResolveLabel }}</button>
+              </div>
+            </sc-if>
+          </div>
+
+          <h2 style="font-size: 23px; font-weight: 600; letter-spacing: -0.02em; margin: 44px 0 18px;">Verdict</h2>
+
+          <!-- NOTE 4 paragraph -->
+          <div style="position: relative;">
+            <p style="font-size: 19px; line-height: 1.78; margin: 0 0 26px; text-wrap: pretty;">Helix is the most coherent answer to durable agents we have reviewed. It is not yet the easy one. For teams already comfortable with event-sourced systems, the model will feel inevitable; for everyone else, the first afternoon will be spent unlearning the assumption that an agent is just a while-loop.</p>
+            <sc-if value="{{ isReview }}" hint-placeholder-val="{{ true }}">
+              <sc-if value="{{ useMargin }}" hint-placeholder-val="{{ true }}">
+                <button onClick="{{ toggleN4 }}" style="{{ dotMarginStyle }}" style-hover="transform: scale(1.35);"><span style="{{ n4DotInner }}"></span></button>
+              </sc-if>
+              <sc-if value="{{ narrowMargin }}" hint-placeholder-val="{{ true }}">
+                <button onClick="{{ toggleN4 }}" style="{{ dotInlineStyle }}"><span style="{{ n4DotInner }}"></span>{{ n4Label }}</button>
+              </sc-if>
+            </sc-if>
+            <sc-if value="{{ n4Open }}" hint-placeholder-val="{{ false }}">
+              <div style="{{ noteCardStyle }}">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                  <span style="width: 6px; height: 6px; border-radius: 50%; background: #5a6178;"></span>
+                  <span style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #908d86;">AI Tech Editor</span>
+                </div>
+                <p style="margin: 0 0 14px; font-size: 14px; line-height: 1.62; color: #46443f; text-wrap: pretty;">Strong close. Name the one fix that flips the verdict — it makes the review actionable for the maintainers and shows we did the homework.</p>
+                <div style="font-family: 'JetBrains Mono', monospace; font-size: 12.5px; line-height: 1.75; background: #faf9f6; border-radius: 8px; padding: 11px 13px; margin-bottom: 14px;">
+                  <div style="color: #8a877f;">…an agent is just a while-loop.</div>
+                  <div style="background: #eef0f4; color: #3a3f4d; font-weight: 500; border-radius: 4px; padding: 0 4px; margin: 2px -4px;">+ A first-run `helix doctor` that provisions</div>
+                  <div style="background: #eef0f4; color: #3a3f4d; font-weight: 500; border-radius: 4px; padding: 0 4px; margin: 2px -4px;">+ Postgres would move this from coherent to recommended.</div>
+                </div>
+                <div style="border-top: 1px solid #efeee8; padding-top: 11px;">
+                  <sc-for list="{{ n4Msgs }}" as="m" hint-placeholder-count="0">
+                    <div style="font-size: 13px; line-height: 1.5; color: #46443f; margin-bottom: 8px;"><span style="color: #a3a09a; font-weight: 500;">You&nbsp;·&nbsp;</span>{{ m }}</div>
+                  </sc-for>
+                  <input onKeyDown="{{ chatN4 }}" placeholder="Push back on this note…" style="width: 100%; border: none; outline: none; background: transparent; font-size: 16px; padding: 2px 0; color: #1b1a18;" />
+                </div>
+                <button onClick="{{ resolveN4 }}" style="{{ n4ResolveStyle }}" style-hover="opacity: 0.85;">{{ n4ResolveLabel }}</button>
+              </div>
+            </sc-if>
+          </div>
+
+          <!-- review status + publish trigger -->
+          <sc-if value="{{ isReview }}" hint-placeholder-val="{{ false }}">
+            <div style="margin-top: 56px; display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap;">
+              <div style="display: flex; align-items: center; gap: 13px;">
+                <span style="display: flex; gap: 6px; align-items: center;">
+                  <span style="{{ prog1Style }}"></span>
+                  <span style="{{ prog2Style }}"></span>
+                  <span style="{{ prog3Style }}"></span>
+                  <span style="{{ prog4Style }}"></span>
+                </span>
+                <span style="font-size: 13px; color: #8a877f;">{{ resolveStatusLabel }}</span>
+              </div>
+              <button onClick="{{ openPublish }}" style="{{ publishBtnStyle }}" style-hover="opacity: 0.88;">Publish article →</button>
+            </div>
+          </sc-if>
+
+          </sc-if>
+        </div>
+      </div>
+    </main>
+  </sc-if>
+
+  <!-- ===================== HANDOFF DRAWER ===================== -->
+  <sc-if value="{{ showDrawer }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeDrawer }}" style="position: fixed; inset: 0; z-index: 60; background: rgba(20,18,16,0.16); backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px); animation: dpFade .28s ease;"></div>
+    <aside data-screen-label="Handoff drawer" style="{{ drawerStyle }}">
+      <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 28px;">
+        <div>
+          <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #908d86; margin-bottom: 8px;">Local Dev Handoff</div>
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 16px; font-weight: 500; letter-spacing: -0.01em;">{{ drawerName }}</div>
+        </div>
+        <button onClick="{{ closeDrawer }}" style="border: none; background: transparent; cursor: pointer; color: #908d86; padding: 4px; margin: -4px -4px 0 0; display: flex;" style-hover="color: #1b1a18;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+      </div>
+
+      <!-- handoff prompt -->
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+        <span style="font-size: 12.5px; font-weight: 500; color: #6d6a64;">Handoff Prompt</span>
+        <button onClick="{{ copyHandoff }}" style="border: none; background: transparent; cursor: pointer; color: #5a6178; font-size: 12px; font-weight: 500; display: flex; align-items: center; gap: 6px; padding: 0;" style-hover="opacity: 0.7;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+          {{ copyLabel }}
+        </button>
+      </div>
+      <div style="font-family: 'JetBrains Mono', monospace; font-size: 12.5px; line-height: 1.72; color: #3a3833; background: #faf9f6; border-radius: 10px; padding: 16px 18px; white-space: pre-wrap; margin-bottom: 34px;">{{ handoffText }}</div>
+
+      <!-- resume workflow -->
+      <sc-if value="{{ notResumed }}" hint-placeholder-val="{{ true }}">
+        <div>
+          <div style="font-size: 12.5px; font-weight: 500; color: #6d6a64; margin-bottom: 18px;">Resume workflow</div>
+
+          <div style="margin-bottom: 22px;">
+            <label style="display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #a3a09a; margin-bottom: 7px;">GitHub URL</label>
+            <input value="{{ repoUrl }}" onInput="{{ onRepoInput }}" placeholder="https://github.com/…" style="width: 100%; border: none; border-bottom: 1.5px solid #e6e4dd; outline: none; background: transparent; font-size: 16px; padding: 6px 0; font-family: 'JetBrains Mono', monospace;" style-focus="border-bottom-color: #5a6178;" />
+          </div>
+
+          <div style="margin-bottom: 26px;">
+            <label style="display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #a3a09a; margin-bottom: 7px;">Food Critic — Developer Log</label>
+            <textarea value="{{ devLog }}" onInput="{{ onDevLogInput }}" rows="4" placeholder="Friction points, timings, surprises from your local run…" style="width: 100%; border: none; border-bottom: 1.5px solid #e6e4dd; outline: none; background: transparent; font-size: 16px; line-height: 1.55; padding: 6px 0;" style-focus="border-bottom-color: #5a6178;"></textarea>
+          </div>
+
+          <button onClick="{{ submitResume }}" style="{{ resumeBtnStyle }}" style-hover="opacity: 0.88;">Resume workflow →</button>
+        </div>
+      </sc-if>
+      <sc-if value="{{ resumed }}" hint-placeholder-val="{{ false }}">
+        <div style="animation: dpFadeUp .3s ease;">
+          <div style="display: flex; align-items: center; gap: 9px; margin-bottom: 10px;">
+            <span style="width: 8px; height: 8px; border-radius: 50%; background: #6f8f6a;"></span>
+            <span style="font-size: 14px; font-weight: 600;">Workflow resumed</span>
+          </div>
+          <p style="margin: 0; font-size: 13.5px; line-height: 1.6; color: #6d6a64;">Developer log attached. <span style="font-family: 'JetBrains Mono', monospace; color: #46443f;">{{ drawerName }}</span> has advanced to <strong style="font-weight: 600; color: #1b1a18;">Drafting</strong>.</p>
+        </div>
+      </sc-if>
+    </aside>
+  </sc-if>
+
+  <!-- ===================== PUBLISH CONSOLE ===================== -->
+  <sc-if value="{{ showPublish }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closePublish }}" style="position: fixed; inset: 0; z-index: 70; background: rgba(20,18,16,0.18); backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px); animation: dpFade .26s ease;"></div>
+    <div data-screen-label="Publish console" style="{{ publishConsoleStyle }}">
+
+      <sc-if value="{{ notDeployed }}" hint-placeholder-val="{{ true }}">
+        <div>
+          <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 28px;">
+            <div>
+              <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #908d86; margin-bottom: 8px;">Syndication &amp; Deploy</div>
+              <div style="font-size: 19px; font-weight: 600; letter-spacing: -0.02em;">State of the Art: Helix</div>
+            </div>
+            <button onClick="{{ closePublish }}" style="border: none; background: transparent; cursor: pointer; color: #908d86; padding: 4px; margin: -4px -4px 0 0; display: flex;" style-hover="color: #1b1a18;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+          </div>
+
+          <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #a3a09a; margin-bottom: 4px;">Syndication targets</div>
+          <div style="margin-bottom: 28px;">
+            <div style="display: flex; align-items: center; gap: 14px; padding: 12px 0;">
+              <span style="display: flex; color: #8a877f; flex: 0 0 auto;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="4"></rect><path d="m9 9-2 3 2 3"></path><path d="m15 9 2 3-2 3"></path></svg></span>
+              <div style="flex: 1 1 auto; min-width: 0;">
+                <div style="font-size: 14.5px; font-weight: 500;">Dev.to</div>
+                <div style="font-size: 12px; color: #a3a09a;">Developer community cross-post</div>
+              </div>
+              <button onClick="{{ toggleDevto }}" style="{{ devtoTrackStyle }}"><span style="{{ devtoKnobStyle }}"></span></button>
+            </div>
+            <div style="display: flex; align-items: center; gap: 14px; padding: 12px 0;">
+              <span style="display: flex; color: #8a877f; flex: 0 0 auto;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"></path><rect width="4" height="12" x="2" y="9"></rect><circle cx="4" cy="4" r="2"></circle></svg></span>
+              <div style="flex: 1 1 auto; min-width: 0;">
+                <div style="font-size: 14.5px; font-weight: 500;">LinkedIn</div>
+                <div style="font-size: 12px; color: #a3a09a;">Professional network article</div>
+              </div>
+              <button onClick="{{ toggleLinkedin }}" style="{{ linkedinTrackStyle }}"><span style="{{ linkedinKnobStyle }}"></span></button>
+            </div>
+            <div style="display: flex; align-items: center; gap: 14px; padding: 12px 0;">
+              <span style="display: flex; color: #8a877f; flex: 0 0 auto;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 3h16v3H4z"></path><path d="M4 9h16v3H4z"></path><path d="M4 15h16v6l-8-4-8 4z"></path></svg></span>
+              <div style="flex: 1 1 auto; min-width: 0;">
+                <div style="font-size: 14.5px; font-weight: 500;">Substack</div>
+                <div style="font-size: 12px; color: #a3a09a;">Newsletter to subscribers</div>
+              </div>
+              <button onClick="{{ toggleSubstack }}" style="{{ substackTrackStyle }}"><span style="{{ substackKnobStyle }}"></span></button>
+            </div>
+            <div style="display: flex; align-items: center; gap: 14px; padding: 12px 0;">
+              <span style="display: flex; color: #8a877f; flex: 0 0 auto;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"></rect><path d="M3 9h18"></path><path d="M9 21V9"></path></svg></span>
+              <div style="flex: 1 1 auto; min-width: 0;">
+                <div style="font-size: 14.5px; font-weight: 500;">DiffPress Portfolio</div>
+                <div style="font-size: 12px; color: #a3a09a;">Canonical home on your site</div>
+              </div>
+              <button onClick="{{ togglePortfolio }}" style="{{ portfolioTrackStyle }}"><span style="{{ portfolioKnobStyle }}"></span></button>
+            </div>
+          </div>
+
+          <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #a3a09a; margin-bottom: 10px;">Timing</div>
+          <div style="display: inline-flex; background: #f1f0ea; border-radius: 9px; padding: 3px; gap: 2px;">
+            <button onClick="{{ setTimingNow }}" style="{{ segTimingNow }}">Publish now</button>
+            <button onClick="{{ setTimingSchedule }}" style="{{ segTimingSchedule }}">Schedule</button>
+          </div>
+          <sc-if value="{{ isSchedule }}" hint-placeholder-val="{{ false }}">
+            <div style="margin-top: 14px;">
+              <input type="datetime-local" value="{{ scheduleAt }}" onInput="{{ onScheduleAt }}" style="width: 100%; border: none; border-bottom: 1.5px solid #e6e4dd; outline: none; background: transparent; font-size: 16px; padding: 7px 0; font-family: 'JetBrains Mono', monospace; color: #1b1a18;" style-focus="border-bottom-color: #5a6178;" />
+            </div>
+          </sc-if>
+
+          <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #a3a09a; margin: 24px 0 8px;">Series link <span style="text-transform: none; letter-spacing: 0; color: #c2c0b8;">— optional</span></div>
+          <input value="{{ seriesLink }}" onInput="{{ onSeriesLink }}" placeholder="Link a previous part or migration update…" style="width: 100%; border: none; border-bottom: 1.5px solid #e6e4dd; outline: none; background: transparent; font-size: 16px; padding: 7px 0; margin-bottom: 32px; font-family: 'JetBrains Mono', monospace;" style-focus="border-bottom-color: #5a6178;" />
+
+          <button onClick="{{ deployArticle }}" style="{{ deployBtnStyle }}" style-hover="opacity: 0.9;">Deploy article →</button>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ deployed }}" hint-placeholder-val="{{ false }}">
+        <div style="text-align: center; padding: 18px 6px 6px; animation: dpFadeUp .34s cubic-bezier(.2,0,0,1);">
+          <div style="width: 52px; height: 52px; border-radius: 50%; background: rgba(111,143,106,0.14); display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#6f8f6a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          </div>
+          <div style="font-size: 20px; font-weight: 600; letter-spacing: -0.02em; margin-bottom: 10px;">Article deployed</div>
+          <p style="margin: 0 0 24px; font-size: 14px; line-height: 1.6; color: #6d6a64;">{{ deploySuccessLabel }}</p>
+          <button onClick="{{ backToDashboard }}" style="border: none; border-radius: 9px; padding: 11px 22px; font-size: 14px; font-weight: 500; font-family: inherit; background: #1b1a18; color: #f6f5f2; cursor: pointer;" style-hover="opacity: 0.88;">Back to pipeline</button>
+        </div>
+      </sc-if>
+
+    </div>
+  </sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = {
+    view: 'dashboard',
+    editorMode: 'draft',
+    drawer: null,
+    openNote: null,
+    vw: 1280,
+    repoUrl: '',
+    devLog: '',
+    resumed: false,
+    copied: false,
+    selBar: null,
+    caretTop: null,
+    plusLeft: null,
+    insertOpen: false,
+    kbInset: 0,
+    chat: { n1: [], n2: [], n3: [], n4: [] },
+    // command center
+    cmdOpen: false,
+    engineActive: true,
+    discoveryMode: 'frontier',
+    velocity: 6,
+    // review + publish
+    resolvedNotes: {},
+    publishOpen: false,
+    targets: { devto: true, linkedin: false, substack: true, portfolio: true },
+    timing: 'now',
+    scheduleAt: '',
+    seriesLink: '',
+    deployed: false,
+  };
+
+  componentDidMount() {
+    this._r = () => this.setState({ vw: window.innerWidth });
+    this._r();
+    window.addEventListener('resize', this._r);
+    document.addEventListener('selectionchange', this.onSelChange);
+    // track the on-screen keyboard via the visual viewport so the insert
+    // sheet can pin itself just above it instead of being buried beneath it
+    this._vv = window.visualViewport;
+    if (this._vv) {
+      this._kb = () => {
+        const inset = Math.max(0, window.innerHeight - this._vv.height - this._vv.offsetTop);
+        this.setState({ kbInset: Math.round(inset) });
+      };
+      this._vv.addEventListener('resize', this._kb);
+      this._vv.addEventListener('scroll', this._kb);
+      this._kb();
+    }
+  }
+  componentWillUnmount() {
+    window.removeEventListener('resize', this._r);
+    document.removeEventListener('selectionchange', this.onSelChange);
+    if (this._vv && this._kb) { this._vv.removeEventListener('resize', this._kb); this._vv.removeEventListener('scroll', this._kb); }
+    this.saveDraft();
+    if (this._copyT) clearTimeout(this._copyT);
+  }
+
+  data() {
+    return {
+      relay: {
+        name: 'relay-systems/relay',
+        handoff:
+'# Handoff — relay-systems/relay\n' +
+'Goal: evaluate durable-workflow ergonomics for the\n' +
+'State-of-the-Art review.\n\n' +
+'## Local setup\n' +
+'git clone https://github.com/relay-systems/relay\n' +
+'cd relay && pnpm install\n' +
+'pnpm dev --profile critic\n\n' +
+'## What to probe\n' +
+'- Cold-start: clean clone → first green run\n' +
+'- Replay determinism under failure injection\n' +
+'- DX of the @durable decorator\n\n' +
+'## Deliverable\n' +
+'Append findings to the Food Critic Developer Log,\n' +
+'then resume the pipeline below.',
+      },
+      sigil: {
+        name: 'forge/sigil',
+        handoff:
+'# Handoff — forge/sigil\n' +
+'Goal: stress-test the typed tool-calling layer for\n' +
+'the State-of-the-Art review.\n\n' +
+'## Local setup\n' +
+'git clone https://github.com/forge/sigil\n' +
+'cd sigil && cargo build --release\n' +
+'./target/release/sigil serve --critic\n\n' +
+'## What to probe\n' +
+'- Schema inference on malformed tool output\n' +
+'- Round-trip latency vs. raw JSON mode\n' +
+'- Error surfaces when a tool contract drifts\n\n' +
+'## Deliverable\n' +
+'Append findings to the Food Critic Developer Log,\n' +
+'then resume the pipeline below.',
+      },
+    };
+  }
+
+  toggle(id) {
+    this.setState((s) => ({ openNote: s.openNote === id ? null : id }));
+  }
+
+  resolveNote(id) {
+    this.setState((s) => ({ resolvedNotes: { ...s.resolvedNotes, [id]: !s.resolvedNotes[id] } }));
+  }
+  toggleTarget(id) {
+    this.setState((s) => ({ targets: { ...s.targets, [id]: !s.targets[id] } }));
+  }
+  anyTargetOn() {
+    const t = this.state.targets;
+    return t.devto || t.linkedin || t.substack || t.portfolio;
+  }
+
+  chatHandler(id) {
+    return (e) => {
+      if (e.key === 'Enter' && e.target.value.trim()) {
+        const v = e.target.value.trim();
+        this.setState((s) => ({ chat: { ...s.chat, [id]: [...s.chat[id], v] } }));
+        e.target.value = '';
+      }
+    };
+  }
+
+  // ===== Live draft editor =====
+  articleHTML = `<div class="dp-meta">helix-labs/helix&nbsp;&nbsp;·&nbsp;&nbsp;★ 14.2k&nbsp;&nbsp;·&nbsp;&nbsp;+2.1k this week</div>
+<h1>State of the Art: Helix</h1>
+<p class="dp-lead">A code-critic deep dive into the durable orchestration runtime that wants to make every agent step a database transaction.</p>
+<p>Every few months a project arrives claiming to make LLM agents "production-ready." Most are wrappers around a chat loop. Helix is not a wrapper — it is a runtime that treats every agent step as a durable, replayable unit of work.</p>
+<h2>The premise</h2>
+<p>On the surface the API is disarmingly simple. You decorate a function with <code class="dp-icode">@step</code>, and Helix registers it as a resumable step whose state survives process restarts, redeploys, and the occasional model timeout.</p>
+<h2>Architecture</h2>
+<p>Underneath, Helix is event-sourced. Each step appends to an append-only log, and recovery is simply a replay of that log against your code.</p>
+<pre class="dp-code"><code>@step(retries=3)
+async def research(topic: str) -> Brief:
+    sources = await search(topic)
+    draft   = await model.summarize(sources)
+    return Brief(draft=draft, sources=sources)</code></pre>
+<p>The elegance has a cost. Because recovery replays your function from the top, every side-effect above a checkpoint must be deterministic.</p>
+<h2>Verdict</h2>
+<p>Helix is the most coherent answer to durable agents we have reviewed. It is not yet the easy one — but for teams comfortable with event-sourced systems, the model will feel inevitable.</p>`;
+
+  refProse = (n) => { this.proseEl = n; };
+
+  saveDraft() {
+    if (this.proseEl) this.articleHTML = this.proseEl.innerHTML;
+  }
+
+  closestBlock(node) {
+    const el = this.proseEl;
+    if (!el || !node) return null;
+    let n = node;
+    while (n && n.parentNode !== el) n = n.parentNode;
+    return n && n.nodeType === 1 ? n : null;
+  }
+
+  onSelChange = () => {
+    if (!(this.state.view === 'editor' && this.state.editorMode === 'draft')) return;
+    const el = this.proseEl;
+    if (!el) return;
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) { this.setState({ selBar: null }); return; }
+    const range = sel.getRangeAt(0);
+    if (!el.contains(range.commonAncestorContainer)) { this.setState({ selBar: null }); return; }
+    let node = range.startContainer;
+    if (node.nodeType === 3) node = node.parentNode;
+    const block = this.closestBlock(node);
+    const er = el.getBoundingClientRect();
+    let caretTop = null, plusLeft = null;
+    if (block) {
+      const br = block.getBoundingClientRect();
+      caretTop = br.top + 3;
+      plusLeft = er.left;
+    }
+    let selBar = null;
+    if (!sel.isCollapsed) {
+      const rr = range.getBoundingClientRect();
+      if (rr.width > 1 || rr.height > 1) selBar = { top: rr.top - 9, left: rr.left + rr.width / 2 };
+    }
+    this.setState({ selBar, caretTop, plusLeft });
+  };
+
+  exec = (cmd, val) => {
+    if (this.proseEl) this.proseEl.focus();
+    try { document.execCommand(cmd, false, val); } catch (e) {}
+    this.onSelChange();
+  };
+  doBold = () => this.exec('bold');
+  doItalic = () => this.exec('italic');
+  curBlockTag() {
+    const sel = window.getSelection();
+    if (!sel || !sel.rangeCount) return null;
+    const b = this.closestBlock(sel.getRangeAt(0).startContainer);
+    return b ? b.tagName : null;
+  }
+  doH2 = () => this.exec('formatBlock', this.curBlockTag() === 'H2' ? 'P' : 'H2');
+  doQuote = () => this.exec('formatBlock', this.curBlockTag() === 'BLOCKQUOTE' ? 'P' : 'BLOCKQUOTE');
+  doText = () => this.exec('formatBlock', 'P');
+  doLink = () => { const u = window.prompt('Link URL', 'https://'); if (u) this.exec('createLink', u); };
+  doCode = () => {
+    const sel = window.getSelection();
+    if (!sel || !sel.rangeCount || sel.isCollapsed) return;
+    const txt = sel.toString().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    this.exec('insertHTML', '<code class="dp-icode">' + txt + '</code>');
+  };
+
+  restoreRange() {
+    if (this.proseEl) this.proseEl.focus();
+    if (this.savedRange) { const s = window.getSelection(); s.removeAllRanges(); s.addRange(this.savedRange); }
+  }
+  openInsert = () => {
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount) this.savedRange = sel.getRangeAt(0).cloneRange();
+    const isMobile = (this.state.vw || 0) < 880;
+    // On mobile, dismiss the keyboard so the insert panel can occupy that space
+    // fully visible. The saved range is restored the moment a block is chosen.
+    if (isMobile && this.proseEl) this.proseEl.blur();
+    this.setState({ insertOpen: true });
+  };
+  closeInsert = () => { this.setState({ insertOpen: false }); };
+  insBlock = (html) => {
+    this.restoreRange();
+    try { document.execCommand('insertHTML', false, html); } catch (e) {}
+    this.setState({ insertOpen: false });
+    this.onSelChange();
+  };
+  insHeading = () => { this.restoreRange(); try { document.execCommand('formatBlock', false, this.curBlockTag() === 'H2' ? 'P' : 'H2'); } catch (e) {} this.setState({ insertOpen: false }); this.onSelChange(); };
+  insQuote = () => { this.restoreRange(); try { document.execCommand('formatBlock', false, this.curBlockTag() === 'BLOCKQUOTE' ? 'P' : 'BLOCKQUOTE'); } catch (e) {} this.setState({ insertOpen: false }); this.onSelChange(); };
+  insText = () => { this.restoreRange(); try { document.execCommand('formatBlock', false, 'P'); } catch (e) {} this.setState({ insertOpen: false }); this.onSelChange(); };
+  insCode = () => this.insBlock('<pre class="dp-code"><code>// your code here</code></pre><p><br></p>');
+  insDivider = () => this.insBlock('<hr class="dp-hr"><p><br></p>');
+  insImage = () => this.insBlock(this.embedHTML('image'));
+  insVideo = () => this.insBlock(this.embedHTML('video'));
+  embedHTML(kind) {
+    const tag = kind === 'video' ? 'VIDEO' : 'IMAGE';
+    const hint = kind === 'video' ? 'embed video · paste a YouTube, Loom or Vimeo URL' : 'image · drag a file in or paste a URL';
+    const glyph = kind === 'video' ? '<span class="dp-play"></span>' : '<span class="dp-imgmark"></span>';
+    return '<figure class="dp-embed" data-kind="' + kind + '" contenteditable="false"><div class="dp-embed-media"><span class="dp-embed-ico">' + glyph + '</span><span class="dp-embed-tag">' + tag + '</span><span class="dp-embed-hint">' + hint + '</span></div><figcaption class="dp-cap" contenteditable="true">Add a caption…</figcaption></figure><p><br></p>';
+  }
+
+  onEditKeyDown = (e) => {
+    if (e.key !== ' ') return;
+    const sel = window.getSelection();
+    if (!sel || !sel.rangeCount) return;
+    const range = sel.getRangeAt(0);
+    if (!range.collapsed) return;
+    let node = range.startContainer;
+    if (node.nodeType === 3) node = node.parentNode;
+    const block = this.closestBlock(node);
+    if (!block) return;
+    const t = block.textContent;
+    let tag = null;
+    if (t === '#' || t === '##') tag = 'H2';
+    else if (t === '###') tag = 'H3';
+    else if (t === '>') tag = 'BLOCKQUOTE';
+    if (!tag) return;
+    e.preventDefault();
+    const r = document.createRange();
+    r.selectNodeContents(block);
+    const s2 = window.getSelection();
+    s2.removeAllRanges(); s2.addRange(r);
+    try { document.execCommand('delete'); document.execCommand('formatBlock', false, tag); } catch (err) {}
+    this.onSelChange();
+  };
+
+  renderVals() {
+    const s = this.state;
+    const vw = s.vw;
+    const isMobile = vw < 880;
+    const useMargin = vw >= 1080;
+    const isReview = s.editorMode === 'review';
+    const isEditor = s.view === 'editor';
+
+    // nav link styles
+    const navBase = 'position: relative; border: none; background: transparent; cursor: pointer; font-size: 14px; font-family: inherit; padding: 4px 1px; letter-spacing: -0.01em; transition: opacity .2s ease;';
+    const navOn = navBase + ' color: #1b1a18; font-weight: 550;';
+    const navOff = navBase + ' color: #908d86; font-weight: 450;';
+
+    // kanban
+    const baseCard = 'background: #ffffff; border-radius: 12px; padding: 16px 17px; box-shadow: 0 1px 2px rgba(26,24,20,0.04);';
+    const cardStyle = isMobile ? baseCard + ' min-width: 270px; scroll-snap-align: start;' : baseCard;
+    const cardActionStyle = cardStyle + ' cursor: pointer; transition: box-shadow .26s cubic-bezier(.2,0,0,1), transform .26s cubic-bezier(.2,0,0,1);';
+    const colStyle = isMobile
+      ? 'display: flex; flex-direction: row; gap: 12px; overflow-x: auto; padding: 2px 2px 8px; scroll-snap-type: x mandatory;'
+      : 'display: flex; flex-direction: column; gap: 12px;';
+    const boardCols = vw >= 1220 ? 4 : 2;
+    const boardStyle = isMobile
+      ? 'display: flex; flex-direction: column; gap: 30px;'
+      : 'display: grid; grid-template-columns: repeat(' + boardCols + ', minmax(0, 1fr)); gap: clamp(16px, 2vw, 26px); column-gap: clamp(20px, 2.4vw, 36px); row-gap: 36px; align-items: start;';
+
+    // editor layout
+    const reviewWide = isReview && useMargin;
+    const reviewWrapStyle = reviewWide
+      ? 'max-width: 1068px; margin: 0 auto; position: relative;'
+      : 'max-width: 680px; margin: 0 auto;';
+    const proseStyle = reviewWide ? 'width: 680px; position: relative;' : 'width: 100%;';
+
+    // marginalia
+    const noteCardStyle = useMargin
+      ? 'position: absolute; left: calc(100% + 48px); top: -6px; width: 332px; background: #ffffff; border-radius: 14px; padding: 18px 19px; box-shadow: 0 10px 40px rgba(26,24,20,0.10); animation: dpFadeUp .34s cubic-bezier(.2,0,0,1); z-index: 5;'
+      : 'position: relative; width: 100%; margin: 2px 0 30px; background: #ffffff; border-radius: 14px; padding: 18px 19px; box-shadow: 0 6px 26px rgba(26,24,20,0.08); animation: dpFadeUp .3s cubic-bezier(.2,0,0,1);';
+    const dotMarginStyle = 'position: absolute; left: calc(100% + 20px); top: 3px; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; border: none; background: transparent; cursor: pointer; padding: 0; transition: transform .22s cubic-bezier(.2,0,0,1);';
+    const dotInlineStyle = 'display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; margin: -14px 0 28px; border: none; background: transparent; cursor: pointer; padding: 4px 0; font-size: 12.5px; font-family: inherit; color: #5a6178; font-weight: 500; letter-spacing: -0.005em;';
+    const dotOn = 'width: 9px; height: 9px; border-radius: 50%; background: #5a6178; box-shadow: 0 0 0 4px rgba(90,97,120,0.14); display: block;';
+    const dotOff = 'width: 9px; height: 9px; border-radius: 50%; background: transparent; border: 1.5px solid #c2c0b8; display: block;';
+
+    // drawer
+    const drawerStyle = (isMobile
+      ? 'width: 100%;'
+      : 'width: 462px;') +
+      ' position: fixed; top: 0; right: 0; bottom: 0; z-index: 61; background: #ffffff; padding: clamp(24px, 4vw, 36px); overflow-y: auto; box-shadow: -24px 0 70px rgba(26,24,20,0.12); animation: dpSlide .34s cubic-bezier(.2,0,0,1);';
+    const resumeBtnStyle = (s.repoUrl.trim()
+      ? 'background: #1b1a18; color: #f6f5f2; cursor: pointer;'
+      : 'background: #e4e2db; color: #b3b0a8; cursor: not-allowed;') +
+      ' border: none; border-radius: 9px; padding: 12px 18px; font-size: 14px; font-weight: 500; font-family: inherit; transition: opacity .2s ease; letter-spacing: -0.01em;';
+
+    const drawerData = s.drawer ? this.data()[s.drawer] : null;
+    const anyNoteOpen = !!s.openNote;
+
+    // ---- review resolution + progress ----
+    const resolved = s.resolvedNotes;
+    const resolvedCount = ['n1', 'n2', 'n3', 'n4'].filter((k) => resolved[k]).length;
+    const allResolved = resolvedCount === 4;
+    const dotResolvedStyle = 'width: 9px; height: 9px; border-radius: 50%; background: #5a6178; display: block;';
+    const dotFor = (id) => resolved[id] ? dotResolvedStyle : (s.openNote === id ? dotOn : dotOff);
+    const labelFor = (id) => resolved[id] ? 'Resolved' : 'Editor note';
+    const progFor = (id) => resolved[id]
+      ? 'width: 7px; height: 7px; border-radius: 50%; background: #5a6178; display: block;'
+      : 'width: 7px; height: 7px; border-radius: 50%; border: 1.5px solid #cfccc3; box-sizing: border-box; display: block;';
+    const resolveBtnFor = (id) => resolved[id]
+      ? 'margin-top: 15px; width: 100%; border: none; background: transparent; color: #6f8f6a; border-radius: 8px; padding: 9px; font-size: 12.5px; font-weight: 500; cursor: pointer; font-family: inherit; transition: opacity .2s ease;'
+      : 'margin-top: 15px; width: 100%; border: none; background: #f4f3ee; color: #46443f; border-radius: 8px; padding: 9px; font-size: 12.5px; font-weight: 500; cursor: pointer; font-family: inherit; transition: background .2s ease;';
+    const resolveLabelFor = (id) => resolved[id] ? '✓ Resolved · undo' : 'Apply edit & resolve →';
+
+    // ---- segmented control ----
+    const seg = (on) => on
+      ? 'padding: 7px 14px; border: none; border-radius: 7px; font-size: 13px; font-family: inherit; cursor: pointer; font-weight: 500; background: #ffffff; color: #1b1a18; box-shadow: 0 1px 2px rgba(26,24,20,0.07); transition: all .18s ease; letter-spacing: -0.01em;'
+      : 'padding: 7px 14px; border: none; border-radius: 7px; font-size: 13px; font-family: inherit; cursor: pointer; font-weight: 450; background: transparent; color: #8a877f; box-shadow: none; transition: all .18s ease; letter-spacing: -0.01em;';
+
+    // ---- command center ----
+    const engineActive = s.engineActive;
+    const modeName = s.discoveryMode === 'frontier' ? 'Frontier' : s.discoveryMode === 'ecosystem' ? 'Ecosystem' : 'Balanced';
+    const cmdTriggerStyle = 'display: flex; align-items: center; gap: 9px; border: none; background: ' + (s.cmdOpen ? 'rgba(0,0,0,0.04)' : 'transparent') + '; cursor: pointer; padding: 6px 10px; border-radius: 9px; font-family: inherit; transition: background .2s ease;';
+    const engineDotStyle = engineActive
+      ? 'width: 7px; height: 7px; border-radius: 50%; background: #6f8f6a; box-shadow: 0 0 0 3px rgba(111,143,106,0.16); animation: dpPulse 2.6s ease-in-out infinite; flex: 0 0 auto;'
+      : 'width: 7px; height: 7px; border-radius: 50%; background: #c2c0b8; flex: 0 0 auto;';
+    const cmdCaretStyle = 'display: flex; color: #b3b0a8; transition: transform .26s ease; transform: rotate(' + (s.cmdOpen ? '180deg' : '0deg') + ');';
+
+    // ---- publish console ----
+    const targets = s.targets;
+    const anyTarget = targets.devto || targets.linkedin || targets.substack || targets.portfolio;
+    const sw = (on) => 'position: relative; width: 38px; height: 22px; border-radius: 22px; border: none; cursor: pointer; flex: 0 0 auto; padding: 0; background: ' + (on ? '#5a6178' : '#dcd9d1') + '; transition: background .22s ease;';
+    const knob = (on) => 'position: absolute; top: 2.5px; left: ' + (on ? '18px' : '2.5px') + '; width: 17px; height: 17px; border-radius: 50%; background: #ffffff; box-shadow: 0 1px 3px rgba(26,24,20,0.25); transition: left .22s cubic-bezier(.2,0,0,1);';
+    const publishConsoleStyle = isMobile
+      ? 'position: fixed; left: 0; right: 0; bottom: 0; max-height: 92vh; overflow-y: auto; background: #ffffff; border-radius: 22px 22px 0 0; padding: 22px 20px 28px; box-shadow: 0 -20px 60px rgba(26,24,20,0.2); z-index: 71; animation: dpSheet .36s cubic-bezier(.2,0,0,1);'
+      : 'position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); width: min(520px, calc(100vw - 40px)); max-height: 88vh; overflow-y: auto; background: #ffffff; border-radius: 18px; padding: 30px; box-shadow: 0 30px 90px rgba(26,24,20,0.22); z-index: 71; animation: dpFadeUp .3s cubic-bezier(.2,0,0,1);';
+    const publishBtnStyle = 'border: none; border-radius: 9px; padding: 11px 18px; font-size: 14px; font-weight: 500; font-family: inherit; background: #1b1a18; color: #f6f5f2; cursor: pointer; transition: opacity .2s ease; letter-spacing: -0.01em;';
+    const deployBtnStyle = (anyTarget
+      ? 'background: #1b1a18; color: #f6f5f2; cursor: pointer;'
+      : 'background: #e4e2db; color: #b3b0a8; cursor: not-allowed;') +
+      ' width: 100%; border: none; border-radius: 10px; padding: 13px; font-size: 14.5px; font-weight: 500; font-family: inherit; transition: opacity .2s ease; letter-spacing: -0.01em; margin-top: 4px;';
+    const deployedTargets = [
+      targets.devto ? 'Dev.to' : null,
+      targets.linkedin ? 'LinkedIn' : null,
+      targets.substack ? 'Substack' : null,
+      targets.portfolio ? 'Portfolio' : null,
+    ].filter(Boolean);
+    const deployedSummary = deployedTargets.length ? deployedTargets.join(' · ') : 'no targets';
+    const timingLabel = s.timing === 'now' ? 'publishing now' : 'scheduled';
+
+    // ---- draft live editor ----
+    const isDraft = isEditor && s.editorMode === 'draft';
+    const sb = s.selBar;
+    const editableEl = React.createElement('div', {
+      'data-dp-editable': '',
+      contentEditable: true,
+      suppressContentEditableWarning: true,
+      spellCheck: true,
+      ref: this.refProse,
+      onKeyDown: this.onEditKeyDown,
+      onMouseUp: this.onSelChange,
+      onFocus: this.onSelChange,
+      style: { width: '100%', minHeight: '340px', outline: 'none', paddingBottom: '40px', paddingLeft: isMobile ? '34px' : '0' },
+      dangerouslySetInnerHTML: { __html: this.articleHTML },
+    });
+    const selBarShow = isDraft && !!sb;
+    const selBarStyle = sb
+      ? 'position: fixed; top: ' + sb.top + 'px; left: ' + sb.left + 'px; transform: translate(-50%,-100%); z-index: 90; display: flex; align-items: center; gap: 1px; background: #1f1d1a; border-radius: 11px; padding: 4px; box-shadow: 0 8px 28px rgba(20,18,16,0.30); animation: dpFade .12s ease;'
+      : '';
+    const plusShow = isDraft && s.caretTop != null && !s.insertOpen && !sb;
+    const insertShow = isDraft && s.insertOpen;
+    const caretY = s.caretTop || 0;
+    // gutter "+" sits at the caret's line on both desktop and mobile (always above the keyboard)
+    const gx = isMobile ? (s.plusLeft || 0) + 4 : Math.max((s.plusLeft || 0) - 34, 8);
+    const plusBtnStyle = 'position: fixed; top: ' + (caretY - (isMobile ? 2 : 0)) + 'px; left: ' + gx + 'px; z-index: 80; width: ' + (isMobile ? 30 : 26) + 'px; height: ' + (isMobile ? 30 : 26) + 'px; border-radius: 50%; border: 1px solid #e0ddd4; background: #ffffff; color: #6d6a64; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; box-shadow: 0 2px 7px rgba(26,24,20,0.13); transition: all .16s ease;';
+    // DESKTOP: small popover anchored to the "+". MOBILE: a bottom sheet pinned
+    // just above the on-screen keyboard, so it can never be buried beneath it.
+    const insertPopover = insertShow && !isMobile;
+    const insertSheet = insertShow && isMobile;
+    const menuLeft = gx;
+    const menuTop = caretY + 30;
+    const insertMenuStyle = 'position: fixed; top: ' + menuTop + 'px; left: ' + menuLeft + 'px; z-index: 85; width: 222px; background: #ffffff; border-radius: 12px; padding: 6px; box-shadow: 0 14px 44px rgba(26,24,20,0.17); animation: dpFadeUp .16s ease;';
+    // keyboard is dismissed on open (see openInsert), so the sheet sits flush at the bottom
+    const insertSheetStyle = 'position: fixed; left: 0; right: 0; bottom: 0; z-index: 88; background: #ffffff; border-radius: 18px 18px 0 0; padding: 8px 14px calc(16px + env(safe-area-inset-bottom)); box-shadow: 0 -16px 44px rgba(26,24,20,0.18); animation: dpSheet .2s cubic-bezier(.2,0,0,1);';
+
+    return {
+      isDashboard: s.view === 'dashboard',
+      isEditor,
+      isDraft: s.editorMode === 'draft',
+      isReview,
+      useMargin,
+      narrowMargin: !useMargin,
+      notMobile: !isMobile,
+
+      // draft editor
+      editableEl,
+      selBarShow, selBarStyle,
+      plusShow, plusBtnStyle,
+      insertShow, insertMenuStyle,
+      insertPopover, insertSheet, insertSheetStyle,
+      preventBlur: (e) => e.preventDefault(),
+      openInsert: this.openInsert,
+      closeInsert: this.closeInsert,
+      doBold: this.doBold, doItalic: this.doItalic, doCode: this.doCode, doLink: this.doLink, doH2: this.doH2, doQuote: this.doQuote, doText: this.doText,
+      insHeading: this.insHeading, insQuote: this.insQuote, insCode: this.insCode, insImage: this.insImage, insVideo: this.insVideo, insDivider: this.insDivider, insText: this.insText,
+      showReviewHint: isReview && !anyNoteOpen,
+
+      navDashStyle: s.view === 'dashboard' ? navOn : navOff,
+      navEditStyle: isEditor ? navOn : navOff,
+      modeDraftStyle: s.editorMode === 'draft' ? navOn : navOff,
+      modeReviewStyle: isReview ? navOn : navOff,
+
+      cardStyle, cardActionStyle, colStyle, boardStyle,
+      reviewWrapStyle, proseStyle, noteCardStyle, dotMarginStyle, dotInlineStyle,
+      drawerStyle, resumeBtnStyle,
+
+      n1Open: s.openNote === 'n1',
+      n2Open: s.openNote === 'n2',
+      n3Open: s.openNote === 'n3',
+      n4Open: s.openNote === 'n4',
+      n1DotInner: dotFor('n1'),
+      n2DotInner: dotFor('n2'),
+      n3DotInner: dotFor('n3'),
+      n4DotInner: dotFor('n4'),
+      n1Label: labelFor('n1'), n2Label: labelFor('n2'), n3Label: labelFor('n3'), n4Label: labelFor('n4'),
+      n1Msgs: s.chat.n1, n2Msgs: s.chat.n2, n3Msgs: s.chat.n3, n4Msgs: s.chat.n4,
+
+      goDashboard: () => { this.saveDraft(); this.setState({ view: 'dashboard' }); },
+      goEditor: () => this.setState({ view: 'editor' }),
+      setDraft: () => this.setState({ editorMode: 'draft', openNote: null }),
+      setReview: () => { this.saveDraft(); this.setState({ editorMode: 'review', selBar: null, insertOpen: false }); },
+      toggleN1: () => this.toggle('n1'),
+      toggleN2: () => this.toggle('n2'),
+      toggleN3: () => this.toggle('n3'),
+      toggleN4: () => this.toggle('n4'),
+      chatN1: this.chatHandler('n1'),
+      chatN2: this.chatHandler('n2'),
+      chatN3: this.chatHandler('n3'),
+      chatN4: this.chatHandler('n4'),
+
+      showDrawer: !!s.drawer,
+      drawerName: drawerData ? drawerData.name : '',
+      handoffText: drawerData ? drawerData.handoff : '',
+      notResumed: !s.resumed,
+      resumed: s.resumed,
+      repoUrl: s.repoUrl,
+      devLog: s.devLog,
+      copyLabel: s.copied ? 'Copied' : 'Copy',
+      openDrawerRelay: () => this.setState({ drawer: 'relay', resumed: false, repoUrl: '', devLog: '', copied: false }),
+      openDrawerSigil: () => this.setState({ drawer: 'sigil', resumed: false, repoUrl: '', devLog: '', copied: false }),
+      closeDrawer: () => this.setState({ drawer: null }),
+      onRepoInput: (e) => this.setState({ repoUrl: e.target.value }),
+      onDevLogInput: (e) => this.setState({ devLog: e.target.value }),
+      submitResume: () => { if (this.state.repoUrl.trim()) this.setState({ resumed: true }); },
+      copyHandoff: () => {
+        const d = this.state.drawer ? this.data()[this.state.drawer] : null;
+        if (d && navigator.clipboard) navigator.clipboard.writeText(d.handoff).catch(() => {});
+        this.setState({ copied: true });
+        if (this._copyT) clearTimeout(this._copyT);
+        this._copyT = setTimeout(() => this.setState({ copied: false }), 1600);
+      },
+
+      // ---- command center ----
+      cmdOpen: s.cmdOpen,
+      toggleCmd: () => this.setState((st) => ({ cmdOpen: !st.cmdOpen })),
+      cmdTriggerStyle, engineDotStyle, cmdCaretStyle,
+      engineLabel: 'Pipeline · ' + (engineActive ? 'Active' : 'Paused'),
+      engineModeLabel: modeName + ' Mode',
+      segEngineActiveStyle: seg(engineActive),
+      segEnginePausedStyle: seg(!engineActive),
+      setEngineActive: () => this.setState({ engineActive: true }),
+      setEnginePaused: () => this.setState({ engineActive: false }),
+      segModeFrontier: seg(s.discoveryMode === 'frontier'),
+      segModeBalanced: seg(s.discoveryMode === 'balanced'),
+      segModeEcosystem: seg(s.discoveryMode === 'ecosystem'),
+      setModeFrontier: () => this.setState({ discoveryMode: 'frontier' }),
+      setModeBalanced: () => this.setState({ discoveryMode: 'balanced' }),
+      setModeEcosystem: () => this.setState({ discoveryMode: 'ecosystem' }),
+      modeHelp: s.discoveryMode === 'frontier'
+        ? 'Surfaces emerging repos before they trend.'
+        : s.discoveryMode === 'ecosystem'
+          ? 'Tracks major v2.0 updates to established projects.'
+          : 'Blends emerging repos with established updates.',
+      velocity: s.velocity,
+      onVelocity: (e) => this.setState({ velocity: Number(e.target.value) }),
+
+      // ---- review resolution + publish trigger ----
+      n1ResolveStyle: resolveBtnFor('n1'), n2ResolveStyle: resolveBtnFor('n2'), n3ResolveStyle: resolveBtnFor('n3'), n4ResolveStyle: resolveBtnFor('n4'),
+      n1ResolveLabel: resolveLabelFor('n1'), n2ResolveLabel: resolveLabelFor('n2'), n3ResolveLabel: resolveLabelFor('n3'), n4ResolveLabel: resolveLabelFor('n4'),
+      resolveN1: () => this.resolveNote('n1'),
+      resolveN2: () => this.resolveNote('n2'),
+      resolveN3: () => this.resolveNote('n3'),
+      resolveN4: () => this.resolveNote('n4'),
+      prog1Style: progFor('n1'), prog2Style: progFor('n2'), prog3Style: progFor('n3'), prog4Style: progFor('n4'),
+      allResolved,
+      resolveStatusLabel: allResolved ? 'All notes resolved — ready to publish' : (resolvedCount + ' of 4 editor notes resolved · resolve all to publish'),
+      publishBtnStyle: (allResolved
+        ? 'background: #1b1a18; color: #f6f5f2; cursor: pointer;'
+        : 'background: #ecebe5; color: #b3b0a8; cursor: not-allowed;') +
+        ' border: none; border-radius: 9px; padding: 11px 18px; font-size: 14px; font-weight: 500; font-family: inherit; transition: opacity .2s ease; letter-spacing: -0.01em; white-space: nowrap;',
+
+      // ---- publish console ----
+      showPublish: s.publishOpen,
+      notDeployed: !s.deployed,
+      deployed: s.deployed,
+      publishConsoleStyle,
+      openPublish: () => { if (allResolved) this.setState({ publishOpen: true, deployed: false }); },
+      closePublish: () => this.setState({ publishOpen: false }),
+      devtoTrackStyle: sw(targets.devto), devtoKnobStyle: knob(targets.devto), toggleDevto: () => this.toggleTarget('devto'),
+      linkedinTrackStyle: sw(targets.linkedin), linkedinKnobStyle: knob(targets.linkedin), toggleLinkedin: () => this.toggleTarget('linkedin'),
+      substackTrackStyle: sw(targets.substack), substackKnobStyle: knob(targets.substack), toggleSubstack: () => this.toggleTarget('substack'),
+      portfolioTrackStyle: sw(targets.portfolio), portfolioKnobStyle: knob(targets.portfolio), togglePortfolio: () => this.toggleTarget('portfolio'),
+      segTimingNow: seg(s.timing === 'now'),
+      segTimingSchedule: seg(s.timing === 'schedule'),
+      setTimingNow: () => this.setState({ timing: 'now' }),
+      setTimingSchedule: () => this.setState({ timing: 'schedule' }),
+      isSchedule: s.timing === 'schedule',
+      scheduleAt: s.scheduleAt,
+      onScheduleAt: (e) => this.setState({ scheduleAt: e.target.value }),
+      seriesLink: s.seriesLink,
+      onSeriesLink: (e) => this.setState({ seriesLink: e.target.value }),
+      deployBtnStyle,
+      deployArticle: () => { if (this.anyTargetOn()) this.setState({ deployed: true }); },
+      deploySuccessLabel: 'Syndicated to ' + deployedSummary + ' · ' + timingLabel,
+      backToDashboard: () => this.setState({ publishOpen: false, view: 'dashboard' }),
+    };
+  }
+}
+</script>
+</body>
+</html>

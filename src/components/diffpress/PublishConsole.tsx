@@ -1,0 +1,205 @@
+import {
+  Check,
+  LayoutDashboard,
+  Linkedin,
+  Mail,
+  SquareCode,
+  X,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useIsMobile } from "./hooks";
+import { useDiffPress } from "./store";
+import { Segmented, Toggle } from "./ui";
+import type { SyndicationTargets } from "./types";
+
+const TARGETS: {
+  id: keyof SyndicationTargets;
+  name: string;
+  desc: string;
+  icon: React.ReactNode;
+}[] = [
+  {
+    id: "devto",
+    name: "Dev.to",
+    desc: "Developer community cross-post",
+    icon: <SquareCode size={19} strokeWidth={1.7} />,
+  },
+  {
+    id: "linkedin",
+    name: "LinkedIn",
+    desc: "Professional network article",
+    icon: <Linkedin size={19} strokeWidth={1.7} />,
+  },
+  {
+    id: "substack",
+    name: "Substack",
+    desc: "Newsletter to subscribers",
+    icon: <Mail size={19} strokeWidth={1.7} />,
+  },
+  {
+    id: "portfolio",
+    name: "DiffPress Portfolio",
+    desc: "Canonical home on your site",
+    icon: <LayoutDashboard size={19} strokeWidth={1.7} />,
+  },
+];
+
+export function PublishConsole() {
+  const isMobile = useIsMobile();
+  const publishOpen = useDiffPress((s) => s.publishOpen);
+  const deployed = useDiffPress((s) => s.deployed);
+  const deploying = useDiffPress((s) => s.deploying);
+  const deploySummary = useDiffPress((s) => s.deploySummary);
+  const targets = useDiffPress((s) => s.targets);
+  const timing = useDiffPress((s) => s.timing);
+  const scheduleAt = useDiffPress((s) => s.scheduleAt);
+  const seriesLink = useDiffPress((s) => s.seriesLink);
+  const closePublish = useDiffPress((s) => s.closePublish);
+  const toggleTarget = useDiffPress((s) => s.toggleTarget);
+  const setTiming = useDiffPress((s) => s.setTiming);
+  const setScheduleAt = useDiffPress((s) => s.setScheduleAt);
+  const setSeriesLink = useDiffPress((s) => s.setSeriesLink);
+  const deploy = useDiffPress((s) => s.deploy);
+  const backToDashboard = useDiffPress((s) => s.backToDashboard);
+
+  if (!publishOpen) return null;
+  const anyTarget = Object.values(targets).some(Boolean);
+
+  const shell = isMobile
+    ? "dp-anim-sheet fixed inset-x-0 bottom-0 z-[71] max-h-[92vh] overflow-y-auto rounded-t-[22px] bg-white p-[22px_20px_28px] shadow-[0_-20px_60px_rgba(26,24,20,0.2)]"
+    : "dp-anim-fadeup fixed left-1/2 top-1/2 z-[71] max-h-[88vh] w-[min(520px,calc(100vw-40px))] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-[18px] bg-white p-[30px] shadow-[0_30px_90px_rgba(26,24,20,0.22)]";
+
+  return (
+    <>
+      <div
+        onClick={closePublish}
+        className="dp-anim-fade fixed inset-0 z-[70] bg-[rgba(20,18,16,0.18)] backdrop-blur-[2px]"
+      />
+      <div className={shell}>
+        {deployed ? (
+          <div className="dp-anim-fadeup px-[6px] pb-[6px] pt-[18px] text-center">
+            <div className="mx-auto mb-5 flex h-[52px] w-[52px] items-center justify-center rounded-full bg-[rgba(111,143,106,0.14)]">
+              <Check size={26} strokeWidth={2} className="text-dp-green" />
+            </div>
+            <div className="mb-[10px] text-[20px] font-semibold tracking-[-0.02em]">
+              Article deployed
+            </div>
+            <p className="mb-6 text-[14px] leading-[1.6] text-dp-muted">
+              {deploySummary}
+            </p>
+            <button
+              onClick={backToDashboard}
+              className="cursor-pointer rounded-[9px] border-none bg-dp-ink px-[22px] py-[11px] text-[14px] font-medium text-dp-paper hover:opacity-[0.88]"
+            >
+              Back to pipeline
+            </button>
+          </div>
+        ) : (
+          <div>
+            <div className="mb-7 flex items-start justify-between gap-4">
+              <div>
+                <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-dp-faint">
+                  Syndication &amp; Deploy
+                </div>
+                <div className="text-[19px] font-semibold tracking-[-0.02em]">
+                  State of the Art: Helix
+                </div>
+              </div>
+              <button
+                onClick={closePublish}
+                className="-mr-1 -mt-1 flex cursor-pointer border-none bg-transparent p-1 text-dp-faint hover:text-dp-ink"
+              >
+                <X size={19} strokeWidth={1.7} />
+              </button>
+            </div>
+
+            <SectionLabel>Syndication targets</SectionLabel>
+            <div className="mb-7">
+              {TARGETS.map((t) => (
+                <div key={t.id} className="flex items-center gap-[14px] py-3">
+                  <span className="flex flex-[0_0_auto] text-[#8a877f]">
+                    {t.icon}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[14.5px] font-medium">{t.name}</div>
+                    <div className="text-[12px] text-dp-faint-2">{t.desc}</div>
+                  </div>
+                  <Toggle
+                    on={targets[t.id]}
+                    onChange={() => toggleTarget(t.id)}
+                    label={t.name}
+                  />
+                </div>
+              ))}
+            </div>
+
+            <SectionLabel>Timing</SectionLabel>
+            <Segmented
+              value={timing}
+              onChange={setTiming}
+              options={[
+                { value: "now", label: "Publish now" },
+                { value: "schedule", label: "Schedule" },
+              ]}
+            />
+            {timing === "schedule" && (
+              <div className="mt-[14px]">
+                <input
+                  type="datetime-local"
+                  value={scheduleAt}
+                  onChange={(e) => setScheduleAt(e.target.value)}
+                  className="w-full border-none border-b-[1.5px] border-dp-line bg-transparent py-[7px] font-dp-mono text-[16px] text-dp-ink outline-none focus:border-dp-slate"
+                />
+              </div>
+            )}
+
+            <SectionLabel className="mt-6">
+              Series link{" "}
+              <span className="normal-case tracking-normal text-[#c2c0b8]">
+                — optional
+              </span>
+            </SectionLabel>
+            <input
+              value={seriesLink}
+              onChange={(e) => setSeriesLink(e.target.value)}
+              placeholder="Link a previous part or migration update…"
+              className="mb-8 w-full border-none border-b-[1.5px] border-dp-line bg-transparent py-[7px] font-dp-mono text-[16px] outline-none focus:border-dp-slate"
+            />
+
+            <button
+              onClick={deploy}
+              disabled={!anyTarget || deploying}
+              className={cn(
+                "mt-1 w-full rounded-[10px] border-none p-[13px] text-[14.5px] font-medium tracking-[-0.01em] transition-opacity",
+                anyTarget
+                  ? "cursor-pointer bg-dp-ink text-dp-paper hover:opacity-90"
+                  : "cursor-not-allowed bg-[#e4e2db] text-dp-faint-3",
+              )}
+            >
+              {deploying ? "Deploying…" : "Deploy article →"}
+            </button>
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+function SectionLabel({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div
+      className={cn(
+        "mb-[10px] text-[11px] uppercase tracking-[0.08em] text-dp-faint-2",
+        className,
+      )}
+    >
+      {children}
+    </div>
+  );
+}

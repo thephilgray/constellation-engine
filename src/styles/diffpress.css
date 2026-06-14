@@ -1,0 +1,81 @@
+/* ============================================================================
+   DiffPress design system — warm, Dieter-Rams minimalism.
+   Palette tokens are exposed to Tailwind via @theme so they become utilities
+   (e.g. bg-dp-paper, text-dp-slate, border-dp-line, font-dp-mono).
+   Rich-text typography lives in .dp-prose, shared by the Review article and
+   the live Draft editor. Borders are kept near-invisible by design.
+   ============================================================================ */
+
+@theme {
+  --color-dp-paper: #f6f5f2; /* app background */
+  --color-dp-card: #ffffff;
+  --color-dp-ink: #1b1a18; /* primary text */
+  --color-dp-slate: #5a6178; /* accent */
+  --color-dp-muted: #6d6a64;
+  --color-dp-faint: #908d86;
+  --color-dp-faint-2: #a3a09a;
+  --color-dp-faint-3: #b3b0a8;
+  --color-dp-faint-4: #c2c0b8;
+  --color-dp-line: #e6e3da;
+  --color-dp-line-2: #ecebe5;
+  --color-dp-line-3: #e0ddd4;
+  --color-dp-wash: #faf9f6;
+  --color-dp-wash-2: #f1f0ea;
+  --color-dp-chip: #efeee8;
+  --color-dp-hover: #f4f3ee;
+  --color-dp-green: #6f8f6a;
+  --color-dp-add-bg: #eef0f4;
+  --color-dp-add-ink: #3a3f4d;
+
+  --font-dp-mono: "JetBrains Mono", ui-monospace, monospace;
+  --font-dp-sans: "Inter", system-ui, sans-serif;
+}
+
+/* ---- keyframes (ported 1:1 from the source design) ---- */
+@keyframes dpFadeUp { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: none; } }
+@keyframes dpFade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes dpSlide { from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: none; } }
+@keyframes dpPulse { 0%, 100% { opacity: .3; } 50% { opacity: 1; } }
+@keyframes dpTrack { 0% { transform: translateX(-110%); } 100% { transform: translateX(360%); } }
+@keyframes dpSheet { from { opacity: 0; transform: translateY(100%); } to { opacity: 1; transform: none; } }
+
+.dp-anim-fadeup { animation: dpFadeUp .34s cubic-bezier(.2, 0, 0, 1); }
+.dp-anim-fade { animation: dpFade .26s ease; }
+.dp-anim-slide { animation: dpSlide .34s cubic-bezier(.2, 0, 0, 1); }
+.dp-anim-sheet { animation: dpSheet .36s cubic-bezier(.2, 0, 0, 1); }
+.dp-pulse { animation: dpPulse 1.3s ease-in-out infinite; }
+.dp-track { animation: dpTrack 1.7s cubic-bezier(.5, 0, .5, 1) infinite; }
+
+/* ---- scrollbars within the workspace ---- */
+.dp-root *::-webkit-scrollbar { height: 9px; width: 9px; }
+.dp-root *::-webkit-scrollbar-thumb { background: #e3e0d8; border-radius: 9px; }
+.dp-root *::-webkit-scrollbar-track { background: transparent; }
+.dp-root ::selection { background: #e7e3d8; }
+
+/* ---- shared rich-text typography (Review article + live Draft editor) ---- */
+.dp-prose { font-size: 16px; color: #1b1a18; }
+.dp-prose:focus { outline: none; }
+.dp-prose *::selection { background: #e7e3d8; }
+.dp-prose .dp-meta { font-family: var(--font-dp-mono); font-size: 12px; color: #a3a09a; letter-spacing: 0.01em; margin-bottom: 18px; }
+.dp-prose h1 { font-size: clamp(30px, 4vw, 40px); font-weight: 600; letter-spacing: -0.03em; line-height: 1.12; margin: 0 0 16px; }
+.dp-prose .dp-lead { font-size: 18px; line-height: 1.5; color: #6d6a64; font-weight: 450; margin: 0 0 34px; text-wrap: pretty; }
+.dp-prose p { font-size: 19px; line-height: 1.78; margin: 0 0 26px; text-wrap: pretty; }
+.dp-prose h2 { font-size: 23px; font-weight: 600; letter-spacing: -0.02em; margin: 44px 0 18px; }
+.dp-prose h3 { font-size: 19px; font-weight: 600; letter-spacing: -0.01em; margin: 32px 0 14px; }
+.dp-prose a { color: #5a6178; text-decoration: underline; text-underline-offset: 2px; text-decoration-color: #c2c5cf; }
+.dp-prose code, .dp-prose .dp-icode { font-family: var(--font-dp-mono); font-size: 0.82em; background: #efeee8; padding: 1px 5px; border-radius: 4px; }
+.dp-prose pre { font-family: var(--font-dp-mono); font-size: 13.5px; line-height: 1.65; background: #faf9f6; color: #2c2a26; border-radius: 10px; padding: 18px 20px; margin: 0 0 26px; overflow-x: auto; white-space: pre; }
+.dp-prose pre code { background: none; padding: 0; font-size: inherit; }
+.dp-prose blockquote { margin: 0 0 26px; padding: 4px 0 4px 22px; border-left: 3px solid #d4d7df; color: #4a4843; font-style: italic; font-size: 20px; line-height: 1.66; }
+.dp-prose hr.dp-hr { border: none; height: 1px; background: #e3e0d8; margin: 34px 0; }
+
+/* embeds inserted from the Draft "+" menu */
+.dp-prose .dp-embed { margin: 6px 0 28px; }
+.dp-prose .dp-embed-media { position: relative; border-radius: 12px; height: 196px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; background-color: #f3f1ea; background-image: repeating-linear-gradient(135deg, #ece8de 0 9px, #f5f3ec 9px 18px); border: 1px solid #e6e3da; }
+.dp-prose .dp-embed-ico { display: flex; align-items: center; justify-content: center; height: 22px; }
+.dp-prose .dp-play { width: 0; height: 0; border-style: solid; border-width: 8px 0 8px 13px; border-color: transparent transparent transparent #8a877f; }
+.dp-prose .dp-imgmark { width: 17px; height: 14px; border: 2px solid #8a877f; border-radius: 2px; }
+.dp-prose .dp-embed-tag { font-family: var(--font-dp-mono); font-size: 10.5px; letter-spacing: 0.14em; color: #8a877f; border: 1px solid #cfccc3; border-radius: 5px; padding: 3px 9px; background: #faf9f6; }
+.dp-prose .dp-embed-hint { font-family: var(--font-dp-mono); font-size: 12px; color: #a8a59e; }
+.dp-prose .dp-cap { font-size: 16px; color: #a3a09a; text-align: center; margin-top: 10px; font-style: italic; }
+.dp-prose .dp-cap:focus { color: #46443f; font-style: normal; outline: none; }
