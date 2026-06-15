@@ -355,6 +355,32 @@ export default $config({
       },
     });
 
+    // ===== DIFFPRESS CONTENT ENGINE — shared resources (declared here; used by API route below and SFN block after dreamer) =====
+
+    // Phase 1 enrichment payloads
+    const contentPayloadBucket = new sst.aws.Bucket("ContentPayloadBucket");
+
+    // Publication ledger (PK: repoName), lifecycle: AWAITING_HANDOFF -> PUBLISHED
+    const publicationLifecycle = new sst.aws.Dynamo("PublicationLifecycle", {
+      fields: { repoName: "string" },
+      primaryIndex: { hashKey: "repoName" },
+    });
+
+    api.route("POST /api/publish-handoff", {
+      handler: "src/diffpress/publishHandoff.handler",
+      link: [auth, publicationLifecycle],
+      permissions: [
+        { actions: ["states:SendTaskSuccess", "states:SendTaskFailure"], resources: ["*"] },
+      ],
+      timeout: "30 seconds",
+    }, {
+      auth: {
+        jwt: {
+          authorizer: authorizer.id,
+        },
+      },
+    });
+
     // DEPLOY FRONTEND
     const site = new sst.aws.Astro("Web", {
       link: [api, auth, webClient], // Link API and Auth to the frontend
@@ -374,12 +400,130 @@ export default $config({
       }
     });
 
+    // ===== DIFFPRESS CONTENT ENGINE — functions, state machine, trigger, cron =====
+
+    const contentEngineFns = {
+      discoverRepos: new sst.aws.Function("DiffPressDiscoverRepos", {
+        handler: "src/diffpress/discoverRepos.handler",
+        link: [GITHUB_TOKEN, publicationLifecycle],
+        timeout: "30 seconds",
+      }),
+      enrichRepos: new sst.aws.Function("DiffPressEnrichRepos", {
+        handler: "src/diffpress/enrichRepos.handler",
+        link: [contentPayloadBucket],
+        timeout: "60 seconds",
+      }),
+      seedIdeas: new sst.aws.Function("DiffPressSeedIdeas", {
+        handler: "src/diffpress/seedIdeas.handler",
+        link: [GEMINI_API_KEY, PINECONE_API_KEY],
+        timeout: "60 seconds",
+      }),
+      notifyHandoff: new sst.aws.Function("DiffPressNotifyHandoff", {
+        handler: "src/diffpress/notifyHandoff.handler",
+        link: [publicationLifecycle],
+        timeout: "30 seconds",
+      }),
+      draftArticle: new sst.aws.Function("DiffPressDraftArticle", {
+        handler: "src/diffpress/draftArticle.handler",
+        link: [GEMINI_API_KEY, contentPayloadBucket],
+        timeout: "60 seconds",
+      }),
+      recordPublication: new sst.aws.Function("DiffPressRecordPublication", {
+        handler: "src/diffpress/recordPublication.handler",
+        link: [publicationLifecycle],
+        timeout: "30 seconds",
+      }),
+    };
+
+    // ----- State machine definition -----
+    const discoverState = sst.aws.StepFunctions.lambdaInvoke({
+      name: "DiscoverRepos",
+      function: contentEngineFns.discoverRepos,
+      output: "{% $states.result.Payload %}",
+    });
+
+    const enrichState = sst.aws.StepFunctions.lambdaInvoke({
+      name: "EnrichRepos",
+      function: contentEngineFns.enrichRepos,
+      payload: "{% $states.input %}",
+      output: "{% $states.result.Payload %}",
+    });
+
+    const seedState = sst.aws.StepFunctions.lambdaInvoke({
+      name: "SeedIdeas",
+      function: contentEngineFns.seedIdeas,
+      payload: "{% $states.input %}",
+      output: "{% $states.result.Payload %}",
+    });
+
+    // Phase 2: paused wait-for-task-token state.
+    const awaitHandoffState = sst.aws.StepFunctions.lambdaInvoke({
+      name: "AwaitHandoff",
+      function: contentEngineFns.notifyHandoff,
+      integration: "token",
+      payload: {
+        taskToken: "{% $states.context.Task.Token %}",
+        state: "{% $states.input %}",
+      },
+      // Preserve pre-pause state and merge in the resume payload (repoUrl + developerLog).
+      output: "{% $merge([$states.input, { 'handoff': $states.result }]) %}",
+    });
+
+    const draftState = sst.aws.StepFunctions.lambdaInvoke({
+      name: "DraftArticle",
+      function: contentEngineFns.draftArticle,
+      payload: "{% $states.input %}",
+      output: "{% $states.result.Payload %}",
+    });
+
+    const recordState = sst.aws.StepFunctions.lambdaInvoke({
+      name: "RecordPublication",
+      function: contentEngineFns.recordPublication,
+      payload: "{% $states.input %}",
+    });
+
+    const contentEngineDefinition = discoverState
+      .next(enrichState)
+      .next(seedState)
+      .next(awaitHandoffState)
+      .next(draftState)
+      .next(recordState);
+
+    const contentEngine = new sst.aws.StepFunctions("ContentEngine", {
+      definition: contentEngineDefinition,
+    });
+
+    // Manual HTTP trigger (mirrors LibrarianTrigger)
+    const contentEngineTrigger = new sst.aws.Function("ContentEngineTrigger", {
+      handler: "src/diffpress/trigger.handler",
+      url: true,
+      link: [contentEngine],
+      permissions: [
+        { actions: ["states:StartExecution"], resources: [contentEngine.arn] },
+      ],
+    });
+
+    // Weekly cron — same handler, StartExecution permission.
+    const contentEngineCron = new sst.aws.Cron("ContentEngineCron", {
+      schedule: "rate(7 days)",
+      job: {
+        handler: "src/diffpress/trigger.handler",
+        link: [contentEngine],
+        permissions: [
+          { actions: ["states:StartExecution"], resources: [contentEngine.arn] },
+        ],
+      },
+    });
+
     return {
       site: site.url,
       api: api.url,
       librarianEndpoint: librarianTrigger.url,
       userPoolId: auth.id,
       userPoolClientId: webClient.id, // Access client ID from the client resource, not the pool
+      contentEngineTrigger: contentEngineTrigger.url,
+      publicationTable: publicationLifecycle.name,
+      contentPayloadBucket: contentPayloadBucket.name,
     };
   },
 });
