@@ -122,7 +122,7 @@ function DraftingArticle({ card }: { card: DraftingCard }) {
 }
 
 function ReviewArticleCard({ card }: { card: ReviewCard }) {
-  const goEditor = useDiffPress((s) => s.goEditor);
+  const openArticle = useDiffPress((s) => s.openArticle);
   if (!card.editable) {
     return (
       <article className={CARD_BASE}>
@@ -138,7 +138,7 @@ function ReviewArticleCard({ card }: { card: ReviewCard }) {
   }
   return (
     <article
-      onClick={goEditor}
+      onClick={() => openArticle(card.id)}
       className={cn(
         CARD_BASE,
         "cursor-pointer transition-[box-shadow,transform] duration-300 ease-[cubic-bezier(.2,0,0,1)] hover:-translate-y-px hover:shadow-[0_4px_18px_rgba(26,24,20,0.07)]",
@@ -156,7 +156,7 @@ function ReviewArticleCard({ card }: { card: ReviewCard }) {
         {card.repo}
       </div>
       <div className="text-[11.5px] font-medium text-dp-slate">
-        Edit article →
+        Read article →
       </div>
     </article>
   );
