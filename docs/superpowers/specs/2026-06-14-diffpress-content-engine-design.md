@@ -66,11 +66,13 @@ All resources are defined inside the existing `run()` block, reusing existing se
 - **`PublicationLifecycle`** — `new sst.aws.Dynamo("PublicationLifecycle", { fields: { repoName: "string" }, primaryIndex: { hashKey: "repoName" } })`.
 - **`ContentEngine`** — `new sst.aws.StepFunctions("ContentEngine", { definition })` built from
   the `sst.aws.StepFunctions.lambdaInvoke(...)` chain.
-- **`ContentEngineTrigger`** — `sst.aws.Function`, `link: [ContentEngine]`,
+- **`ContentEngineTrigger`** — `sst.aws.Function`, `handler: "src/diffpress/trigger.handler"`,
+  `url: true` (manual HTTP trigger), `link: [ContentEngine]`,
   `permissions: [{ actions: ["states:StartExecution"], resources: [ContentEngine.arn] }]`.
-- **`ContentEngineCron`** — `new sst.aws.Cron("ContentEngineCron", { schedule: "rate(7 days)", job: <trigger function def> })`.
-  (Cron's `job` can inline the trigger handler directly; a standalone trigger function is only
-  needed if we also want a manual HTTP trigger. Plan will pick one — default: inline cron job.)
+  Mirrors `LibrarianTrigger` in the existing config.
+- **`ContentEngineCron`** — `new sst.aws.Cron("ContentEngineCron", { schedule: "rate(7 days)", job: { handler: "src/diffpress/trigger.handler", link: [ContentEngine], permissions: [{ actions: ["states:StartExecution"], resources: [ContentEngine.arn] }] } })`.
+  Both the cron job and the manual trigger share the same `src/diffpress/trigger.ts` handler
+  (it `StartExecution`s the machine and works for both an EventBridge event and an HTTP request).
 - **API route** on the existing `api` (`IngestApi`):
   ```ts
   api.route("POST /api/publish-handoff", {
@@ -123,6 +125,7 @@ that **throws** on hard failure (so Step Functions can Catch/Retry), structured 
 | `publishHandoff.ts` | **API handler.** Verify JWT user (`event.requestContext.authorizer.jwt.claims.sub`). Parse `{ taskToken, repoUrl, developerLog }`. Call `SendTaskSuccess` with that payload as output. 401/400/202/500. | `auth`, `states:SendTaskSuccess/Failure` |
 | `draftArticle.ts` | `GetObject` the S3 enrichment payload; combine with `repoUrl` + `developerLog` into article markdown (**LLM STUB**). Return `{ articleMarkdown, title, ... }`. | `ContentPayloadBucket`, `GEMINI_API_KEY` |
 | `recordPublication.ts` | Conditional update of the ledger item → `PUBLISHED` with article metadata + `publishedAt`. Treat `ConditionalCheckFailed` as already-published (no throw). | `PublicationLifecycle` |
+| `trigger.ts` | Shared by the cron job **and** the manual `url: true` function. `StartExecution`s `ContentEngine` (handles both an EventBridge invocation and an HTTP request). Mirrors `src/librarian/trigger.ts`. | `states:StartExecution` on `ContentEngine.arn` |
 | `lib/ledger.ts` | Typed helpers for `PublicationLifecycle` (`getByRepo`, `putPending`, `markPublished`, `listPublishedNames`). Separate from `src/lib/dynamo.ts` (hardwired to `UnifiedLake`). | `PublicationLifecycle` |
 | `lib/payloadStore.ts` | S3 `putPayload` / `getPayload` helpers (none exist in repo today). | `ContentPayloadBucket` |
 
@@ -169,16 +172,28 @@ One item per repo, `repoName` as the only key:
   pointed at one later if needed).
 - Any monorepo / `packages/` restructure.
 
+## Testing
+
+Add **`vitest`** as the repo's test runner (none exists today):
+
+- `vitest` added to `devDependencies`; `"test": "vitest run"` added to `package.json` scripts.
+- A minimal `vitest.config.ts` (node environment).
+- Unit tests for the **pure-logic seams** (no AWS calls in the unit under test — clients are
+  injected or mocked):
+  - `discoverRepos` dedupe filter — drops candidates already `PUBLISHED`.
+  - `publishHandoff` request validation — 401 (no user), 400 (missing `taskToken`/`repoUrl`/`developerLog`), happy path shape.
+  - `lib/ledger` — `markPublished` builds the correct conditional-update params; `ConditionalCheckFailed` is swallowed.
+- To keep handlers testable, validation/dedupe/param-building logic is factored into small pure
+  functions that the thin Lambda handlers call.
+
 ## Verification / success criteria
 
-The repo has **no test runner** (nothing in `package.json` scripts/devDeps), and all external
-calls are stubbed, so verification is build-level:
+All external calls are stubbed, so verification is build- and unit-level:
 
 1. `npx tsc --noEmit` passes for all new `src/diffpress/**` files (type-correct handlers + shared types).
-2. `npx sst diff` (or `sst deploy --stage dev` dry path) builds the resource graph cleanly:
-   the `ContentEngine` state machine, bucket, table, cron, and the new API route resolve, and
-   all `link`/`permissions` references are valid.
+2. `npm test` (`vitest run`) passes for the unit tests above.
+3. `npx sst diff` (or `sst deploy --stage dev` dry path) builds the resource graph cleanly:
+   the `ContentEngine` state machine, bucket, table, cron, manual trigger, and the new API route
+   resolve, and all `link`/`permissions` references are valid.
 
-Both must pass before the work is reported complete. (If a lightweight test runner is desired
-for the pure-logic helpers — `lib/ledger.ts`, dedupe filter, `publishHandoff` validation — that
-can be added in the plan, but it is not required by this spec.)
+All three must pass before the work is reported complete.
