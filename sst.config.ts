@@ -381,6 +381,32 @@ export default $config({
       },
     });
 
+    // Read the pending/published board (Ready for Dev + In Review columns).
+    api.route("GET /api/handoffs", {
+      handler: "src/diffpress/listHandoffs.handler",
+      link: [auth, publicationLifecycle],
+      timeout: "30 seconds",
+    }, {
+      auth: {
+        jwt: {
+          authorizer: authorizer.id,
+        },
+      },
+    });
+
+    // Read a single published article's markdown (?repo=owner/name).
+    api.route("GET /api/articles", {
+      handler: "src/diffpress/getArticle.handler",
+      link: [auth, publicationLifecycle],
+      timeout: "30 seconds",
+    }, {
+      auth: {
+        jwt: {
+          authorizer: authorizer.id,
+        },
+      },
+    });
+
     // DEPLOY FRONTEND
     const site = new sst.aws.Astro("Web", {
       link: [api, auth, webClient], // Link API and Auth to the frontend

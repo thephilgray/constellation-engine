@@ -68,6 +68,7 @@ export interface PublicationRecord {
   taskToken?: string;
   payloadKey?: string;
   title?: string;
+  articleMarkdown?: string;
   discoveredAt?: string;
   publishedAt?: string;
 }

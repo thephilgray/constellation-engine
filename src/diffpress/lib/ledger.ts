@@ -35,13 +35,13 @@ export function buildPendingPutParams(
 export function buildMarkPublishedParams(
   table: string,
   repoName: string,
-  meta: { title: string; publishedAt: string }
+  meta: { title: string; publishedAt: string; articleMarkdown: string }
 ): UpdateCommandInput {
   return {
     TableName: table,
     Key: { repoName },
     UpdateExpression:
-      "SET #status = :published, title = :title, publishedAt = :publishedAt",
+      "SET #status = :published, title = :title, publishedAt = :publishedAt, articleMarkdown = :article",
     // Idempotent: do not re-publish an item already in PUBLISHED state.
     ConditionExpression:
       "attribute_not_exists(#status) OR #status <> :published",
@@ -50,6 +50,7 @@ export function buildMarkPublishedParams(
       ":published": "PUBLISHED",
       ":title": meta.title,
       ":publishedAt": meta.publishedAt,
+      ":article": meta.articleMarkdown,
     },
   };
 }
@@ -79,7 +80,7 @@ export async function putPending(record: PublicationRecord): Promise<void> {
 /** Flip the item to PUBLISHED. Swallows the conditional-check failure (idempotent). */
 export async function markPublished(
   repoName: string,
-  meta: { title: string; publishedAt: string }
+  meta: { title: string; publishedAt: string; articleMarkdown: string }
 ): Promise<void> {
   try {
     await docClient.send(
@@ -92,6 +93,22 @@ export async function markPublished(
     }
     throw err;
   }
+}
+
+/**
+ * Scan every ledger item for the board view. Projects out `articleMarkdown`
+ * (fetched on demand via getByRepo) so the board payload stays light.
+ */
+export async function listBoardItems(): Promise<PublicationRecord[]> {
+  const { Items } = await docClient.send(
+    new ScanCommand({
+      TableName: tableName(),
+      ProjectionExpression:
+        "repoName, #status, repoUrl, taskToken, payloadKey, discoveredAt, title, publishedAt",
+      ExpressionAttributeNames: { "#status": "status" },
+    })
+  );
+  return (Items ?? []) as PublicationRecord[];
 }
 
 /** Return the set of repoNames already in PUBLISHED status (for dedupe). */

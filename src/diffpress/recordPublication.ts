@@ -11,6 +11,7 @@ export async function handler(
   await markPublished(state.repo.repoName, {
     title: state.article.title,
     publishedAt: new Date().toISOString(),
+    articleMarkdown: state.article.articleMarkdown,
   });
 
   console.log(`[recordPublication] ledger updated: ${state.repo.repoName} -> PUBLISHED`);
