@@ -16,6 +16,10 @@ export interface HandoffCard {
   id: string;
   repo: string;
   desc: string;
+  /** The Step Functions task token needed to resume this handoff (from the API). */
+  taskToken?: string;
+  /** Prefill for the resume form, when the discovered repo URL is known. */
+  repoUrl?: string;
 }
 
 export interface DraftingCard {
@@ -76,4 +80,28 @@ export interface DeployPayload {
   timing: Timing;
   scheduleAt: string;
   seriesLink: string;
+}
+
+// ---- API response shapes (GET /api/handoffs, GET /api/articles) ----
+
+export interface HandoffsResponse {
+  readyForDev: {
+    repoName: string;
+    repoUrl?: string;
+    taskToken?: string;
+    discoveredAt?: string;
+  }[];
+  inReview: {
+    repoName: string;
+    title?: string;
+    publishedAt?: string;
+  }[];
+}
+
+export interface ArticleResponse {
+  repoName: string;
+  title: string;
+  articleMarkdown: string;
+  publishedAt?: string;
+  status: string;
 }

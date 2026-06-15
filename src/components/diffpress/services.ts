@@ -1,43 +1,76 @@
-// Async service stubs for the DiffPress workspace.
+// Service layer for the DiffPress workspace.
 //
-// Each function fakes latency and returns the shape we expect from the real
-// backend (API Gateway → Lambda → Step Functions). Swap the bodies for `fetch`
-// calls when the endpoints exist; the signatures are intended to stay stable.
+// The handoff loop (board read + resume) and the read-only article view are
+// wired to the real Content Engine backend. The deploy/syndication console and
+// the AI Tech Editor have no backend yet and are disabled in the UI, so their
+// stubs below are retained but never invoked.
 
-import { HANDOFFS, PIPELINE, TECH_EDITOR_NOTES } from "./data";
+import { authedFetch } from "@/lib/authedApi";
+import { PIPELINE, TECH_EDITOR_NOTES } from "./data";
 import type {
+  ArticleResponse,
   DeployPayload,
-  HandoffDoc,
+  HandoffsResponse,
   PipelineData,
   TechEditorNote,
 } from "./types";
 
 const delay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
-/** Load the pipeline board (Discovery → In Review). */
+/**
+ * Load the pipeline board. The Ready-for-Dev and In-Review columns come from
+ * the ledger (`GET /api/handoffs`); Discovery and Drafting have no queryable
+ * backend source, so they remain decorative mock data.
+ */
 export async function fetchCandidates(): Promise<PipelineData> {
-  await delay(280);
-  return structuredClone(PIPELINE);
-}
-
-/** Fetch the local-dev handoff prompt for a "Ready for Dev" repo. */
-export async function fetchHandoff(id: string): Promise<HandoffDoc | null> {
-  await delay(160);
-  return HANDOFFS[id] ?? null;
+  const res = await authedFetch("/api/handoffs");
+  if (!res.ok) throw new Error(`Failed to load handoffs (${res.status})`);
+  const board: HandoffsResponse = await res.json();
+  return {
+    discovery: structuredClone(PIPELINE.discovery),
+    drafting: structuredClone(PIPELINE.drafting),
+    readyForDev: board.readyForDev.map((h) => ({
+      id: h.repoName,
+      repo: h.repoName,
+      desc: "Ready for a local-dev pass before drafting.",
+      taskToken: h.taskToken,
+      repoUrl: h.repoUrl,
+    })),
+    inReview: board.inReview.map((r) => ({
+      id: r.repoName,
+      title: r.title ?? r.repoName,
+      repo: r.repoName,
+      editable: true,
+    })),
+  };
 }
 
 /**
- * Resume the workflow for a repo: attaches the developer log and advances the
- * card from "Ready for Dev" into "Drafting". Eventually a Step Functions
- * `SendTaskSuccess` call.
+ * Resume the paused workflow via `POST /api/publish-handoff` (Step Functions
+ * `SendTaskSuccess`). Needs the `taskToken` captured from the board.
  */
 export async function publishHandoff(input: {
-  id: string;
+  taskToken: string;
   repoUrl: string;
   devLog: string;
-}): Promise<{ ok: true; advancedTo: "drafting" }> {
-  await delay(650);
-  return { ok: true, advancedTo: "drafting" };
+}): Promise<void> {
+  const res = await authedFetch("/api/publish-handoff", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      taskToken: input.taskToken,
+      repoUrl: input.repoUrl,
+      developerLog: input.devLog,
+    }),
+  });
+  if (!res.ok) throw new Error(`Failed to resume workflow (${res.status})`);
+}
+
+/** Fetch a published article's markdown for the read-only In-Review view. */
+export async function fetchArticle(repoName: string): Promise<ArticleResponse> {
+  const res = await authedFetch(`/api/articles?repo=${encodeURIComponent(repoName)}`);
+  if (!res.ok) throw new Error(`Failed to load article (${res.status})`);
+  return res.json();
 }
 
 /** Deploy / syndicate the finished article. Eventually a deploy Step Function. */

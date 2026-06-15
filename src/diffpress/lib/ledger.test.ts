@@ -27,12 +27,25 @@ describe("buildMarkPublishedParams", () => {
     const params = buildMarkPublishedParams("MyTable", "vercel/next.js", {
       title: "Inside Next.js",
       publishedAt: "2026-06-14T01:00:00.000Z",
+      articleMarkdown: "# Inside Next.js\n\nbody",
     });
     expect(params.TableName).toBe("MyTable");
     expect(params.Key).toEqual({ repoName: "vercel/next.js" });
     expect(params.ConditionExpression).toContain("status");
     expect(params.ExpressionAttributeValues![":published"]).toBe("PUBLISHED");
     expect(params.ExpressionAttributeValues![":title"]).toBe("Inside Next.js");
+  });
+
+  it("persists the article markdown in the update", () => {
+    const params = buildMarkPublishedParams("MyTable", "vercel/next.js", {
+      title: "Inside Next.js",
+      publishedAt: "2026-06-14T01:00:00.000Z",
+      articleMarkdown: "# Inside Next.js\n\nbody",
+    });
+    expect(params.UpdateExpression).toContain("articleMarkdown = :article");
+    expect(params.ExpressionAttributeValues![":article"]).toBe(
+      "# Inside Next.js\n\nbody"
+    );
   });
 });
 

@@ -2,8 +2,8 @@ import { create } from "zustand";
 import { ARTICLE_HTML, EMPTY_DEPLOY, PIPELINE, TECH_EDITOR_NOTES } from "./data";
 import {
   deployArticle,
+  fetchArticle,
   fetchCandidates,
-  fetchHandoff,
   publishHandoff,
   triggerTechEditor,
 } from "./services";
@@ -16,6 +16,21 @@ import type {
 } from "./types";
 
 const NOTE_IDS = TECH_EDITOR_NOTES.map((n) => n.id);
+
+/** Client-side handoff prompt (the backend doesn't generate one). */
+const buildHandoffPrompt = (repo: string) =>
+  `# Handoff — ${repo}
+
+Clone the repository and run it locally as a critical reviewer.
+
+## What to capture
+- Cold start: clean clone → first successful run
+- Friction points, surprises, and rough edges in the DX
+- Timings worth quoting in the write-up
+
+## Deliverable
+Paste the GitHub URL and your developer log below, then resume the
+workflow to draft the article.`;
 
 // Stream cancel handle kept outside the store — it's a side-effect handle, not
 // reactive state.
@@ -37,6 +52,13 @@ interface DiffPressState {
   // ---- live draft (uncontrolled contentEditable, persisted across modes) ----
   articleHtml: string;
   saveArticleHtml: (html: string) => void;
+
+  // ---- read-only article view (real, fetched from the backend) ----
+  articleRepo: string | null;
+  articleTitle: string;
+  articleMarkdown: string;
+  articleLoading: boolean;
+  openArticle: (repoName: string) => Promise<void>;
 
   // ---- command center ----
   cmdOpen: boolean;
@@ -99,19 +121,53 @@ export const useDiffPress = create<DiffPressState>((set, get) => ({
   editorMode: "draft",
   goDashboard: () => set({ view: "dashboard" }),
   goEditor: () => set({ view: "editor" }),
-  setEditorMode: (mode) => {
-    set({ editorMode: mode });
-    if (mode === "review") get().startTechEditor();
-  },
+  // Review mode (AI Tech Editor) is disabled — no backend. Kept as a no-op so
+  // the navigation type stays stable.
+  setEditorMode: (mode) => set({ editorMode: mode }),
 
   pipeline: structuredClone(PIPELINE),
   loadPipeline: async () => {
-    const pipeline = await fetchCandidates();
-    set({ pipeline });
+    try {
+      const pipeline = await fetchCandidates();
+      set({ pipeline });
+    } catch (err) {
+      // Backend unreachable or not signed in: keep the board usable, drop the
+      // two real columns so we don't present mock handoffs as real.
+      console.warn("[diffpress] failed to load pipeline:", err);
+      set((s) => ({ pipeline: { ...s.pipeline, readyForDev: [], inReview: [] } }));
+    }
   },
 
   articleHtml: ARTICLE_HTML,
   saveArticleHtml: (articleHtml) => set({ articleHtml }),
+
+  articleRepo: null,
+  articleTitle: "",
+  articleMarkdown: "",
+  articleLoading: false,
+  openArticle: async (repoName) => {
+    set({
+      view: "editor",
+      articleRepo: repoName,
+      articleTitle: "",
+      articleMarkdown: "",
+      articleLoading: true,
+    });
+    try {
+      const article = await fetchArticle(repoName);
+      // Guard against a race where the user opened a different article.
+      if (get().articleRepo === repoName) {
+        set({
+          articleTitle: article.title,
+          articleMarkdown: article.articleMarkdown,
+          articleLoading: false,
+        });
+      }
+    } catch (err) {
+      console.warn("[diffpress] failed to load article:", err);
+      if (get().articleRepo === repoName) set({ articleLoading: false });
+    }
+  },
 
   cmdOpen: false,
   engineActive: true,
@@ -130,17 +186,20 @@ export const useDiffPress = create<DiffPressState>((set, get) => ({
   resuming: false,
   resumed: false,
   openDrawer: async (id) => {
+    // The handoff card already carries everything the drawer needs (repo name +
+    // discovered URL); there is no separate backend handoff-prompt generator, so
+    // we synthesize a short prompt client-side.
+    const card = get().pipeline.readyForDev.find((c) => c.id === id);
     set({
       drawerId: id,
-      handoffDoc: null,
-      repoUrl: "",
+      handoffDoc: card
+        ? { id, name: card.repo, handoff: buildHandoffPrompt(card.repo) }
+        : null,
+      repoUrl: card?.repoUrl ?? "",
       devLog: "",
       copied: false,
       resumed: false,
     });
-    const handoffDoc = await fetchHandoff(id);
-    // Guard against a race where the user reopened a different drawer.
-    if (get().drawerId === id) set({ handoffDoc });
   },
   closeDrawer: () => set({ drawerId: null }),
   setRepoUrl: (repoUrl) => set({ repoUrl }),
@@ -157,31 +216,29 @@ export const useDiffPress = create<DiffPressState>((set, get) => ({
   submitResume: async () => {
     const { repoUrl, devLog, drawerId, pipeline } = get();
     if (!repoUrl.trim() || !drawerId) return;
-    set({ resuming: true });
-    await publishHandoff({ id: drawerId, repoUrl, devLog });
-
-    // Move the card from "Ready for Dev" into "Drafting".
-    let nextPipeline = pipeline;
-    if (pipeline) {
-      const card = pipeline.readyForDev.find((c) => c.id === drawerId);
-      if (card) {
-        nextPipeline = {
-          ...pipeline,
-          readyForDev: pipeline.readyForDev.filter((c) => c.id !== drawerId),
-          drafting: [
-            ...pipeline.drafting,
-            {
-              id: card.id,
-              repo: card.repo,
-              desc: "Synthesizing the State-of-the-Art draft.",
-              stage: "model pass 1 / 3",
-              progress: 0.12,
-            },
-          ],
-        };
-      }
+    const card = pipeline.readyForDev.find((c) => c.id === drawerId);
+    if (!card?.taskToken) {
+      console.warn("[diffpress] cannot resume: no task token for", drawerId);
+      return;
     }
-    set({ resuming: false, resumed: true, pipeline: nextPipeline ?? pipeline });
+    set({ resuming: true });
+    try {
+      await publishHandoff({ taskToken: card.taskToken, repoUrl, devLog });
+    } catch (err) {
+      console.error("[diffpress] resume failed:", err);
+      set({ resuming: false });
+      return;
+    }
+    // The workflow now drafts and publishes asynchronously. Optimistically drop
+    // the card from Ready-for-Dev; it reappears in In-Review on the next load.
+    set({
+      resuming: false,
+      resumed: true,
+      pipeline: {
+        ...pipeline,
+        readyForDev: pipeline.readyForDev.filter((c) => c.id !== drawerId),
+      },
+    });
   },
 
   streaming: false,
