@@ -17,9 +17,46 @@ declare module "sst" {
       "name": string
       "type": "sst.aws.Function"
     }
+    "ContentEngine": {
+      "arn": string
+      "type": "sst.aws.StepFunctions"
+    }
+    "ContentEngineTrigger": {
+      "name": string
+      "type": "sst.aws.Function"
+      "url": string
+    }
+    "ContentPayloadBucket": {
+      "name": string
+      "type": "sst.aws.Bucket"
+    }
     "DialecticalLibrarian": {
       "arn": string
       "type": "sst.aws.StepFunctions"
+    }
+    "DiffPressDiscoverRepos": {
+      "name": string
+      "type": "sst.aws.Function"
+    }
+    "DiffPressDraftArticle": {
+      "name": string
+      "type": "sst.aws.Function"
+    }
+    "DiffPressEnrichRepos": {
+      "name": string
+      "type": "sst.aws.Function"
+    }
+    "DiffPressNotifyHandoff": {
+      "name": string
+      "type": "sst.aws.Function"
+    }
+    "DiffPressRecordPublication": {
+      "name": string
+      "type": "sst.aws.Function"
+    }
+    "DiffPressSeedIdeas": {
+      "name": string
+      "type": "sst.aws.Function"
     }
     "GEMINI_API_KEY": {
       "type": "sst.sst.Secret"
@@ -85,6 +122,10 @@ declare module "sst" {
     "PINECONE_INDEX_HOST": {
       "type": "sst.sst.Secret"
       "value": string
+    }
+    "PublicationLifecycle": {
+      "name": string
+      "type": "sst.aws.Dynamo"
     }
     "UnifiedLake": {
       "name": string
