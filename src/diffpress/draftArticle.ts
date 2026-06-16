@@ -3,6 +3,7 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { Resource } from "sst";
 import { getPayload } from "./lib/payloadStore";
 import { fetchDevNotes, assembleNotes } from "./lib/devNotes";
+import { markDrafting } from "./lib/ledger";
 import { sanitizeMarkdown } from "../utils";
 import type {
   ContentEngineState,
@@ -121,6 +122,9 @@ export async function handler(state: ContentEngineState): Promise<ContentEngineS
   if (!state.handoff) {
     throw new Error("draftArticle: missing handoff data in state.");
   }
+
+  // Surface this repo in the Drafting column while the model runs.
+  await markDrafting(state.repo.repoName);
 
   const payload = await getPayload(state.enrichment.key);
   const fileNotes = await fetchDevNotes(state.handoff.repoUrl);
