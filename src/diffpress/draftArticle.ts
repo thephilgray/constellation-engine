@@ -79,6 +79,33 @@ function composeArticle(
   };
 }
 
+/** Pure: parse and validate the model's JSON output into title + body. */
+export function parseDraftResponse(rawText: string): {
+  title: string;
+  articleMarkdown: string;
+} {
+  const text = (rawText ?? "").trim();
+  if (!text) {
+    throw new Error("draftArticle: model returned empty output.");
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    throw new Error("draftArticle: model output was not valid JSON.");
+  }
+  const obj = parsed as { title?: unknown; articleMarkdown?: unknown };
+  if (
+    typeof obj.title !== "string" ||
+    typeof obj.articleMarkdown !== "string" ||
+    !obj.title.trim() ||
+    !obj.articleMarkdown.trim()
+  ) {
+    throw new Error("draftArticle: model output missing title or articleMarkdown.");
+  }
+  return { title: obj.title, articleMarkdown: obj.articleMarkdown };
+}
+
 export async function handler(state: ContentEngineState): Promise<ContentEngineState> {
   if (!state.enrichment?.key) {
     throw new Error("draftArticle: missing enrichment payload location in state.");

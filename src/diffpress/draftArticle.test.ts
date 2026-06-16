@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildDraftPrompt } from "./draftArticle";
+import { buildDraftPrompt, parseDraftResponse } from "./draftArticle";
 import type { RepoCandidate, EnrichmentPayload } from "./types";
 
 const repo: RepoCandidate = {
@@ -35,5 +35,24 @@ describe("buildDraftPrompt", () => {
     expect(p).toContain("explainer");
     expect(p).toContain("narrative");
     expect(p.toLowerCase()).toContain("mode:");
+  });
+});
+
+describe("parseDraftResponse", () => {
+  it("parses a valid JSON response", () => {
+    const raw = JSON.stringify({ title: "My Title", articleMarkdown: "## Body" });
+    expect(parseDraftResponse(raw)).toEqual({ title: "My Title", articleMarkdown: "## Body" });
+  });
+
+  it("throws on empty output", () => {
+    expect(() => parseDraftResponse("   ")).toThrow(/empty/i);
+  });
+
+  it("throws on invalid JSON", () => {
+    expect(() => parseDraftResponse("not json")).toThrow(/valid JSON/i);
+  });
+
+  it("throws when a required field is missing", () => {
+    expect(() => parseDraftResponse(JSON.stringify({ title: "x" }))).toThrow(/missing/i);
   });
 });
