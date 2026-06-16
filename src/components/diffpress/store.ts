@@ -131,8 +131,8 @@ export const useDiffPress = create<DiffPressState>((set, get) => ({
       const pipeline = await fetchCandidates();
       set({ pipeline });
     } catch (err) {
-      // Backend unreachable or not signed in: keep the board usable, drop the
-      // two real columns so we don't present mock handoffs as real.
+      // Backend unreachable or not signed in: clear all columns so we never
+      // present stale or mock data as real.
       console.warn("[diffpress] failed to load pipeline:", err);
       set({ pipeline: { discovery: [], readyForDev: [], drafting: [], inReview: [] } });
     }
