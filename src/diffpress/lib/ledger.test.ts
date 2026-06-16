@@ -68,7 +68,7 @@ describe("buildMarkDraftingParams", () => {
     expect(params.Key).toEqual({ repoName: "vercel/next.js" });
     expect(params.ExpressionAttributeValues![":drafting"]).toBe("DRAFTING");
     // Do not resurrect a published item.
-    expect(params.ConditionExpression).toContain("status");
+    expect(params.ConditionExpression).toContain(":published");
   });
 });
 
@@ -82,6 +82,9 @@ describe("buildMarkAwaitingParams", () => {
     expect(params.Key).toEqual({ repoName: "vercel/next.js" });
     expect(params.ExpressionAttributeValues![":awaiting"]).toBe("AWAITING_HANDOFF");
     expect(params.ExpressionAttributeValues![":taskToken"]).toBe("tok-9");
+    expect(params.ExpressionAttributeValues![":payloadKey"]).toBe(
+      "enrichment/exec-1/vercel-next.js.json"
+    );
     expect(params.UpdateExpression).toContain("taskToken = :taskToken");
   });
 });
