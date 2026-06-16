@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { ARTICLE_HTML, EMPTY_DEPLOY, PIPELINE, TECH_EDITOR_NOTES } from "./data";
+import { ARTICLE_HTML, EMPTY_DEPLOY, TECH_EDITOR_NOTES } from "./data";
 import {
   deployArticle,
   fetchArticle,
@@ -125,7 +125,7 @@ export const useDiffPress = create<DiffPressState>((set, get) => ({
   // the navigation type stays stable.
   setEditorMode: (mode) => set({ editorMode: mode }),
 
-  pipeline: structuredClone(PIPELINE),
+  pipeline: { discovery: [], readyForDev: [], drafting: [], inReview: [] },
   loadPipeline: async () => {
     try {
       const pipeline = await fetchCandidates();
@@ -134,7 +134,7 @@ export const useDiffPress = create<DiffPressState>((set, get) => ({
       // Backend unreachable or not signed in: keep the board usable, drop the
       // two real columns so we don't present mock handoffs as real.
       console.warn("[diffpress] failed to load pipeline:", err);
-      set((s) => ({ pipeline: { ...s.pipeline, readyForDev: [], inReview: [] } }));
+      set({ pipeline: { discovery: [], readyForDev: [], drafting: [], inReview: [] } });
     }
   },
 
