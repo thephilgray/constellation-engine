@@ -7,6 +7,7 @@ export interface RepoCandidate {
   description: string;
   stars: number;
   language: string | null;
+  pushedAt: string; // GitHub `pushed_at` ISO timestamp
 }
 
 /** Enrichment payload assembled in Phase 1 and written to S3. */
@@ -58,7 +59,11 @@ export interface DraftedArticle {
   draftedAt: string;
 }
 
-export type PublicationStatus = "AWAITING_HANDOFF" | "PUBLISHED";
+export type PublicationStatus =
+  | "DISCOVERED"
+  | "AWAITING_HANDOFF"
+  | "DRAFTING"
+  | "PUBLISHED";
 
 /** An item in the PublicationLifecycle table (PK: repoName). */
 export interface PublicationRecord {
@@ -71,4 +76,10 @@ export interface PublicationRecord {
   articleMarkdown?: string;
   discoveredAt?: string;
   publishedAt?: string;
+  // Discovery-pool fields (status === "DISCOVERED")
+  description?: string;
+  stars?: number;
+  language?: string | null;
+  pushedAt?: string;
+  ttl?: number; // epoch seconds; DynamoDB TTL attribute
 }
