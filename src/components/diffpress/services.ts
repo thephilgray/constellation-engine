@@ -6,7 +6,7 @@
 // stubs below are retained but never invoked.
 
 import { authedFetch } from "@/lib/authedApi";
-import { PIPELINE, TECH_EDITOR_NOTES } from "./data";
+import { TECH_EDITOR_NOTES } from "./data";
 import type {
   ArticleResponse,
   DeployPayload,
@@ -18,17 +18,27 @@ import type {
 const delay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 /**
- * Load the pipeline board. The Ready-for-Dev and In-Review columns come from
- * the ledger (`GET /api/handoffs`); Discovery and Drafting have no queryable
- * backend source, so they remain decorative mock data.
+ * Load the pipeline board. All four columns come from the ledger via
+ * `GET /api/handoffs` (status GSI); the UI never queries GitHub directly.
  */
 export async function fetchCandidates(): Promise<PipelineData> {
   const res = await authedFetch("/api/handoffs");
   if (!res.ok) throw new Error(`Failed to load handoffs (${res.status})`);
   const board: HandoffsResponse = await res.json();
   return {
-    discovery: structuredClone(PIPELINE.discovery),
-    drafting: structuredClone(PIPELINE.drafting),
+    discovery: board.discovered.map((d) => ({
+      id: d.repoName,
+      repo: d.repoName,
+      desc: d.description ?? "",
+      stars: d.stars ?? 0,
+      language: d.language ?? "",
+      lastUpdated: d.pushedAt ?? "",
+    })),
+    drafting: board.drafting.map((d) => ({
+      id: d.repoName,
+      repo: d.repoName,
+      desc: d.description ?? "Drafting in progress.",
+    })),
     readyForDev: board.readyForDev.map((h) => ({
       id: h.repoName,
       repo: h.repoName,
