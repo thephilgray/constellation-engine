@@ -2,12 +2,10 @@ import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import {
   DynamoDBDocumentClient,
   GetCommand,
-  PutCommand,
   UpdateCommand,
   QueryCommand,
   BatchGetCommand,
   BatchWriteCommand,
-  type PutCommandInput,
   type UpdateCommandInput,
 } from "@aws-sdk/lib-dynamodb";
 import { Resource } from "sst";
@@ -20,17 +18,6 @@ const docClient = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 function tableName(): string {
   return (Resource as unknown as { PublicationLifecycle: { name: string } })
     .PublicationLifecycle.name;
-}
-
-/** Pure: build the PutCommand input for a pending (AWAITING_HANDOFF) item. */
-export function buildPendingPutParams(
-  table: string,
-  record: PublicationRecord
-): PutCommandInput {
-  return {
-    TableName: table,
-    Item: { ...record },
-  };
 }
 
 /** Pure: build a conditional UpdateCommand input that flips an item to PUBLISHED. */
@@ -110,11 +97,6 @@ export async function getByRepo(repoName: string): Promise<PublicationRecord | n
     new GetCommand({ TableName: tableName(), Key: { repoName } })
   );
   return (Item as PublicationRecord) ?? null;
-}
-
-/** Write the AWAITING_HANDOFF item carrying the task token + payload location. */
-export async function putPending(record: PublicationRecord): Promise<void> {
-  await docClient.send(new PutCommand(buildPendingPutParams(tableName(), record)));
 }
 
 /** Flip the item to PUBLISHED. Swallows the conditional-check failure (idempotent). */
