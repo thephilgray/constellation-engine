@@ -59,7 +59,7 @@ function DiscoveryArticle({ card }: { card: DiscoveryCard }) {
       <RepoName>{card.repo}</RepoName>
       <Desc>{card.desc}</Desc>
       <div className={cn("flex gap-4", META)}>
-        <span>★ {card.stars.toLocaleString()}</span>
+        <span><span aria-hidden="true">★</span> {card.stars.toLocaleString()}</span>
         {card.language ? <span>{card.language}</span> : null}
       </div>
     </article>
@@ -98,7 +98,7 @@ function DraftingArticle({ card }: { card: DraftingCard }) {
       <RepoName>{card.repo}</RepoName>
       <Desc>{card.desc}</Desc>
       <div className="flex items-center gap-[10px]">
-        <span className="flex gap-1">
+        <span className="flex gap-1" aria-hidden="true">
           {[0, 0.2, 0.4].map((d) => (
             <span
               key={d}
