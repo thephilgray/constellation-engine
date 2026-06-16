@@ -1,15 +1,34 @@
 import { Octokit } from "@octokit/rest";
 import { Resource } from "sst";
-import { listPublishedNames } from "./lib/ledger";
-import type { RepoCandidate, ContentEngineState } from "./types";
+import { batchGetExisting, batchPutDiscovered } from "./lib/ledger";
+import type { RepoCandidate, ContentEngineState, PublicationRecord } from "./types";
 
-/** Pure: drop candidates already covered (PUBLISHED) in the ledger. */
-export function filterUnpublished(
+const DISCOVERY_TTL_DAYS = 30;
+
+/** Pure: drop candidates already present in the ledger (any status). */
+export function dedupeByExisting(
   candidates: RepoCandidate[],
-  publishedNames: string[]
+  existing: Set<string>
 ): RepoCandidate[] {
-  const published = new Set(publishedNames);
-  return candidates.filter((c) => !published.has(c.repoName));
+  return candidates.filter((c) => !existing.has(c.repoName));
+}
+
+/** Pure: map a fresh candidate to a DISCOVERED ledger row with a 30-day TTL. */
+export function toDiscoveredRecord(
+  c: RepoCandidate,
+  nowMs: number
+): PublicationRecord {
+  return {
+    repoName: c.repoName,
+    status: "DISCOVERED",
+    repoUrl: c.repoUrl,
+    description: c.description,
+    stars: c.stars,
+    language: c.language,
+    pushedAt: c.pushedAt,
+    discoveredAt: new Date(nowMs).toISOString(),
+    ttl: Math.floor(nowMs / 1000) + DISCOVERY_TTL_DAYS * 24 * 60 * 60,
+  };
 }
 
 /** Build the "emerging repos" search query: created in the last 30 days, popular. */
@@ -27,7 +46,7 @@ export async function handler(): Promise<ContentEngineState> {
     q: emergingQuery(),
     sort: "stars",
     order: "desc",
-    per_page: 25,
+    per_page: 50,
   });
 
   const candidates: RepoCandidate[] = data.items.map((item) => ({
@@ -36,16 +55,22 @@ export async function handler(): Promise<ContentEngineState> {
     description: item.description ?? "",
     stars: item.stargazers_count,
     language: item.language ?? null,
+    pushedAt: item.pushed_at ?? new Date().toISOString(),
   }));
 
-  const publishedNames = await listPublishedNames();
-  const fresh = filterUnpublished(candidates, publishedNames);
+  // Dedup against the whole ledger via BatchGetItem (no table scan).
+  const existing = await batchGetExisting(candidates.map((c) => c.repoName));
+  const fresh = dedupeByExisting(candidates, existing);
 
   if (fresh.length === 0) {
-    throw new Error("No un-published emerging repos found this cycle.");
+    throw new Error("No un-seen emerging repos found this cycle.");
   }
 
+  // Persist the whole fresh pool as DISCOVERED so the UI can show it.
+  const now = Date.now();
+  await batchPutDiscovered(fresh.map((c) => toDiscoveredRecord(c, now)));
+
   const repo = fresh[0];
-  console.log(`[discoverRepos] selected ${repo.repoName} from ${fresh.length} candidates`);
+  console.log(`[discoverRepos] wrote ${fresh.length} DISCOVERED; selected ${repo.repoName}`);
   return { repo, candidates: fresh };
 }

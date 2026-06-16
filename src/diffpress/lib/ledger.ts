@@ -4,7 +4,6 @@ import {
   GetCommand,
   PutCommand,
   UpdateCommand,
-  ScanCommand,
   QueryCommand,
   BatchGetCommand,
   BatchWriteCommand,
@@ -144,20 +143,6 @@ export async function listBoardItems(): Promise<PublicationRecord[]> {
   const statuses = ["DISCOVERED", "AWAITING_HANDOFF", "DRAFTING", "PUBLISHED"];
   const groups = await Promise.all(statuses.map((s) => queryByStatus(s)));
   return groups.flat();
-}
-
-/** Return the set of repoNames already in PUBLISHED status (for dedupe). */
-export async function listPublishedNames(): Promise<string[]> {
-  const { Items } = await docClient.send(
-    new ScanCommand({
-      TableName: tableName(),
-      FilterExpression: "#status = :published",
-      ExpressionAttributeNames: { "#status": "status" },
-      ExpressionAttributeValues: { ":published": "PUBLISHED" },
-      ProjectionExpression: "repoName",
-    })
-  );
-  return (Items ?? []).map((i) => (i as PublicationRecord).repoName);
 }
 
 /** Name of the status GSI declared in sst.config.ts. */
