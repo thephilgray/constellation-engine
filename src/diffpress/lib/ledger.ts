@@ -55,6 +55,44 @@ export function buildMarkPublishedParams(
   };
 }
 
+/** Pure: flip an item to DRAFTING (only if not already PUBLISHED). */
+export function buildMarkDraftingParams(
+  table: string,
+  repoName: string
+): UpdateCommandInput {
+  return {
+    TableName: table,
+    Key: { repoName },
+    UpdateExpression: "SET #status = :drafting",
+    ConditionExpression:
+      "attribute_not_exists(#status) OR #status <> :published",
+    ExpressionAttributeNames: { "#status": "status" },
+    ExpressionAttributeValues: { ":drafting": "DRAFTING", ":published": "PUBLISHED" },
+  };
+}
+
+/** Pure: flip a DISCOVERED item to AWAITING_HANDOFF, attaching resume metadata. */
+export function buildMarkAwaitingParams(
+  table: string,
+  repoName: string,
+  meta: { repoUrl: string; taskToken: string; payloadKey?: string }
+): UpdateCommandInput {
+  return {
+    TableName: table,
+    Key: { repoName },
+    UpdateExpression:
+      "SET #status = :awaiting, repoUrl = :repoUrl, taskToken = :taskToken, payloadKey = :payloadKey, discoveredAt = if_not_exists(discoveredAt, :now)",
+    ExpressionAttributeNames: { "#status": "status" },
+    ExpressionAttributeValues: {
+      ":awaiting": "AWAITING_HANDOFF",
+      ":repoUrl": meta.repoUrl,
+      ":taskToken": meta.taskToken,
+      ":payloadKey": meta.payloadKey ?? null,
+      ":now": new Date().toISOString(),
+    },
+  };
+}
+
 /** Pure: is this error a DynamoDB conditional-check failure (already published)? */
 export function isAlreadyPublishedError(err: unknown): boolean {
   return (

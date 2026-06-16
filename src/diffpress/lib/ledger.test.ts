@@ -3,6 +3,8 @@ import {
   buildPendingPutParams,
   buildMarkPublishedParams,
   isAlreadyPublishedError,
+  buildMarkDraftingParams,
+  buildMarkAwaitingParams,
 } from "./ledger";
 
 describe("buildPendingPutParams", () => {
@@ -56,5 +58,30 @@ describe("isAlreadyPublishedError", () => {
   it("returns false for other errors", () => {
     expect(isAlreadyPublishedError({ name: "ResourceNotFoundException" })).toBe(false);
     expect(isAlreadyPublishedError(new Error("boom"))).toBe(false);
+  });
+});
+
+describe("buildMarkDraftingParams", () => {
+  it("builds a conditional UpdateCommand flipping status to DRAFTING", () => {
+    const params = buildMarkDraftingParams("MyTable", "vercel/next.js");
+    expect(params.TableName).toBe("MyTable");
+    expect(params.Key).toEqual({ repoName: "vercel/next.js" });
+    expect(params.ExpressionAttributeValues![":drafting"]).toBe("DRAFTING");
+    // Do not resurrect a published item.
+    expect(params.ConditionExpression).toContain("status");
+  });
+});
+
+describe("buildMarkAwaitingParams", () => {
+  it("builds an UpdateCommand carrying taskToken + payloadKey", () => {
+    const params = buildMarkAwaitingParams("MyTable", "vercel/next.js", {
+      repoUrl: "https://github.com/vercel/next.js",
+      taskToken: "tok-9",
+      payloadKey: "enrichment/exec-1/vercel-next.js.json",
+    });
+    expect(params.Key).toEqual({ repoName: "vercel/next.js" });
+    expect(params.ExpressionAttributeValues![":awaiting"]).toBe("AWAITING_HANDOFF");
+    expect(params.ExpressionAttributeValues![":taskToken"]).toBe("tok-9");
+    expect(params.UpdateExpression).toContain("taskToken = :taskToken");
   });
 });
