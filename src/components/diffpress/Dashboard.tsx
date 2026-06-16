@@ -59,8 +59,8 @@ function DiscoveryArticle({ card }: { card: DiscoveryCard }) {
       <RepoName>{card.repo}</RepoName>
       <Desc>{card.desc}</Desc>
       <div className={cn("flex gap-4", META)}>
-        <span>★ Δ {card.starsDelta}</span>
-        <span>cov {card.coverage}</span>
+        <span>★ {card.stars.toLocaleString()}</span>
+        {card.language ? <span>{card.language}</span> : null}
       </div>
     </article>
   );
@@ -97,7 +97,7 @@ function DraftingArticle({ card }: { card: DraftingCard }) {
     <article className={CARD_BASE}>
       <RepoName>{card.repo}</RepoName>
       <Desc>{card.desc}</Desc>
-      <div className="mb-[11px] flex items-center gap-[10px]">
+      <div className="flex items-center gap-[10px]">
         <span className="flex gap-1">
           {[0, 0.2, 0.4].map((d) => (
             <span
@@ -107,15 +107,7 @@ function DraftingArticle({ card }: { card: DraftingCard }) {
             />
           ))}
         </span>
-        <span className="font-dp-mono text-[11.5px] text-[#8a877f]">
-          {card.stage}
-        </span>
-      </div>
-      <div className="h-[2px] overflow-hidden rounded-sm bg-[#ecebe5]">
-        <div
-          className="dp-track h-full rounded-sm bg-[#c2c5cf]"
-          style={{ width: `${Math.round(card.progress * 100)}%` }}
-        />
+        <span className="font-dp-mono text-[11.5px] text-[#8a877f]">drafting…</span>
       </div>
     </article>
   );
