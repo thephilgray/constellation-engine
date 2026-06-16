@@ -1,4 +1,4 @@
-import { putPending } from "./lib/ledger";
+import { markAwaitingHandoff } from "./lib/ledger";
 import type { ContentEngineState } from "./types";
 
 interface NotifyHandoffEvent {
@@ -15,13 +15,10 @@ export async function handler(event: NotifyHandoffEvent): Promise<{ ok: true }> 
       `payloadKey=${payloadKey} taskToken=${taskToken}`
   );
 
-  await putPending({
-    repoName: state.repo.repoName,
-    status: "AWAITING_HANDOFF",
+  await markAwaitingHandoff(state.repo.repoName, {
     repoUrl: state.repo.repoUrl,
     taskToken,
     payloadKey,
-    discoveredAt: new Date().toISOString(),
   });
 
   return { ok: true };
