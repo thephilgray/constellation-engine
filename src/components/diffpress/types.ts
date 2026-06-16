@@ -8,8 +8,9 @@ export interface DiscoveryCard {
   id: string;
   repo: string;
   desc: string;
-  starsDelta: string; // e.g. "+2.1k"
-  coverage: string; // e.g. "0.82"
+  stars: number;
+  language: string;
+  lastUpdated: string; // ISO timestamp (GitHub pushed_at)
 }
 
 export interface HandoffCard {
@@ -26,8 +27,6 @@ export interface DraftingCard {
   id: string;
   repo: string;
   desc: string;
-  stage: string; // e.g. "model pass 2 / 3"
-  progress: number; // 0..1 (drives the indeterminate-ish bar width)
 }
 
 export interface ReviewCard {
@@ -85,11 +84,23 @@ export interface DeployPayload {
 // ---- API response shapes (GET /api/handoffs, GET /api/articles) ----
 
 export interface HandoffsResponse {
+  discovered: {
+    repoName: string;
+    repoUrl?: string;
+    description?: string;
+    stars?: number;
+    language?: string | null;
+    pushedAt?: string;
+  }[];
   readyForDev: {
     repoName: string;
     repoUrl?: string;
     taskToken?: string;
     discoveredAt?: string;
+  }[];
+  drafting: {
+    repoName: string;
+    description?: string;
   }[];
   inReview: {
     repoName: string;
