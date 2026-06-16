@@ -1,11 +1,26 @@
 // src/diffpress/draftArticle.ts
+import { GoogleGenAI, Type } from "@google/genai";
+import { Resource } from "sst";
 import { getPayload } from "./lib/payloadStore";
+import { fetchDevNotes, assembleNotes } from "./lib/devNotes";
+import { sanitizeMarkdown } from "../utils";
 import type {
   ContentEngineState,
   DraftedArticle,
   RepoCandidate,
   EnrichmentPayload,
 } from "./types";
+
+const MODEL = "gemini-2.5-pro";
+
+// Lazy init so importing this module in unit tests does not require SST Resource bindings.
+let genAI: GoogleGenAI | undefined;
+function getGenAI(): GoogleGenAI {
+  if (!genAI) {
+    genAI = new GoogleGenAI({ apiKey: Resource.GEMINI_API_KEY.value });
+  }
+  return genAI;
+}
 
 /** Pure: assemble the full Gemini prompt from repo metadata, enrichment, and notes. */
 export function buildDraftPrompt(input: {
@@ -52,33 +67,6 @@ export function buildDraftPrompt(input: {
   ].join("\n");
 }
 
-/**
- * STUB: combine enrichment docs, the repo URL, and the developer log into an article.
- * Replace the body with a real LLM call; the return shape is the contract.
- */
-function composeArticle(
-  docs: string,
-  repoUrl: string,
-  developerLog: string,
-  repoName: string
-): DraftedArticle {
-  return {
-    title: `A Critical Read of ${repoName}`,
-    articleMarkdown: [
-      `# A Critical Read of ${repoName}`,
-      ``,
-      `Source: ${repoUrl}`,
-      ``,
-      `## Background`,
-      docs,
-      ``,
-      `## Developer Log`,
-      developerLog,
-    ].join("\n"),
-    draftedAt: new Date().toISOString(),
-  };
-}
-
 /** Pure: parse and validate the model's JSON output into title + body. */
 export function parseDraftResponse(rawText: string): {
   title: string;
@@ -106,6 +94,26 @@ export function parseDraftResponse(rawText: string): {
   return { title: obj.title, articleMarkdown: obj.articleMarkdown };
 }
 
+/** Thin wrapper around the Gemini structured-output call. */
+async function generateArticle(prompt: string): Promise<string> {
+  const result = await getGenAI().models.generateContent({
+    model: MODEL,
+    contents: [{ text: prompt }],
+    config: {
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: Type.OBJECT,
+        properties: {
+          title: { type: Type.STRING },
+          articleMarkdown: { type: Type.STRING },
+        },
+        required: ["title", "articleMarkdown"],
+      },
+    },
+  });
+  return result.text ?? "";
+}
+
 export async function handler(state: ContentEngineState): Promise<ContentEngineState> {
   if (!state.enrichment?.key) {
     throw new Error("draftArticle: missing enrichment payload location in state.");
@@ -115,13 +123,21 @@ export async function handler(state: ContentEngineState): Promise<ContentEngineS
   }
 
   const payload = await getPayload(state.enrichment.key);
-  const article = composeArticle(
-    payload.documentation,
-    state.handoff.repoUrl,
-    state.handoff.developerLog,
-    state.repo.repoName
-  );
+  const fileNotes = await fetchDevNotes(state.handoff.repoUrl);
+  const notes = assembleNotes(fileNotes, state.handoff.developerLog);
 
-  console.log(`[draftArticle] drafted "${article.title}"`);
+  const prompt = buildDraftPrompt({ repo: state.repo, enrichment: payload, notes });
+  const raw = await generateArticle(prompt);
+  const { title, articleMarkdown } = parseDraftResponse(raw);
+
+  const article: DraftedArticle = {
+    title,
+    articleMarkdown: sanitizeMarkdown(articleMarkdown),
+    draftedAt: new Date().toISOString(),
+  };
+
+  console.log(
+    `[draftArticle] drafted "${article.title}" (notes source: ${fileNotes ? "file+ui" : "ui-only"})`
+  );
   return { ...state, article };
 }
