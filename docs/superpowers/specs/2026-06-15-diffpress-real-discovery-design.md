@@ -1,7 +1,7 @@
 # DiffPress — Real Discovery & Drafting Columns (de-mock the board)
 
 **Date:** 2026-06-15
-**Status:** Approved-in-principle; one open decision flagged (discovery model A vs B)
+**Status:** Approved — Model A confirmed; GSI in scope. Ready for implementation plan.
 **Related:** `2026-06-14-diffpress-content-engine-design.md`,
 `2026-06-15-diffpress-ui-integration-design.md`
 
@@ -52,26 +52,17 @@ DISCOVERED  ──►  AWAITING_HANDOFF  ──resume──►  DRAFTING  ──
   deferred feature — stays.
 - Star-deltas ("+N this week") or coverage scores — both need N+1 external calls.
   Discovery cards show only what one GitHub search returns.
-- Replacing the board-read `Scan` with a status GSI (see Open Questions).
+## Confirmed decisions
 
-## OPEN DECISION — discovery model (pick one before implementation)
-
-The Step Function processes one repo per execution and pauses once
-(`waitForTaskToken`). To populate `DISCOVERED` **and** `AWAITING_HANDOFF` as two
-distinct columns, choose:
-
-- **Model A (this spec's default):** `DiscoverRepos` writes **all top-N deduped
+- **Model A (candidate pool).** `DiscoverRepos` writes **all top-N deduped
   candidates** as `DISCOVERED` (cheap metadata, no enrichment), then enriches +
   hands off the one it selects, which `notifyHandoff` flips to
   `AWAITING_HANDOFF`. Discovery column = un-selected candidate pool. No new UI
   action. `DISCOVERED` rows carry a DynamoDB **TTL** (~30d) so the pool
-  self-expires without a cleanup scan.
-- **Model B:** only the enriched, selected repo is written `DISCOVERED` at the
-  pause; reaching `AWAITING_HANDOFF` requires a **new `POST /api/claim-handoff`**
-  action (UI button + endpoint). Discovery shows ~one card per run.
-
-Everything below is written for **Model A**; switching to B changes §1 and adds
-a claim endpoint.
+  self-expires without a cleanup scan. (Model B — enriched-then-claim with a new
+  `POST /api/claim-handoff` — was rejected.)
+- **GSI now, no board-read scan.** Add a `status-index` GSI; `listBoardItems`
+  uses `Query` per status, not `Scan`.
 
 ## Design
 
@@ -113,15 +104,32 @@ the frontend `DiscoveryCard` type.
   (`attribute_not_exists(#status) OR #status <> :published`) already permits
   `DRAFTING → PUBLISHED` unchanged.
 
-### 3. `listHandoffs.ts` — four-column bucketing, DynamoDB-driven
+### 3. Infra (`sst.config.ts`) — GSI, TTL, links
 
-- `bucketBoard` maps every item by status into four arrays:
-  `DISCOVERED → discovered`, `AWAITING_HANDOFF → readyForDev`,
-  `DRAFTING → drafting`, `PUBLISHED → inReview`.
-- `Board` interface: `{ discovered, readyForDev, drafting, inReview }`.
-- `listBoardItems` projection extends to include the discovery fields
-  (`stars, language, pushedAt, description`) so discovery cards render.
-- The read path makes **no GitHub call**.
+- `PublicationLifecycle` gains a `status` field, a `status-index` GSI
+  (`hashKey: "status"`), and TTL on a `ttl` attribute:
+  ```ts
+  new sst.aws.Dynamo("PublicationLifecycle", {
+    fields: { repoName: "string", status: "string" },
+    primaryIndex: { hashKey: "repoName" },
+    globalIndexes: { "status-index": { hashKey: "status" } },
+    ttl: "ttl",
+  });
+  ```
+- **Link `publicationLifecycle` to the `draftArticle` function** (currently
+  unlinked) for the `markDrafting` write. `discoverRepos` and `notifyHandoff`
+  are already linked.
+
+### 4. `listHandoffs.ts` — four columns via GSI Query (no Scan)
+
+- `listBoardItems` issues parallel `Query`s on `status-index`, one per status
+  (`DISCOVERED`, `AWAITING_HANDOFF`, `DRAFTING`, `PUBLISHED`) — replacing the
+  `Scan`. Each Query is keyed and bounded.
+- `bucketBoard` maps results into `Board`:
+  `{ discovered, readyForDev, drafting, inReview }`.
+- Queries project the discovery fields (`stars, language, pushedAt,
+  description`) so discovery cards render. The read path makes **no GitHub
+  call**.
 
 ### 4. Frontend rewire (`services.ts`, `store.ts`, `types.ts`)
 
@@ -150,7 +158,7 @@ EventBridge ─► DiscoverRepos ─► GitHub Search ─► BatchGetItem dedup
                   ▼  DISCOVERED → AWAITING_HANDOFF (+taskToken)
                   … resume → DRAFTING → PUBLISHED
 
-UI ── GET /api/handoffs ─► listBoardItems (Scan) ─► bucketBoard →
+UI ── GET /api/handoffs ─► listBoardItems (Query ×4 on status-index) ─► bucketBoard →
         { discovered, readyForDev, drafting, inReview }   (no GitHub call)
 ```
 
@@ -169,11 +177,12 @@ UI ── GET /api/handoffs ─► listBoardItems (Scan) ─► bucketBoard →
   confirm a card appears in Discovery, advances to Ready-for-Dev on selection,
   to Drafting on resume, and to In-Review with a genuine Gemini headline.
 
-## Open Questions (for the plan, non-blocking except the first)
+## Tuning knobs (settle in the plan, non-blocking)
 
-1. **Model A vs B** above — must be settled before implementation.
-2. **Board read still `Scan`s** `listBoardItems` (pre-existing). At scale a
-   `status-index` GSI would replace it with per-status `Query`s. Recommended
-   follow-up; out of scope here unless you want it folded in now.
-3. Discovery `BatchWrite` count / TTL window (default top-N to write, 30d) —
-   tune in the plan.
+- Discovery `BatchWrite` count and TTL window — default top-N to write and 30d.
+- `notifyHandoff` switches from `Put` to `Update` (the row already exists as
+  `DISCOVERED`), flipping status → `AWAITING_HANDOFF` and attaching
+  `taskToken` + `payloadKey` while preserving discovery metadata.
+
+**Stack:** SST v3 (Ion, 3.17.12). `sst.aws.Dynamo` supports `globalIndexes`
+and `ttl` declaratively as shown in §3.
