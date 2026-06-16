@@ -360,10 +360,13 @@ export default $config({
     // Phase 1 enrichment payloads
     const contentPayloadBucket = new sst.aws.Bucket("ContentPayloadBucket");
 
-    // Publication ledger (PK: repoName), lifecycle: AWAITING_HANDOFF -> PUBLISHED
+    // Publication ledger (PK: repoName). Lifecycle:
+    // DISCOVERED -> AWAITING_HANDOFF -> DRAFTING -> PUBLISHED.
     const publicationLifecycle = new sst.aws.Dynamo("PublicationLifecycle", {
-      fields: { repoName: "string" },
+      fields: { repoName: "string", status: "string" },
       primaryIndex: { hashKey: "repoName" },
+      globalIndexes: { "status-index": { hashKey: "status" } },
+      ttl: "ttl",
     });
 
     api.route("POST /api/publish-handoff", {
@@ -451,7 +454,7 @@ export default $config({
       }),
       draftArticle: new sst.aws.Function("DiffPressDraftArticle", {
         handler: "src/diffpress/draftArticle.handler",
-        link: [GEMINI_API_KEY, GITHUB_TOKEN, contentPayloadBucket],
+        link: [GEMINI_API_KEY, GITHUB_TOKEN, contentPayloadBucket, publicationLifecycle],
         timeout: "60 seconds",
       }),
       recordPublication: new sst.aws.Function("DiffPressRecordPublication", {
