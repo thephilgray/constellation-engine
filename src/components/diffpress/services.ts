@@ -31,6 +31,7 @@ export async function fetchCandidates(): Promise<PipelineData> {
       repo: d.repoName,
       desc: d.description ?? "",
       stars: d.stars ?? 0,
+      // API sends null for repos with no detected language; normalize to "".
       language: d.language ?? "",
       lastUpdated: d.pushedAt ?? "",
     })),
