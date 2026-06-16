@@ -451,7 +451,7 @@ export default $config({
       }),
       draftArticle: new sst.aws.Function("DiffPressDraftArticle", {
         handler: "src/diffpress/draftArticle.handler",
-        link: [GEMINI_API_KEY, contentPayloadBucket],
+        link: [GEMINI_API_KEY, GITHUB_TOKEN, contentPayloadBucket],
         timeout: "60 seconds",
       }),
       recordPublication: new sst.aws.Function("DiffPressRecordPublication", {
