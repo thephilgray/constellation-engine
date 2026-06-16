@@ -1,124 +1,7 @@
 // Static mock data for the DiffPress workspace. In production these payloads
 // arrive from the API; here they seed the stubbed services in `services.ts`.
 
-import type {
-  DeployPayload,
-  HandoffDoc,
-  PipelineData,
-  TechEditorNote,
-} from "./types";
-
-export const PIPELINE: PipelineData = {
-  discovery: [
-    {
-      id: "helix",
-      repo: "helix-labs/helix",
-      desc: "Durable orchestration runtime for LLM agents.",
-      stars: 14200,
-      language: "Python",
-      lastUpdated: "2026-06-14T00:00:00Z",
-    },
-    {
-      id: "loom",
-      repo: "volta-ai/loom",
-      desc: "Declarative agent graphs, defined as code.",
-      stars: 8700,
-      language: "TypeScript",
-      lastUpdated: "2026-06-12T00:00:00Z",
-    },
-    {
-      id: "agentmesh",
-      repo: "tau/agentmesh",
-      desc: "A message bus for multi-agent systems.",
-      stars: 5300,
-      language: "Go",
-      lastUpdated: "2026-06-10T00:00:00Z",
-    },
-  ],
-  readyForDev: [
-    {
-      id: "relay",
-      repo: "relay-systems/relay",
-      desc: "Durable workflows with deterministic replay.",
-    },
-    {
-      id: "sigil",
-      repo: "forge/sigil",
-      desc: "A typed tool-calling layer for agents.",
-    },
-  ],
-  drafting: [
-    {
-      id: "orchard",
-      repo: "cortex/orchard",
-      desc: "Synthesizing the State-of-the-Art draft.",
-    },
-    {
-      id: "atlas",
-      repo: "nine/atlas",
-      desc: "Outlining the architecture teardown.",
-    },
-  ],
-  inReview: [
-    {
-      id: "helix-article",
-      title: "State of the Art: Helix",
-      repo: "helix-labs/helix",
-      editable: true,
-    },
-    {
-      id: "agentmesh-article",
-      title: "Field Notes: agentmesh",
-      repo: "tau/agentmesh",
-      editable: false,
-    },
-  ],
-};
-
-export const HANDOFFS: Record<string, HandoffDoc> = {
-  relay: {
-    id: "relay",
-    name: "relay-systems/relay",
-    handoff: `# Handoff — relay-systems/relay
-Goal: evaluate durable-workflow ergonomics for the
-State-of-the-Art review.
-
-## Local setup
-git clone https://github.com/relay-systems/relay
-cd relay && pnpm install
-pnpm dev --profile critic
-
-## What to probe
-- Cold-start: clean clone → first green run
-- Replay determinism under failure injection
-- DX of the @durable decorator
-
-## Deliverable
-Append findings to the Food Critic Developer Log,
-then resume the pipeline below.`,
-  },
-  sigil: {
-    id: "sigil",
-    name: "forge/sigil",
-    handoff: `# Handoff — forge/sigil
-Goal: stress-test the typed tool-calling layer for
-the State-of-the-Art review.
-
-## Local setup
-git clone https://github.com/forge/sigil
-cd sigil && cargo build --release
-./target/release/sigil serve --critic
-
-## What to probe
-- Schema inference on malformed tool output
-- Round-trip latency vs. raw JSON mode
-- Error surfaces when a tool contract drifts
-
-## Deliverable
-Append findings to the Food Critic Developer Log,
-then resume the pipeline below.`,
-  },
-};
+import type { DeployPayload, TechEditorNote } from "./types";
 
 // The article body for the live Draft editor (contentEditable seed HTML).
 export const ARTICLE_HTML = `<div class="dp-meta">helix-labs/helix&nbsp;&nbsp;·&nbsp;&nbsp;★ 14.2k&nbsp;&nbsp;·&nbsp;&nbsp;+2.1k this week</div>
@@ -178,14 +61,6 @@ export const TECH_EDITOR_NOTES: TechEditorNote[] = [
       { kind: "add", text: "A first-run `helix doctor` that provisions" },
       { kind: "add", text: "Postgres would move this from coherent to recommended." },
     ],
-  },
-];
-
-// The Review article paragraphs, with the note anchored to each (null = no note).
-export const REVIEW_BLOCKS: { html: string; noteId: string | null }[] = [
-  {
-    html: `Every few months a project arrives claiming to make LLM agents "production-ready." Most are wrappers around a chat loop. Helix is not a wrapper — it is a runtime that treats every agent step as a durable, replayable unit of work. After a week with it, that distinction turns out to matter more than the README suggests.`,
-    noteId: null,
   },
 ];
 
