@@ -3,11 +3,25 @@ import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from "aws-lambda
 import { listBoardItems } from "./lib/ledger";
 import type { PublicationRecord } from "./types";
 
+export interface DiscoveredItem {
+  repoName: string;
+  repoUrl?: string;
+  description?: string;
+  stars?: number;
+  language?: string | null;
+  pushedAt?: string;
+}
+
 export interface HandoffItem {
   repoName: string;
   repoUrl?: string;
   taskToken?: string;
   discoveredAt?: string;
+}
+
+export interface DraftingItem {
+  repoName: string;
+  description?: string;
 }
 
 export interface ReviewItem {
@@ -17,31 +31,51 @@ export interface ReviewItem {
 }
 
 export interface Board {
+  discovered: DiscoveredItem[];
   readyForDev: HandoffItem[];
+  drafting: DraftingItem[];
   inReview: ReviewItem[];
 }
 
-/** Pure: split ledger items into the two board columns the UI renders. */
+/** Pure: split ledger items into the four board columns the UI renders. */
 export function bucketBoard(items: PublicationRecord[]): Board {
-  const readyForDev: HandoffItem[] = [];
-  const inReview: ReviewItem[] = [];
+  const board: Board = { discovered: [], readyForDev: [], drafting: [], inReview: [] };
   for (const item of items) {
-    if (item.status === "AWAITING_HANDOFF") {
-      readyForDev.push({
-        repoName: item.repoName,
-        repoUrl: item.repoUrl,
-        taskToken: item.taskToken,
-        discoveredAt: item.discoveredAt,
-      });
-    } else if (item.status === "PUBLISHED") {
-      inReview.push({
-        repoName: item.repoName,
-        title: item.title,
-        publishedAt: item.publishedAt,
-      });
+    switch (item.status) {
+      case "DISCOVERED":
+        board.discovered.push({
+          repoName: item.repoName,
+          repoUrl: item.repoUrl,
+          description: item.description,
+          stars: item.stars,
+          language: item.language,
+          pushedAt: item.pushedAt,
+        });
+        break;
+      case "AWAITING_HANDOFF":
+        board.readyForDev.push({
+          repoName: item.repoName,
+          repoUrl: item.repoUrl,
+          taskToken: item.taskToken,
+          discoveredAt: item.discoveredAt,
+        });
+        break;
+      case "DRAFTING":
+        board.drafting.push({
+          repoName: item.repoName,
+          description: item.description,
+        });
+        break;
+      case "PUBLISHED":
+        board.inReview.push({
+          repoName: item.repoName,
+          title: item.title,
+          publishedAt: item.publishedAt,
+        });
+        break;
     }
   }
-  return { readyForDev, inReview };
+  return board;
 }
 
 export async function handler(
