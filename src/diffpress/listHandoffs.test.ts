@@ -51,6 +51,10 @@ describe("bucketBoard", () => {
     const board = bucketBoard(items);
     expect(board.drafting).toHaveLength(1);
     expect(board.drafting[0].repoName).toBe("cortex/orchard");
+    // Guard against cross-column bleed from the other statuses.
+    expect(board.discovered).toHaveLength(1);
+    expect(board.readyForDev).toHaveLength(1);
+    expect(board.inReview).toHaveLength(1);
   });
 
   it("routes PUBLISHED items to inReview without exposing a task token", () => {

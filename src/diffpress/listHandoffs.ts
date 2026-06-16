@@ -73,6 +73,7 @@ export function bucketBoard(items: PublicationRecord[]): Board {
           publishedAt: item.publishedAt,
         });
         break;
+      // Unknown statuses are intentionally dropped (no default bucket).
     }
   }
   return board;
