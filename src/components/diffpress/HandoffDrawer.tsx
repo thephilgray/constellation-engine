@@ -32,7 +32,18 @@ export function HandoffDrawer() {
               Local Dev Handoff
             </div>
             <div className="font-dp-mono text-[16px] font-medium tracking-[-0.01em]">
-              {doc?.name ?? "…"}
+              {doc?.repoUrl ? (
+                <a
+                  href={doc.repoUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="hover:underline"
+                >
+                  {doc.name}
+                </a>
+              ) : (
+                doc?.name ?? "…"
+              )}
             </div>
           </div>
           <button

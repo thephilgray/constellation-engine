@@ -11,6 +11,8 @@ export interface DiscoveryCard {
   stars: number;
   language: string;
   lastUpdated: string; // ISO timestamp (GitHub pushed_at)
+  /** Link to the source repo on GitHub, when known. */
+  repoUrl?: string;
 }
 
 export interface HandoffCard {
@@ -49,6 +51,8 @@ export interface HandoffDoc {
   id: string;
   name: string;
   handoff: string;
+  /** Link to the source repo on GitHub, when known. */
+  repoUrl?: string;
 }
 
 /** A single marginalia note streamed from the AI Tech Editor (SSE). */

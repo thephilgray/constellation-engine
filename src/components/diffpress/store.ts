@@ -193,9 +193,16 @@ export const useDiffPress = create<DiffPressState>((set, get) => ({
     set({
       drawerId: id,
       handoffDoc: card
-        ? { id, name: card.repo, handoff: buildHandoffPrompt(card.repo) }
+        ? {
+            id,
+            name: card.repo,
+            handoff: buildHandoffPrompt(card.repo),
+            repoUrl: card.repoUrl,
+          }
         : null,
-      repoUrl: card?.repoUrl ?? "",
+      // Start empty: this field is for the user's *demo-project* URL, not the
+      // source repo. Prefilling it with the discovered URL was misleading.
+      repoUrl: "",
       devLog: "",
       copied: false,
       resumed: false,

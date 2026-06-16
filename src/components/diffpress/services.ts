@@ -34,6 +34,7 @@ export async function fetchCandidates(): Promise<PipelineData> {
       // API sends null for repos with no detected language; normalize to "".
       language: d.language ?? "",
       lastUpdated: d.pushedAt ?? "",
+      repoUrl: d.repoUrl,
     })),
     drafting: board.drafting.map((d) => ({
       id: d.repoName,

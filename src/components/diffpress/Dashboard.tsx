@@ -47,7 +47,7 @@ function RepoName({ children }: { children: React.ReactNode }) {
 
 function Desc({ children }: { children: React.ReactNode }) {
   return (
-    <p className="mb-[14px] text-[14px] leading-[1.5] text-dp-muted">
+    <p className="mb-[14px] break-words text-[14px] leading-[1.5] text-dp-muted">
       {children}
     </p>
   );
@@ -56,7 +56,20 @@ function Desc({ children }: { children: React.ReactNode }) {
 function DiscoveryArticle({ card }: { card: DiscoveryCard }) {
   return (
     <article className={CARD_BASE}>
-      <RepoName>{card.repo}</RepoName>
+      <RepoName>
+        {card.repoUrl ? (
+          <a
+            href={card.repoUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="hover:underline"
+          >
+            {card.repo}
+          </a>
+        ) : (
+          card.repo
+        )}
+      </RepoName>
       <Desc>{card.desc}</Desc>
       <div className={cn("flex gap-4", META)}>
         <span><span aria-hidden="true">★</span> {card.stars.toLocaleString()}</span>
