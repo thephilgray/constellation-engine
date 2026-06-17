@@ -32,6 +32,14 @@ function reasonBadge(card: DiscoveryCard): string | null {
   return null;
 }
 
+/** 3-tier coverage label from a 0..1 score, or null when unknown. */
+function coverageTier(score: number | undefined): string | null {
+  if (typeof score !== "number") return null;
+  if (score < 0.33) return "Low coverage";
+  if (score < 0.66) return "Med coverage";
+  return "High coverage";
+}
+
 const CARD_BASE =
   "rounded-[12px] bg-dp-card p-[16px_17px] shadow-[0_1px_2px_rgba(26,24,20,0.04)] max-[879px]:min-w-[270px] max-[879px]:[scroll-snap-align:start]";
 const META = "font-dp-mono text-[11.5px] text-dp-faint-2";
@@ -78,6 +86,7 @@ function Desc({ children }: { children: React.ReactNode }) {
 
 function DiscoveryArticle({ card }: { card: DiscoveryCard }) {
   const badge = reasonBadge(card);
+  const coverage = coverageTier(card.coverageScore);
   return (
     <article className={CARD_BASE}>
       <RepoName>
@@ -99,6 +108,7 @@ function DiscoveryArticle({ card }: { card: DiscoveryCard }) {
         {badge ? <span className="font-medium text-dp-slate">{badge}</span> : null}
         <span><span aria-hidden="true">★</span> {card.stars.toLocaleString()}</span>
         {card.language ? <span>{card.language}</span> : null}
+        {coverage ? <span className="text-dp-slate">{coverage}</span> : null}
       </div>
     </article>
   );
