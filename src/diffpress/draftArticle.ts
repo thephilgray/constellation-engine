@@ -34,6 +34,10 @@ export function buildDraftPrompt(input: {
     enrichment.sentiment
       .map((s) => `- (${s.source}, score ${s.score}) ${s.summary}`)
       .join("\n") || "- (none)";
+  const coverage =
+    (repo.coverageSources ?? [])
+      .map((s) => `- "${s.title}" (${s.domain}) — ${s.abstract}`)
+      .join("\n") || "(no prior coverage found)";
   return [
     `You are the staff writer for DiffPress, a publication that covers emerging open-source projects through the lens of real demo projects built with them.`,
     ``,
@@ -59,6 +63,10 @@ export function buildDraftPrompt(input: {
     ``,
     `## Community sentiment`,
     sentiment,
+    ``,
+    `## Existing coverage (review the literature, then differentiate)`,
+    `The following third-party articles already cover this subject. Orient the piece against them: reference them where useful, and find an angle they miss. Do not duplicate their framing.`,
+    coverage,
     ``,
     `## Author's notes (primary source — drives both content and mode)`,
     notes || "(none provided)",

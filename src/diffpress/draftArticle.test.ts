@@ -57,3 +57,39 @@ describe("parseDraftResponse", () => {
     expect(() => parseDraftResponse(JSON.stringify({ title: "x" }))).toThrow(/missing/i);
   });
 });
+
+describe("buildDraftPrompt coverage section", () => {
+  function repoWith(sources: RepoCandidate["coverageSources"]): RepoCandidate {
+    return {
+      repoName: "acme/widget",
+      repoUrl: "https://github.com/acme/widget",
+      description: "A widget",
+      stars: 100,
+      language: "TS",
+      pushedAt: "2026-06-10T00:00:00Z",
+      coverageSources: sources,
+    };
+  }
+
+  it("lists coverage sources when present", () => {
+    const prompt = buildDraftPrompt({
+      repo: repoWith([
+        { title: "Existing Guide", url: "https://dev.to/x", domain: "dev.to", abstract: "an intro", relevanceScore: 0.9 },
+      ]),
+      enrichment,
+      notes: "n",
+    });
+    expect(prompt).toContain("Existing coverage");
+    expect(prompt).toContain("Existing Guide");
+    expect(prompt).toContain("dev.to");
+  });
+
+  it("renders a fallback when there are no sources", () => {
+    const prompt = buildDraftPrompt({
+      repo: repoWith(undefined),
+      enrichment,
+      notes: "n",
+    });
+    expect(prompt).toContain("no prior coverage found");
+  });
+});
