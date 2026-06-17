@@ -20,6 +20,18 @@ export interface RepoCandidate {
   signalType?: SignalType;
   starsGained?: number; // stars gained over the discovery window
   releaseTag?: string; // tag of the release that surfaced it (RELEASE lane)
+  // Interest-to-Coverage (set by discoverRepos via Tavily).
+  coverageScore?: number; // 0..1, higher = more existing coverage
+  coverageSources?: CoverageSource[]; // top sources, persisted for drafting
+}
+
+/** A third-party web source about a repo (or a specific release), from Tavily. */
+export interface CoverageSource {
+  title: string;
+  url: string;
+  domain: string; // registrable domain, e.g. "dev.to"
+  abstract: string; // trimmed Tavily content snippet
+  relevanceScore: number; // Tavily relevance score, 0..1
 }
 
 /** Enrichment payload assembled in Phase 1 and written to S3. */
@@ -96,5 +108,7 @@ export interface PublicationRecord {
   signalType?: SignalType; // why it surfaced (TRENDING/NEW/RELEASE)
   starsGained?: number; // stars gained over the discovery window
   releaseTag?: string; // release tag, for the RELEASE lane
+  coverageScore?: number; // 0..1; projected to the board badge
+  coverageSources?: CoverageSource[]; // top sources (not projected to board list)
   ttl?: number; // epoch seconds; DynamoDB TTL attribute
 }
