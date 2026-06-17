@@ -35,6 +35,9 @@ export async function fetchCandidates(): Promise<PipelineData> {
       language: d.language ?? "",
       lastUpdated: d.pushedAt ?? "",
       repoUrl: d.repoUrl,
+      signalType: d.signalType,
+      starsGained: d.starsGained,
+      releaseTag: d.releaseTag,
     })),
     drafting: board.drafting.map((d) => ({
       id: d.repoName,

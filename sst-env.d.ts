@@ -58,6 +58,10 @@ declare module "sst" {
       "name": string
       "type": "sst.aws.Function"
     }
+    "DiscoverySignals": {
+      "name": string
+      "type": "sst.aws.Dynamo"
+    }
     "GEMINI_API_KEY": {
       "type": "sst.sst.Secret"
       "value": string

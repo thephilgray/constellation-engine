@@ -10,6 +10,9 @@ export interface DiscoveredItem {
   stars?: number;
   language?: string | null;
   pushedAt?: string;
+  signalType?: "TRENDING" | "NEW" | "RELEASE";
+  starsGained?: number;
+  releaseTag?: string;
 }
 
 export interface HandoffItem {
@@ -50,6 +53,9 @@ export function bucketBoard(items: PublicationRecord[]): Board {
           stars: item.stars,
           language: item.language,
           pushedAt: item.pushedAt,
+          signalType: item.signalType,
+          starsGained: item.starsGained,
+          releaseTag: item.releaseTag,
         });
         break;
       case "AWAITING_HANDOFF":

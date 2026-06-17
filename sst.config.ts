@@ -369,6 +369,15 @@ export default $config({
       ttl: "ttl",
     });
 
+    // Rolling GH Archive signal buckets (PK: repoName, SK: signalKey).
+    // Hourly ingest writes STAR#/RELEASE# per-hour buckets; TTL prunes the
+    // window, and discoverRepos sums it for star-velocity ranking.
+    const discoverySignals = new sst.aws.Dynamo("DiscoverySignals", {
+      fields: { repoName: "string", signalKey: "string" },
+      primaryIndex: { hashKey: "repoName", rangeKey: "signalKey" },
+      ttl: "ttl",
+    });
+
     api.route("POST /api/publish-handoff", {
       handler: "src/diffpress/publishHandoff.handler",
       link: [auth, publicationLifecycle],
@@ -434,8 +443,8 @@ export default $config({
     const contentEngineFns = {
       discoverRepos: new sst.aws.Function("DiffPressDiscoverRepos", {
         handler: "src/diffpress/discoverRepos.handler",
-        link: [GITHUB_TOKEN, publicationLifecycle],
-        timeout: "30 seconds",
+        link: [GITHUB_TOKEN, publicationLifecycle, discoverySignals],
+        timeout: "120 seconds",
       }),
       enrichRepos: new sst.aws.Function("DiffPressEnrichRepos", {
         handler: "src/diffpress/enrichRepos.handler",
@@ -541,6 +550,20 @@ export default $config({
         permissions: [
           { actions: ["states:StartExecution"], resources: [contentEngine.arn] },
         ],
+      },
+    });
+
+    // Hourly GH Archive ingest — streams the previous hour's event file and
+    // folds star/release signals into DiscoverySignals for the discovery window.
+    const eventIngestCron = new sst.aws.Cron("EventIngestCron", {
+      schedule: "rate(1 hour)",
+      job: {
+        handler: "src/diffpress/ingestEvents.handler",
+        link: [discoverySignals],
+        timeout: "300 seconds",
+        // 2 GB gives a full vCPU; gunzip + JSON.parse are CPU-bound, so this
+        // roughly halves the run at ~flat GB-second cost.
+        memory: "2048 MB",
       },
     });
 

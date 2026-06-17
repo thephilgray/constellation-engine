@@ -7,7 +7,30 @@ import type {
   DraftingCard,
   HandoffCard,
   ReviewCard,
+  SignalType,
 } from "./types";
+
+/** Discovery sub-lanes, in display order. Cards default to TRENDING. */
+const DISCOVERY_LANES: { type: SignalType; label: string }[] = [
+  { type: "TRENDING", label: "Trending" },
+  { type: "RELEASE", label: "New releases" },
+  { type: "NEW", label: "New projects" },
+];
+
+/** Display backstop: at most this many cards rendered per lane. */
+const LANE_RENDER_CAP = 8;
+
+/** Short "why it surfaced" badge for a discovery card. */
+function reasonBadge(card: DiscoveryCard): string | null {
+  if (card.signalType === "RELEASE" && card.releaseTag) {
+    return `released ${card.releaseTag}`;
+  }
+  if (typeof card.starsGained === "number" && card.starsGained > 0) {
+    return `+${card.starsGained.toLocaleString()} ★ / 7d`;
+  }
+  if (card.signalType === "NEW") return "new project";
+  return null;
+}
 
 const CARD_BASE =
   "rounded-[12px] bg-dp-card p-[16px_17px] shadow-[0_1px_2px_rgba(26,24,20,0.04)] max-[879px]:min-w-[270px] max-[879px]:[scroll-snap-align:start]";
@@ -54,6 +77,7 @@ function Desc({ children }: { children: React.ReactNode }) {
 }
 
 function DiscoveryArticle({ card }: { card: DiscoveryCard }) {
+  const badge = reasonBadge(card);
   return (
     <article className={CARD_BASE}>
       <RepoName>
@@ -71,11 +95,59 @@ function DiscoveryArticle({ card }: { card: DiscoveryCard }) {
         )}
       </RepoName>
       <Desc>{card.desc}</Desc>
-      <div className={cn("flex gap-4", META)}>
+      <div className={cn("flex flex-wrap items-center gap-x-4 gap-y-1", META)}>
+        {badge ? <span className="font-medium text-dp-slate">{badge}</span> : null}
         <span><span aria-hidden="true">★</span> {card.stars.toLocaleString()}</span>
         {card.language ? <span>{card.language}</span> : null}
       </div>
     </article>
+  );
+}
+
+function LaneHeader({ label, count }: { label: string; count: number }) {
+  return (
+    <div className="mb-[9px] flex items-baseline justify-between px-[2px]">
+      <span className="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-dp-faint-2">
+        {label}
+      </span>
+      <span className="font-dp-mono text-[11px] text-dp-faint-3">{count}</span>
+    </div>
+  );
+}
+
+/** Discovery column split into Trending / New releases / New projects lanes. */
+function DiscoveryColumn({ cards }: { cards: DiscoveryCard[] }) {
+  const lanes = DISCOVERY_LANES.map((lane) => ({
+    ...lane,
+    cards: cards
+      .filter((c) => (c.signalType ?? "TRENDING") === lane.type)
+      .slice(0, LANE_RENDER_CAP),
+  }));
+  return (
+    <section className="min-w-0">
+      <div className="mb-[14px] flex items-baseline justify-between px-[2px]">
+        <span className="text-[11.5px] font-semibold uppercase tracking-[0.09em] text-dp-faint">
+          Discovery
+        </span>
+        <span className="font-dp-mono text-[12px] text-dp-faint-3">{cards.length}</span>
+      </div>
+      <div className="flex flex-col gap-6">
+        {lanes.map((lane) => (
+          <div key={lane.type}>
+            <LaneHeader label={lane.label} count={lane.cards.length} />
+            <div className="flex flex-col gap-3">
+              {lane.cards.length === 0 ? (
+                <p className="px-[2px] font-dp-mono text-[11.5px] text-dp-faint-3">
+                  Nothing yet
+                </p>
+              ) : (
+                lane.cards.map((c) => <DiscoveryArticle key={c.id} card={c} />)
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -272,11 +344,7 @@ export function Dashboard() {
         {cmdOpen && <CommandCenter />}
 
         <div className="flex flex-col gap-[30px] min-[880px]:grid min-[880px]:grid-cols-2 min-[880px]:items-start min-[880px]:gap-x-[clamp(20px,2.4vw,36px)] min-[880px]:gap-y-9 min-[1220px]:grid-cols-4">
-          <ColumnShell title="Discovery" count={pipeline.discovery.length}>
-            {pipeline.discovery.map((c) => (
-              <DiscoveryArticle key={c.id} card={c} />
-            ))}
-          </ColumnShell>
+          <DiscoveryColumn cards={pipeline.discovery} />
           <ColumnShell title="Ready for Dev" count={pipeline.readyForDev.length}>
             {pipeline.readyForDev.map((c) => (
               <HandoffArticle key={c.id} card={c} />

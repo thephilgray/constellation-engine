@@ -1,5 +1,13 @@
 // src/diffpress/types.ts
 
+/**
+ * Why a repo surfaced in Discovery:
+ * - TRENDING — gaining stars fast over the window (new or established).
+ * - NEW — recently created and gaining traction.
+ * - RELEASE — shipped a release during the window.
+ */
+export type SignalType = "TRENDING" | "NEW" | "RELEASE";
+
 /** A candidate repository discovered from GitHub. */
 export interface RepoCandidate {
   repoName: string; // "owner/name" — the ledger partition key
@@ -8,6 +16,10 @@ export interface RepoCandidate {
   stars: number;
   language: string | null;
   pushedAt: string; // GitHub `pushed_at` ISO timestamp
+  // Discovery signal (GH Archive velocity), set by discoverRepos.
+  signalType?: SignalType;
+  starsGained?: number; // stars gained over the discovery window
+  releaseTag?: string; // tag of the release that surfaced it (RELEASE lane)
 }
 
 /** Enrichment payload assembled in Phase 1 and written to S3. */
@@ -81,5 +93,8 @@ export interface PublicationRecord {
   stars?: number;
   language?: string | null;
   pushedAt?: string;
+  signalType?: SignalType; // why it surfaced (TRENDING/NEW/RELEASE)
+  starsGained?: number; // stars gained over the discovery window
+  releaseTag?: string; // release tag, for the RELEASE lane
   ttl?: number; // epoch seconds; DynamoDB TTL attribute
 }

@@ -4,6 +4,9 @@
 
 export type ColumnId = "discovery" | "readyForDev" | "drafting" | "inReview";
 
+/** Why a repo surfaced in Discovery (GH Archive velocity signal). */
+export type SignalType = "TRENDING" | "NEW" | "RELEASE";
+
 export interface DiscoveryCard {
   id: string;
   repo: string;
@@ -13,6 +16,12 @@ export interface DiscoveryCard {
   lastUpdated: string; // ISO timestamp (GitHub pushed_at)
   /** Link to the source repo on GitHub, when known. */
   repoUrl?: string;
+  /** Which Discovery lane this card belongs to. Defaults to TRENDING. */
+  signalType?: SignalType;
+  /** Stars gained over the discovery window (for the reason badge). */
+  starsGained?: number;
+  /** Release tag, when surfaced by the RELEASE lane. */
+  releaseTag?: string;
 }
 
 export interface HandoffCard {
@@ -95,6 +104,9 @@ export interface HandoffsResponse {
     stars?: number;
     language?: string | null;
     pushedAt?: string;
+    signalType?: SignalType;
+    starsGained?: number;
+    releaseTag?: string;
   }[];
   readyForDev: {
     repoName: string;
