@@ -39,6 +39,7 @@ export async function fetchCandidates(): Promise<PipelineData> {
       signalType: d.signalType,
       starsGained: d.starsGained,
       releaseTag: d.releaseTag,
+      coverageScore: d.coverageScore,
     })),
     drafting: board.drafting.map((d) => ({
       id: d.repoName,
