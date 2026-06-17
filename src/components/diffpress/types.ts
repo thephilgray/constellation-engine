@@ -22,6 +22,8 @@ export interface DiscoveryCard {
   starsGained?: number;
   /** Release tag, when surfaced by the RELEASE lane. */
   releaseTag?: string;
+  /** Existing-coverage score 0..1 (higher = more covered). Drives the chip. */
+  coverageScore?: number;
 }
 
 export interface HandoffCard {
@@ -115,6 +117,7 @@ export interface HandoffsResponse {
     signalType?: SignalType;
     starsGained?: number;
     releaseTag?: string;
+    coverageScore?: number;
   }[];
   readyForDev: {
     repoName: string;
