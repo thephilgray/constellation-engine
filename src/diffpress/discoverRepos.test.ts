@@ -152,3 +152,71 @@ describe("toDiscoveredRecord", () => {
     expect(rec.ttl).toBe(Math.floor(now / 1000) + 10 * 24 * 60 * 60);
   });
 });
+
+// --- Interest-to-Coverage gating ---
+import { vi, beforeEach } from "vitest";
+
+vi.mock("./lib/tavily", () => ({
+  searchCoverage: vi.fn(),
+  EXCLUDE_DOMAINS: [],
+}));
+
+import { scoreAndGateCandidates } from "./discoverRepos";
+import { searchCoverage } from "./lib/tavily";
+
+function cand(over: Partial<RepoCandidate> = {}): RepoCandidate {
+  return {
+    repoName: "acme/widget",
+    repoUrl: "https://github.com/acme/widget",
+    description: "d",
+    stars: 100,
+    language: "TS",
+    pushedAt: "2026-06-10T00:00:00Z",
+    signalType: "TRENDING",
+    starsGained: 100,
+    ...over,
+  };
+}
+
+describe("scoreAndGateCandidates", () => {
+  // Block body (not an expression arrow): returning the Mock from mockReset()
+  // trips a vitest v4 unhandled-rejection false-positive on the fail-open path.
+  beforeEach(() => {
+    vi.mocked(searchCoverage).mockReset();
+  });
+
+  it("scores at most the top 40 by starsGained", async () => {
+    const many = Array.from({ length: 50 }, (_, i) =>
+      cand({ repoName: `a/${i}`, starsGained: i })
+    );
+    vi.mocked(searchCoverage).mockResolvedValue([]);
+    await scoreAndGateCandidates(many);
+    expect(vi.mocked(searchCoverage)).toHaveBeenCalledTimes(40);
+  });
+
+  it("drops over-covered candidates and attaches score + sources to survivors", async () => {
+    const lo = cand({ repoName: "a/lo", starsGained: 10 });
+    const hi = cand({ repoName: "a/hi", starsGained: 10 });
+    vi.mocked(searchCoverage).mockImplementation(async (q: string) => {
+      if (q.includes("a/hi")) {
+        // saturate coverage → dropped
+        return ["x.com","y.com","z.com","p.com","q.com","r.com"].map((d) => ({
+          title: "t", url: `https://${d}/a`, content: "c", score: 0.9,
+        }));
+      }
+      return [{ title: "t", url: "https://only.com/a", content: "c", score: 0.9 }];
+    });
+    const out = await scoreAndGateCandidates([lo, hi]);
+    expect(out.map((c) => c.repoName)).toEqual(["a/lo"]);
+    expect(out[0].coverageScore).toBeGreaterThan(0);
+    expect(out[0].coverageSources?.[0].domain).toBe("only.com");
+  });
+
+  it("fails open: a Tavily error retains the candidate, unscored", async () => {
+    vi.mocked(searchCoverage).mockRejectedValue(new Error("503"));
+    const out = await scoreAndGateCandidates([cand({ repoName: "a/x" })]);
+    expect(out).toHaveLength(1);
+    expect(out[0].coverageScore).toBeUndefined();
+    expect(out[0].coverageSources).toBeUndefined();
+  });
+});

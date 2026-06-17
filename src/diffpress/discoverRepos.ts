@@ -4,6 +4,14 @@ import { batchGetExisting, batchPutDiscovered } from "./lib/ledger";
 import { scanSignals, type SignalRow } from "./lib/signals";
 import { passesQualityBar, type RepoMetadata } from "./lib/quality";
 import { getDiscoveryConfig, type DiscoveryMode } from "./lib/config";
+import { searchCoverage } from "./lib/tavily";
+import {
+  buildCoverageQuery,
+  scoreCoverage,
+  dropOverCovered,
+  rankByInterestToCoverage,
+  toCoverageSources,
+} from "./lib/coverage";
 import type {
   RepoCandidate,
   ContentEngineState,
@@ -21,6 +29,10 @@ const NEW_DAYS = 30;
 const ENRICH_LIMIT = 60;
 /** Released-in-window candidates to enrich (so the RELEASE lane is fed). */
 const RELEASE_ENRICH_LIMIT = 40;
+/** Max candidates to spend Tavily queries on per run (bounds cost). */
+const COVERAGE_SCORE_LIMIT = 40;
+/** How many Tavily calls run concurrently. */
+const COVERAGE_CONCURRENCY = 5;
 
 /** Per-repo signal aggregated over the discovery window. */
 export interface RepoSignal {
@@ -161,6 +173,8 @@ export function toDiscoveredRecord(
     signalType: c.signalType,
     starsGained: c.starsGained,
     releaseTag: c.releaseTag,
+    coverageScore: c.coverageScore,
+    coverageSources: c.coverageSources,
     discoveredAt: new Date(nowMs).toISOString(),
     ttl: Math.floor(nowMs / 1000) + DISCOVERY_TTL_DAYS * 24 * 60 * 60,
   };
@@ -180,6 +194,44 @@ function selectForEnrichment(ranked: RepoSignal[]): RepoSignal[] {
     selected.push(r);
   }
   return selected;
+}
+
+/**
+ * Score the top candidates' existing web coverage (Tavily), drop the
+ * over-covered ones, re-rank survivors by interest-to-coverage, and attach the
+ * top sources for drafting. Fail-open: a Tavily error retains the candidate
+ * unscored (a flaky/down API must never empty the board).
+ */
+export async function scoreAndGateCandidates(
+  enriched: RepoCandidate[]
+): Promise<RepoCandidate[]> {
+  const toScore = [...enriched]
+    .sort((a, b) => (b.starsGained ?? 0) - (a.starsGained ?? 0))
+    .slice(0, COVERAGE_SCORE_LIMIT);
+
+  // Bounded-concurrency scoring; mutate copies, never the inputs.
+  const scored: RepoCandidate[] = [];
+  for (let i = 0; i < toScore.length; i += COVERAGE_CONCURRENCY) {
+    const batch = toScore.slice(i, i + COVERAGE_CONCURRENCY);
+    const results = await Promise.all(
+      batch.map(async (c) => {
+        try {
+          const hits = await searchCoverage(buildCoverageQuery(c));
+          const { coverageScore } = scoreCoverage(hits, {
+            repoName: c.repoName,
+            repoUrl: c.repoUrl,
+          });
+          return { ...c, coverageScore, coverageSources: toCoverageSources(hits) };
+        } catch (err) {
+          console.warn(`[discoverRepos] coverage scoring failed for ${c.repoName}; retaining unscored`, err);
+          return { ...c }; // fail-open: no score, no sources
+        }
+      })
+    );
+    scored.push(...results);
+  }
+
+  return rankByInterestToCoverage(dropOverCovered(scored));
 }
 
 export async function handler(): Promise<ContentEngineState> {
@@ -237,11 +289,17 @@ export async function handler(): Promise<ContentEngineState> {
     throw new Error("No quality discovery candidates this cycle.");
   }
 
-  // 4. Apply Command Center config: keep only the active lanes for the current
+  // 4. Score existing web coverage; drop over-covered, re-rank by interest/coverage.
+  const gated = await scoreAndGateCandidates(enriched);
+  if (gated.length === 0) {
+    throw new Error("No under-covered discovery candidates this cycle.");
+  }
+
+  // 5. Apply Command Center config: keep only the active lanes for the current
   //    mode, capped to the per-lane budget derived from velocity.
   const cfg = await getDiscoveryConfig();
   const lanes = activeLanesFor(cfg.discoveryMode);
-  const laned = capPerLane(enriched, laneBudgets(cfg.velocity, lanes));
+  const laned = capPerLane(gated, laneBudgets(cfg.velocity, lanes));
 
   if (laned.length === 0) {
     throw new Error(
