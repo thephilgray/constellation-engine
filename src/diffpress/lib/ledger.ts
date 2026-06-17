@@ -203,7 +203,7 @@ export async function queryByStatus(status: string): Promise<PublicationRecord[]
       ExpressionAttributeNames: { "#status": "status", "#lang": "language" },
       ExpressionAttributeValues: { ":s": status },
       ProjectionExpression:
-        "repoName, #status, repoUrl, taskToken, discoveredAt, title, publishedAt, description, stars, #lang, pushedAt, signalType, starsGained, releaseTag",
+        "repoName, #status, repoUrl, taskToken, discoveredAt, title, publishedAt, description, stars, #lang, pushedAt, signalType, starsGained, releaseTag, coverageScore",
     })
   );
   return (Items ?? []) as PublicationRecord[];
