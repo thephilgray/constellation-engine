@@ -4,11 +4,14 @@ import {
   deployArticle,
   fetchArticle,
   fetchCandidates,
+  fetchDiscoveryConfig,
+  saveDiscoveryConfig,
   publishHandoff,
   triggerTechEditor,
 } from "./services";
 import type {
   DiscoveryMode,
+  EngineState,
   HandoffDoc,
   PipelineData,
   SyndicationTargets,
@@ -36,6 +39,21 @@ workflow to draft the article.`;
 // reactive state.
 let stopStream: (() => void) | null = null;
 let copyTimer: ReturnType<typeof setTimeout> | null = null;
+let configTimer: ReturnType<typeof setTimeout> | null = null;
+
+/** Fire-and-forget POST of the current Command Center config. */
+function persistConfig(get: () => DiffPressState) {
+  const { engineState, discoveryMode, velocity } = get();
+  saveDiscoveryConfig({ engineState, discoveryMode, velocity }).catch((err) =>
+    console.warn("[diffpress] failed to save config:", err),
+  );
+}
+
+/** Debounced variant for the velocity slider, which fires continuously on drag. */
+function persistConfigDebounced(get: () => DiffPressState) {
+  if (configTimer) clearTimeout(configTimer);
+  configTimer = setTimeout(() => persistConfig(get), 400);
+}
 
 interface DiffPressState {
   // ---- navigation ----
@@ -62,11 +80,12 @@ interface DiffPressState {
 
   // ---- command center ----
   cmdOpen: boolean;
-  engineActive: boolean;
+  engineState: EngineState;
   discoveryMode: DiscoveryMode;
   velocity: number;
+  loadConfig: () => Promise<void>;
   toggleCmd: () => void;
-  setEngineActive: (active: boolean) => void;
+  setEngineState: (state: EngineState) => void;
   setDiscoveryMode: (mode: DiscoveryMode) => void;
   setVelocity: (v: number) => void;
 
@@ -170,13 +189,36 @@ export const useDiffPress = create<DiffPressState>((set, get) => ({
   },
 
   cmdOpen: false,
-  engineActive: true,
+  engineState: "active",
   discoveryMode: "frontier",
   velocity: 6,
+  loadConfig: async () => {
+    try {
+      const cfg = await fetchDiscoveryConfig();
+      set({
+        engineState: cfg.engineState,
+        discoveryMode: cfg.discoveryMode,
+        velocity: cfg.velocity,
+      });
+    } catch (err) {
+      console.warn("[diffpress] failed to load config:", err);
+    }
+  },
   toggleCmd: () => set((s) => ({ cmdOpen: !s.cmdOpen })),
-  setEngineActive: (engineActive) => set({ engineActive }),
-  setDiscoveryMode: (discoveryMode) => set({ discoveryMode }),
-  setVelocity: (velocity) => set({ velocity }),
+  // Setters are optimistic: update local state immediately, persist in the
+  // background (velocity debounced so dragging doesn't spam the API).
+  setEngineState: (engineState) => {
+    set({ engineState });
+    persistConfig(get);
+  },
+  setDiscoveryMode: (discoveryMode) => {
+    set({ discoveryMode });
+    persistConfig(get);
+  },
+  setVelocity: (velocity) => {
+    set({ velocity });
+    persistConfigDebounced(get);
+  },
 
   drawerId: null,
   handoffDoc: null,

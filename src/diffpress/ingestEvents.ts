@@ -2,6 +2,7 @@ import zlib from "node:zlib";
 import readline from "node:readline";
 import { Readable } from "node:stream";
 import { batchPutSignals, type SignalRow } from "./lib/signals";
+import { getDiscoveryConfig } from "./lib/config";
 
 // GH Archive publishes one gzipped JSON file of all public GitHub events per
 // hour at data.gharchive.org. We stream the file, keep only the two event types
@@ -122,6 +123,15 @@ export async function handler(): Promise<{
   skipped?: boolean;
 }> {
   const hour = targetHour(Date.now());
+
+  // Hard stop: when the engine is `off`, don't ingest at all. (`paused`/`active`
+  // both keep ingesting so the velocity window stays warm.)
+  const { engineState } = await getDiscoveryConfig();
+  if (engineState === "off") {
+    console.log(`[ingestEvents] ${hourKey(hour)}: engine off; skipping`);
+    return { hour: hourKey(hour), rows: 0, skipped: true };
+  }
+
   const url = archiveUrl(hour);
 
   const res = await fetch(url);

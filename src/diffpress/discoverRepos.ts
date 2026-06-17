@@ -3,6 +3,7 @@ import { Resource } from "sst";
 import { batchGetExisting, batchPutDiscovered } from "./lib/ledger";
 import { scanSignals, type SignalRow } from "./lib/signals";
 import { passesQualityBar, type RepoMetadata } from "./lib/quality";
+import { getDiscoveryConfig, type DiscoveryMode } from "./lib/config";
 import type {
   RepoCandidate,
   ContentEngineState,
@@ -20,8 +21,6 @@ const NEW_DAYS = 30;
 const ENRICH_LIMIT = 60;
 /** Released-in-window candidates to enrich (so the RELEASE lane is fed). */
 const RELEASE_ENRICH_LIMIT = 40;
-/** Max cards kept per lane, so a run writes at most 3 × this. */
-const MAX_PER_LANE = 8;
 
 /** Per-repo signal aggregated over the discovery window. */
 export interface RepoSignal {
@@ -96,18 +95,52 @@ export function assignLane(
   return "TRENDING";
 }
 
-/** Pure: keep at most `maxPerLane` candidates per signal lane, preserving order. */
+/** Pure: which lanes a discovery mode targets. */
+export function activeLanesFor(mode: DiscoveryMode): SignalType[] {
+  switch (mode) {
+    case "frontier":
+      return ["NEW", "TRENDING"];
+    case "ecosystem":
+      return ["RELEASE"];
+    case "balanced":
+    default:
+      return ["TRENDING", "NEW", "RELEASE"];
+  }
+}
+
+/** Pure: split a weekly candidate budget evenly across lanes (remainder first). */
+export function laneBudgets(
+  velocity: number,
+  lanes: SignalType[]
+): Map<SignalType, number> {
+  const budgets = new Map<SignalType, number>();
+  if (lanes.length === 0) return budgets;
+  const base = Math.floor(velocity / lanes.length);
+  let remainder = velocity - base * lanes.length;
+  for (const lane of lanes) {
+    budgets.set(lane, base + (remainder > 0 ? 1 : 0));
+    if (remainder > 0) remainder--;
+  }
+  return budgets;
+}
+
+/**
+ * Pure: keep candidates whose lane has budget, capped to that budget, preserving
+ * order. Candidates in lanes absent from `budgets` (inactive for the mode) drop.
+ */
 export function capPerLane(
   candidates: RepoCandidate[],
-  maxPerLane: number = MAX_PER_LANE
+  budgets: Map<SignalType, number>
 ): RepoCandidate[] {
   const counts = new Map<SignalType, number>();
   const out: RepoCandidate[] = [];
   for (const c of candidates) {
     const lane: SignalType = c.signalType ?? "TRENDING";
+    const budget = budgets.get(lane);
+    if (budget === undefined) continue; // lane not active for this mode
     const n = (counts.get(lane) ?? 0) + 1;
     counts.set(lane, n);
-    if (n <= maxPerLane) out.push(c);
+    if (n <= budget) out.push(c);
   }
   return out;
 }
@@ -204,14 +237,24 @@ export async function handler(): Promise<ContentEngineState> {
     throw new Error("No quality discovery candidates this cycle.");
   }
 
-  // 4. Cap per lane and persist as DISCOVERED for the board.
-  const laned = capPerLane(enriched);
+  // 4. Apply Command Center config: keep only the active lanes for the current
+  //    mode, capped to the per-lane budget derived from velocity.
+  const cfg = await getDiscoveryConfig();
+  const lanes = activeLanesFor(cfg.discoveryMode);
+  const laned = capPerLane(enriched, laneBudgets(cfg.velocity, lanes));
+
+  if (laned.length === 0) {
+    throw new Error(
+      `No candidates in active lanes (${cfg.discoveryMode}) this cycle.`
+    );
+  }
+
   await batchPutDiscovered(laned.map((c) => toDiscoveredRecord(c, now)));
 
   // The top-ranked candidate advances into the rest of the pipeline.
   const repo = laned[0];
   console.log(
-    `[discoverRepos] ${ranked.length} signals → ${laned.length} DISCOVERED; selected ${repo.repoName} (${repo.signalType})`
+    `[discoverRepos] ${ranked.length} signals → ${laned.length} DISCOVERED (${cfg.discoveryMode}, v=${cfg.velocity}); selected ${repo.repoName} (${repo.signalType})`
   );
   return { repo, candidates: laned };
 }

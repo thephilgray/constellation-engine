@@ -77,7 +77,15 @@ export interface DiffLine {
 }
 
 export type DiscoveryMode = "frontier" | "balanced" | "ecosystem";
+export type EngineState = "active" | "paused" | "off";
 export type Timing = "now" | "schedule";
+
+/** Pipeline Command Center config, round-tripped through /api/discovery-config. */
+export interface DiscoveryConfig {
+  engineState: EngineState;
+  discoveryMode: DiscoveryMode;
+  velocity: number;
+}
 
 export interface SyndicationTargets {
   devto: boolean;

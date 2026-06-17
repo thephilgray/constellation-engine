@@ -6,7 +6,7 @@
 // The thresholds and word lists are deliberately simple and tunable.
 
 /** Minimum absolute stars so velocity on tiny/empty repos can't dominate. */
-export const STAR_FLOOR = 100;
+export const STAR_FLOOR = 250;
 
 /** Min share of letters that must be Latin-script for a description to "read". */
 export const ENGLISH_LATIN_RATIO = 0.6;

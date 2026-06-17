@@ -240,10 +240,10 @@ function ReviewArticleCard({ card }: { card: ReviewCard }) {
 }
 
 function CommandCenter() {
-  const engineActive = useDiffPress((s) => s.engineActive);
+  const engineState = useDiffPress((s) => s.engineState);
   const discoveryMode = useDiffPress((s) => s.discoveryMode);
   const velocity = useDiffPress((s) => s.velocity);
-  const setEngineActive = useDiffPress((s) => s.setEngineActive);
+  const setEngineState = useDiffPress((s) => s.setEngineState);
   const setDiscoveryMode = useDiffPress((s) => s.setDiscoveryMode);
   const setVelocity = useDiffPress((s) => s.setVelocity);
 
@@ -266,11 +266,13 @@ function CommandCenter() {
         <div>
           <Label>Engine State</Label>
           <Segmented
-            value={engineActive ? "active" : "paused"}
-            onChange={(v) => setEngineActive(v === "active")}
+            wrap
+            value={engineState}
+            onChange={setEngineState}
             options={[
               { value: "active", label: "Active" },
               { value: "paused", label: "Paused" },
+              { value: "off", label: "Off" },
             ]}
           />
         </div>

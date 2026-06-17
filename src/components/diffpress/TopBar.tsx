@@ -46,7 +46,7 @@ function Wordmark() {
 
 export function TopBar() {
   const view = useDiffPress((s) => s.view);
-  const engineActive = useDiffPress((s) => s.engineActive);
+  const engineState = useDiffPress((s) => s.engineState);
   const discoveryMode = useDiffPress((s) => s.discoveryMode);
   const cmdOpen = useDiffPress((s) => s.cmdOpen);
   const goDashboard = useDiffPress((s) => s.goDashboard);
@@ -59,6 +59,9 @@ export function TopBar() {
       : discoveryMode === "ecosystem"
         ? "Ecosystem"
         : "Balanced";
+
+  const stateLabel =
+    engineState === "active" ? "Active" : engineState === "paused" ? "Paused" : "Off";
 
   return (
     <header className="sticky top-0 z-40 flex h-[62px] items-center gap-[clamp(10px,2.4vw,20px)] bg-dp-paper/80 px-[clamp(16px,4vw,40px)] backdrop-blur-[14px] backdrop-saturate-[1.1]">
@@ -85,13 +88,13 @@ export function TopBar() {
             <span
               className={cn(
                 "h-[7px] w-[7px] flex-[0_0_auto] rounded-full",
-                engineActive
+                engineState === "active"
                   ? "dp-pulse bg-dp-green shadow-[0_0_0_3px_rgba(111,143,106,0.16)] [animation-duration:2.6s]"
                   : "bg-dp-faint-4",
               )}
             />
             <span className="hidden whitespace-nowrap text-[12.5px] font-medium text-[#46443f] min-[880px]:inline">
-              Pipeline · {engineActive ? "Active" : "Paused"}
+              Pipeline · {stateLabel}
             </span>
             <span className="hidden whitespace-nowrap font-dp-mono text-[12.5px] tracking-[-0.01em] text-dp-faint-2 min-[880px]:inline">
               {modeName} Mode

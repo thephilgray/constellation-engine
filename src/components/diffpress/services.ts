@@ -10,6 +10,7 @@ import { TECH_EDITOR_NOTES } from "./data";
 import type {
   ArticleResponse,
   DeployPayload,
+  DiscoveryConfig,
   HandoffsResponse,
   PipelineData,
   TechEditorNote,
@@ -79,6 +80,23 @@ export async function publishHandoff(input: {
     }),
   });
   if (!res.ok) throw new Error(`Failed to resume workflow (${res.status})`);
+}
+
+/** Load the Pipeline Command Center config from the backend. */
+export async function fetchDiscoveryConfig(): Promise<DiscoveryConfig> {
+  const res = await authedFetch("/api/discovery-config");
+  if (!res.ok) throw new Error(`Failed to load discovery config (${res.status})`);
+  return res.json();
+}
+
+/** Persist a Command Center config change. */
+export async function saveDiscoveryConfig(cfg: DiscoveryConfig): Promise<void> {
+  const res = await authedFetch("/api/discovery-config", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(cfg),
+  });
+  if (!res.ok) throw new Error(`Failed to save discovery config (${res.status})`);
 }
 
 /** Fetch a published article's markdown for the read-only In-Review view. */

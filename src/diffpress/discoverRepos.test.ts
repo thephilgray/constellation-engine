@@ -3,6 +3,8 @@ import {
   dedupeByExisting,
   aggregateSignals,
   assignLane,
+  activeLanesFor,
+  laneBudgets,
   capPerLane,
   toDiscoveredRecord,
 } from "./discoverRepos";
@@ -92,17 +94,51 @@ describe("assignLane", () => {
   });
 });
 
+describe("activeLanesFor", () => {
+  it("maps each mode to its lanes", () => {
+    expect(activeLanesFor("frontier")).toEqual(["NEW", "TRENDING"]);
+    expect(activeLanesFor("ecosystem")).toEqual(["RELEASE"]);
+    expect(activeLanesFor("balanced")).toEqual(["TRENDING", "NEW", "RELEASE"]);
+  });
+});
+
+describe("laneBudgets", () => {
+  it("splits the budget evenly", () => {
+    expect(laneBudgets(6, ["NEW", "TRENDING", "RELEASE"])).toEqual(
+      new Map([["NEW", 2], ["TRENDING", 2], ["RELEASE", 2]])
+    );
+  });
+  it("gives the remainder to earlier lanes", () => {
+    expect(laneBudgets(7, ["NEW", "TRENDING", "RELEASE"])).toEqual(
+      new Map([["NEW", 3], ["TRENDING", 2], ["RELEASE", 2]])
+    );
+  });
+  it("puts the whole budget on a single active lane", () => {
+    expect(laneBudgets(6, ["RELEASE"])).toEqual(new Map([["RELEASE", 6]]));
+  });
+});
+
 describe("capPerLane", () => {
-  it("keeps at most N per lane, preserving order", () => {
-    const cands = [
-      candidate("a/1", "TRENDING"),
-      candidate("a/2", "TRENDING"),
-      candidate("a/3", "TRENDING"),
-      candidate("b/1", "NEW"),
-      candidate("c/1", "RELEASE"),
-    ];
-    const out = capPerLane(cands, 2);
+  const cands = [
+    candidate("a/1", "TRENDING"),
+    candidate("a/2", "TRENDING"),
+    candidate("a/3", "TRENDING"),
+    candidate("b/1", "NEW"),
+    candidate("c/1", "RELEASE"),
+  ];
+
+  it("caps each lane to its budget, preserving order", () => {
+    const out = capPerLane(
+      cands,
+      new Map([["TRENDING", 2], ["NEW", 2], ["RELEASE", 2]])
+    );
     expect(out.map((c) => c.repoName)).toEqual(["a/1", "a/2", "b/1", "c/1"]);
+  });
+
+  it("drops candidates in lanes that are inactive for the mode", () => {
+    // ecosystem mode → only RELEASE has budget
+    const out = capPerLane(cands, new Map([["RELEASE", 6]]));
+    expect(out.map((c) => c.repoName)).toEqual(["c/1"]);
   });
 });
 

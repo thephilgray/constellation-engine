@@ -378,6 +378,13 @@ export default $config({
       ttl: "ttl",
     });
 
+    // Pipeline Command Center config — single item (id: "current").
+    // Drives engine state (active/paused/off), discovery mode, and velocity.
+    const discoveryConfig = new sst.aws.Dynamo("DiscoveryConfig", {
+      fields: { id: "string" },
+      primaryIndex: { hashKey: "id" },
+    });
+
     api.route("POST /api/publish-handoff", {
       handler: "src/diffpress/publishHandoff.handler",
       link: [auth, publicationLifecycle],
@@ -419,6 +426,21 @@ export default $config({
       },
     });
 
+    // Read/write the Pipeline Command Center config (engine state, mode, velocity).
+    for (const method of ["GET", "POST"] as const) {
+      api.route(`${method} /api/discovery-config`, {
+        handler: "src/diffpress/discoveryConfig.handler",
+        link: [auth, discoveryConfig],
+        timeout: "30 seconds",
+      }, {
+        auth: {
+          jwt: {
+            authorizer: authorizer.id,
+          },
+        },
+      });
+    }
+
     // DEPLOY FRONTEND
     const site = new sst.aws.Astro("Web", {
       link: [api, auth, webClient], // Link API and Auth to the frontend
@@ -443,7 +465,7 @@ export default $config({
     const contentEngineFns = {
       discoverRepos: new sst.aws.Function("DiffPressDiscoverRepos", {
         handler: "src/diffpress/discoverRepos.handler",
-        link: [GITHUB_TOKEN, publicationLifecycle, discoverySignals],
+        link: [GITHUB_TOKEN, publicationLifecycle, discoverySignals, discoveryConfig],
         timeout: "120 seconds",
       }),
       enrichRepos: new sst.aws.Function("DiffPressEnrichRepos", {
@@ -535,7 +557,7 @@ export default $config({
     const contentEngineTrigger = new sst.aws.Function("ContentEngineTrigger", {
       handler: "src/diffpress/trigger.handler",
       url: true,
-      link: [contentEngine],
+      link: [contentEngine, discoveryConfig],
       permissions: [
         { actions: ["states:StartExecution"], resources: [contentEngine.arn] },
       ],
@@ -546,7 +568,7 @@ export default $config({
       schedule: "rate(7 days)",
       job: {
         handler: "src/diffpress/trigger.handler",
-        link: [contentEngine],
+        link: [contentEngine, discoveryConfig],
         permissions: [
           { actions: ["states:StartExecution"], resources: [contentEngine.arn] },
         ],
@@ -559,7 +581,7 @@ export default $config({
       schedule: "rate(1 hour)",
       job: {
         handler: "src/diffpress/ingestEvents.handler",
-        link: [discoverySignals],
+        link: [discoverySignals, discoveryConfig],
         timeout: "300 seconds",
         // 2 GB gives a full vCPU; gunzip + JSON.parse are CPU-bound, so this
         // roughly halves the run at ~flat GB-second cost.

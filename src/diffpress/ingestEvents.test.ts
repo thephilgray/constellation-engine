@@ -9,6 +9,15 @@ import {
   handler,
   type GhEvent,
 } from "./ingestEvents";
+import { getDiscoveryConfig } from "./lib/config";
+
+vi.mock("./lib/config", () => ({
+  getDiscoveryConfig: vi.fn().mockResolvedValue({
+    engineState: "active",
+    discoveryMode: "frontier",
+    velocity: 6,
+  }),
+}));
 
 const watch = (repo: string, actor: string): GhEvent => ({
   type: "WatchEvent",
@@ -86,10 +95,24 @@ describe("handler", () => {
   afterEach(() => vi.unstubAllGlobals());
 
   it("skips gracefully when the hourly file is not yet published (404)", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ status: 404, ok: false }));
+    const fetchMock = vi.fn().mockResolvedValue({ status: 404, ok: false });
+    vi.stubGlobal("fetch", fetchMock);
     const result = await handler();
     expect(result.skipped).toBe(true);
     expect(result.rows).toBe(0);
+  });
+
+  it("hard-stops without fetching when the engine is off", async () => {
+    vi.mocked(getDiscoveryConfig).mockResolvedValueOnce({
+      engineState: "off",
+      discoveryMode: "frontier",
+      velocity: 6,
+    });
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const result = await handler();
+    expect(result.skipped).toBe(true);
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });
 

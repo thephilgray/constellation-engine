@@ -8,10 +8,12 @@ import { useDiffPress } from "./store";
 export default function DiffPress() {
   const view = useDiffPress((s) => s.view);
   const loadPipeline = useDiffPress((s) => s.loadPipeline);
+  const loadConfig = useDiffPress((s) => s.loadConfig);
 
   useEffect(() => {
     loadPipeline();
-  }, [loadPipeline]);
+    loadConfig();
+  }, [loadPipeline, loadConfig]);
 
   return (
     <div className="dp-root flex min-h-screen flex-col overflow-x-clip bg-dp-paper font-dp-sans text-[15px] leading-[1.5] tracking-[-0.006em] text-dp-ink antialiased">
