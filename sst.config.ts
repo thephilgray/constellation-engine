@@ -17,6 +17,7 @@ export default $config({
     const GITHUB_REPO = new sst.Secret("GITHUB_REPO");
     const INGEST_API_KEY = new sst.Secret("INGEST_API_KEY");
     const GOOGLE_BOOKS_API_KEY = new sst.Secret("GOOGLE_BOOKS_API_KEY");
+    const TAVILY_API_KEY = new sst.Secret("TAVILY_API_KEY");
 
     // NEW: Authentication (with Google Identity Provider)
     // Note: 'identityProviders' is not a direct property of CognitoUserPool args in this version.
@@ -465,7 +466,7 @@ export default $config({
     const contentEngineFns = {
       discoverRepos: new sst.aws.Function("DiffPressDiscoverRepos", {
         handler: "src/diffpress/discoverRepos.handler",
-        link: [GITHUB_TOKEN, publicationLifecycle, discoverySignals, discoveryConfig],
+        link: [GITHUB_TOKEN, publicationLifecycle, discoverySignals, discoveryConfig, TAVILY_API_KEY],
         timeout: "120 seconds",
       }),
       enrichRepos: new sst.aws.Function("DiffPressEnrichRepos", {
