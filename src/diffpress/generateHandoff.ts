@@ -1,5 +1,15 @@
 // src/diffpress/generateHandoff.ts
-import type { RepoCandidate, SeedIdea } from "./types";
+import { GoogleGenAI, Type } from "@google/genai";
+import { Resource } from "sst";
+import { getPayload } from "./lib/payloadStore";
+import type {
+  ContentEngineState,
+  RepoCandidate,
+  SeedIdea,
+  EnrichmentPayload,
+} from "./types";
+
+const MODEL = "gemini-2.5-pro";
 
 /** Pure: assemble the Gemini instruction that produces the handoff brief. */
 export function buildMetaPrompt(input: {
@@ -92,4 +102,58 @@ export function resolveHandoff(
   }
   console.warn(`[generateHandoff] using fallback prompt for ${repoName}`);
   return { handoffPrompt: fallbackHandoffPrompt(repoName) };
+}
+
+// Lazy init so importing this module in unit tests does not require SST Resource bindings.
+let genAI: GoogleGenAI | undefined;
+function getGenAI(): GoogleGenAI {
+  if (!genAI) {
+    genAI = new GoogleGenAI({ apiKey: Resource.GEMINI_API_KEY.value });
+  }
+  return genAI;
+}
+
+/** Thin wrapper around the Gemini structured-output call. Returns "" on any error. */
+async function generateBrief(prompt: string): Promise<string> {
+  try {
+    const result = await getGenAI().models.generateContent({
+      model: MODEL,
+      contents: [{ text: prompt }],
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            mode: { type: Type.STRING },
+            handoffMarkdown: { type: Type.STRING },
+          },
+          required: ["mode", "handoffMarkdown"],
+        },
+      },
+    });
+    return result.text ?? "";
+  } catch (err) {
+    console.error(`[generateHandoff] Gemini call failed: ${(err as Error).message}`);
+    return "";
+  }
+}
+
+export async function handler(state: ContentEngineState): Promise<ContentEngineState> {
+  if (!state.enrichment?.key) {
+    throw new Error("generateHandoff: missing enrichment payload location in state.");
+  }
+  const payload: EnrichmentPayload = await getPayload(state.enrichment.key);
+
+  const prompt = buildMetaPrompt({
+    repo: state.repo,
+    documentation: payload.documentation,
+    seedIdeas: state.seedIdeas ?? [],
+  });
+  const raw = await generateBrief(prompt);
+  const { mode, handoffPrompt } = resolveHandoff(raw, state.repo.repoName);
+
+  console.log(
+    `[generateHandoff] ${state.repo.repoName} → mode=${mode ?? "fallback"} (${handoffPrompt.length} chars)`
+  );
+  return { ...state, mode, handoffPrompt };
 }
