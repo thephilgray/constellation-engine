@@ -4,6 +4,7 @@ import {
   isAlreadyPublishedError,
   buildMarkDraftingParams,
   buildMarkAwaitingParams,
+  BOARD_PROJECTION,
 } from "./ledger";
 
 describe("buildMarkPublishedParams", () => {
@@ -86,5 +87,16 @@ describe("buildMarkAwaitingParams", () => {
       taskToken: "tok",
     });
     expect(params.ExpressionAttributeValues?.[":handoffPrompt"]).toBeNull();
+  });
+});
+
+describe("BOARD_PROJECTION", () => {
+  it("includes handoffPrompt so AWAITING_HANDOFF items surface their prompt", () => {
+    expect(BOARD_PROJECTION).toContain("handoffPrompt");
+  });
+
+  it("includes critical board fields: taskToken and coverageScore", () => {
+    expect(BOARD_PROJECTION).toContain("taskToken");
+    expect(BOARD_PROJECTION).toContain("coverageScore");
   });
 });

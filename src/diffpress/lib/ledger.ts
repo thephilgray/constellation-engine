@@ -131,6 +131,14 @@ export async function listBoardItems(): Promise<PublicationRecord[]> {
 /** Name of the status GSI declared in sst.config.ts. */
 export const STATUS_INDEX = "status-index";
 
+/**
+ * Attributes projected by queryByStatus / listBoardItems.
+ * Add fields here whenever board display or downstream logic needs them —
+ * DynamoDB returns ONLY the listed attributes, so omissions are silent data loss.
+ */
+export const BOARD_PROJECTION =
+  "repoName, #status, repoUrl, taskToken, discoveredAt, title, publishedAt, description, stars, #lang, pushedAt, signalType, starsGained, releaseTag, coverageScore, handoffPrompt";
+
 /** Flip an item to DRAFTING. Swallows the conditional-check failure (idempotent). */
 export async function markDrafting(repoName: string): Promise<void> {
   try {
@@ -203,8 +211,7 @@ export async function queryByStatus(status: string): Promise<PublicationRecord[]
       KeyConditionExpression: "#status = :s",
       ExpressionAttributeNames: { "#status": "status", "#lang": "language" },
       ExpressionAttributeValues: { ":s": status },
-      ProjectionExpression:
-        "repoName, #status, repoUrl, taskToken, discoveredAt, title, publishedAt, description, stars, #lang, pushedAt, signalType, starsGained, releaseTag, coverageScore",
+      ProjectionExpression: BOARD_PROJECTION,
     })
   );
   return (Items ?? []) as PublicationRecord[];
