@@ -52,6 +52,7 @@ export async function fetchCandidates(): Promise<PipelineData> {
       desc: "Ready for a local-dev pass before drafting.",
       taskToken: h.taskToken,
       repoUrl: h.repoUrl,
+      handoffPrompt: h.handoffPrompt,
     })),
     inReview: board.inReview.map((r) => ({
       id: r.repoName,

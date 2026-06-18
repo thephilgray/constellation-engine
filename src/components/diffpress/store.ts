@@ -238,7 +238,7 @@ export const useDiffPress = create<DiffPressState>((set, get) => ({
         ? {
             id,
             name: card.repo,
-            handoff: buildHandoffPrompt(card.repo),
+            handoff: card.handoffPrompt ?? buildHandoffPrompt(card.repo),
             repoUrl: card.repoUrl,
           }
         : null,

@@ -19,6 +19,7 @@ export async function handler(event: NotifyHandoffEvent): Promise<{ ok: true }> 
     repoUrl: state.repo.repoUrl,
     taskToken,
     payloadKey,
+    handoffPrompt: state.handoffPrompt,
   });
 
   return { ok: true };

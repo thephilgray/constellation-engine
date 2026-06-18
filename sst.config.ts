@@ -471,13 +471,18 @@ export default $config({
       }),
       enrichRepos: new sst.aws.Function("DiffPressEnrichRepos", {
         handler: "src/diffpress/enrichRepos.handler",
-        link: [contentPayloadBucket],
+        link: [contentPayloadBucket, GITHUB_TOKEN],
         timeout: "60 seconds",
       }),
       seedIdeas: new sst.aws.Function("DiffPressSeedIdeas", {
         handler: "src/diffpress/seedIdeas.handler",
         link: [GEMINI_API_KEY, PINECONE_API_KEY],
         timeout: "60 seconds",
+      }),
+      generateHandoff: new sst.aws.Function("DiffPressGenerateHandoff", {
+        handler: "src/diffpress/generateHandoff.handler",
+        link: [GEMINI_API_KEY, contentPayloadBucket],
+        timeout: "120 seconds",
       }),
       notifyHandoff: new sst.aws.Function("DiffPressNotifyHandoff", {
         handler: "src/diffpress/notifyHandoff.handler",
@@ -517,6 +522,13 @@ export default $config({
       output: "{% $states.result.Payload %}",
     });
 
+    const generateHandoffState = sst.aws.StepFunctions.lambdaInvoke({
+      name: "GenerateHandoff",
+      function: contentEngineFns.generateHandoff,
+      payload: "{% $states.input %}",
+      output: "{% $states.result.Payload %}",
+    });
+
     // Phase 2: paused wait-for-task-token state.
     const awaitHandoffState = sst.aws.StepFunctions.lambdaInvoke({
       name: "AwaitHandoff",
@@ -546,6 +558,7 @@ export default $config({
     const contentEngineDefinition = discoverState
       .next(enrichState)
       .next(seedState)
+      .next(generateHandoffState)
       .next(awaitHandoffState)
       .next(draftState)
       .next(recordState);

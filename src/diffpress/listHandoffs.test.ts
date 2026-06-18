@@ -72,3 +72,19 @@ describe("bucketBoard", () => {
     expect(board.inReview).toHaveLength(0);
   });
 });
+
+describe("bucketBoard handoffPrompt", () => {
+  it("projects handoffPrompt onto readyForDev items", () => {
+    const items: PublicationRecord[] = [
+      {
+        repoName: "acme/widget",
+        status: "AWAITING_HANDOFF",
+        repoUrl: "https://github.com/acme/widget",
+        taskToken: "tok",
+        handoffPrompt: "# Handoff — acme/widget",
+      },
+    ];
+    const board = bucketBoard(items);
+    expect(board.readyForDev[0].handoffPrompt).toBe("# Handoff — acme/widget");
+  });
+});

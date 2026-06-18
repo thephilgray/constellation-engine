@@ -4,6 +4,7 @@ import {
   isAlreadyPublishedError,
   buildMarkDraftingParams,
   buildMarkAwaitingParams,
+  BOARD_PROJECTION,
 } from "./ledger";
 
 describe("buildMarkPublishedParams", () => {
@@ -68,5 +69,34 @@ describe("buildMarkAwaitingParams", () => {
       "enrichment/exec-1/vercel-next.js.json"
     );
     expect(params.UpdateExpression).toContain("taskToken = :taskToken");
+  });
+
+  it("persists handoffPrompt when provided", () => {
+    const params = buildMarkAwaitingParams("table", "acme/widget", {
+      repoUrl: "https://github.com/acme/widget",
+      taskToken: "tok",
+      handoffPrompt: "# Handoff — acme/widget",
+    });
+    expect(params.UpdateExpression).toContain("handoffPrompt = :handoffPrompt");
+    expect(params.ExpressionAttributeValues?.[":handoffPrompt"]).toBe("# Handoff — acme/widget");
+  });
+
+  it("stores null handoffPrompt when omitted", () => {
+    const params = buildMarkAwaitingParams("table", "acme/widget", {
+      repoUrl: "https://github.com/acme/widget",
+      taskToken: "tok",
+    });
+    expect(params.ExpressionAttributeValues?.[":handoffPrompt"]).toBeNull();
+  });
+});
+
+describe("BOARD_PROJECTION", () => {
+  it("includes handoffPrompt so AWAITING_HANDOFF items surface their prompt", () => {
+    expect(BOARD_PROJECTION).toContain("handoffPrompt");
+  });
+
+  it("includes critical board fields: taskToken and coverageScore", () => {
+    expect(BOARD_PROJECTION).toContain("taskToken");
+    expect(BOARD_PROJECTION).toContain("coverageScore");
   });
 });

@@ -28,8 +28,9 @@ export function buildDraftPrompt(input: {
   repo: RepoCandidate;
   enrichment: EnrichmentPayload;
   notes: string;
+  mode?: "narrative" | "explainer";
 }): string {
-  const { repo, enrichment, notes } = input;
+  const { repo, enrichment, notes, mode } = input;
   const sentiment =
     enrichment.sentiment
       .map((s) => `- (${s.source}, score ${s.score}) ${s.summary}`)
@@ -50,6 +51,9 @@ export function buildDraftPrompt(input: {
     `If the author's notes contain an explicit directive (a line such as "mode: explainer" or "mode: narrative", or a natural-language instruction like "write this as a narrative about my build"), honor it.`,
     `Otherwise infer the mode from the depth of the notes: rich, detailed notes -> narrative; thin notes -> a concise explainer.`,
     `Do not manufacture opinions or filler. Include criticism or assessment only where the notes or community sentiment provide specific, substantive signal.`,
+    ...(mode
+      ? [``, `MODE DIRECTIVE: ${mode} — the assignment editor has already chosen this mode. Use it; do not infer a different mode from the notes.`]
+      : []),
     ``,
     `## OSS project`,
     `- Name: ${repo.repoName}`,
@@ -138,7 +142,7 @@ export async function handler(state: ContentEngineState): Promise<ContentEngineS
   const fileNotes = await fetchDevNotes(state.handoff.repoUrl);
   const notes = assembleNotes(fileNotes, state.handoff.developerLog);
 
-  const prompt = buildDraftPrompt({ repo: state.repo, enrichment: payload, notes });
+  const prompt = buildDraftPrompt({ repo: state.repo, enrichment: payload, notes, mode: state.mode });
   const raw = await generateArticle(prompt);
   const { title, articleMarkdown } = parseDraftResponse(raw);
 
