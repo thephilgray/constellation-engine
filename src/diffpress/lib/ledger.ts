@@ -64,19 +64,20 @@ export function buildMarkDraftingParams(
 export function buildMarkAwaitingParams(
   table: string,
   repoName: string,
-  meta: { repoUrl: string; taskToken: string; payloadKey?: string }
+  meta: { repoUrl: string; taskToken: string; payloadKey?: string; handoffPrompt?: string }
 ): UpdateCommandInput {
   return {
     TableName: table,
     Key: { repoName },
     UpdateExpression:
-      "SET #status = :awaiting, repoUrl = :repoUrl, taskToken = :taskToken, payloadKey = :payloadKey, discoveredAt = if_not_exists(discoveredAt, :now)",
+      "SET #status = :awaiting, repoUrl = :repoUrl, taskToken = :taskToken, payloadKey = :payloadKey, handoffPrompt = :handoffPrompt, discoveredAt = if_not_exists(discoveredAt, :now)",
     ExpressionAttributeNames: { "#status": "status" },
     ExpressionAttributeValues: {
       ":awaiting": "AWAITING_HANDOFF",
       ":repoUrl": meta.repoUrl,
       ":taskToken": meta.taskToken,
       ":payloadKey": meta.payloadKey ?? null,
+      ":handoffPrompt": meta.handoffPrompt ?? null,
       ":now": new Date().toISOString(),
     },
   };
@@ -148,7 +149,7 @@ export async function markDrafting(repoName: string): Promise<void> {
 /** Flip a DISCOVERED item to AWAITING_HANDOFF with resume metadata. */
 export async function markAwaitingHandoff(
   repoName: string,
-  meta: { repoUrl: string; taskToken: string; payloadKey?: string }
+  meta: { repoUrl: string; taskToken: string; payloadKey?: string; handoffPrompt?: string }
 ): Promise<void> {
   await docClient.send(
     new UpdateCommand(buildMarkAwaitingParams(tableName(), repoName, meta))

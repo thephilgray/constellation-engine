@@ -69,4 +69,22 @@ describe("buildMarkAwaitingParams", () => {
     );
     expect(params.UpdateExpression).toContain("taskToken = :taskToken");
   });
+
+  it("persists handoffPrompt when provided", () => {
+    const params = buildMarkAwaitingParams("table", "acme/widget", {
+      repoUrl: "https://github.com/acme/widget",
+      taskToken: "tok",
+      handoffPrompt: "# Handoff — acme/widget",
+    });
+    expect(params.UpdateExpression).toContain("handoffPrompt = :handoffPrompt");
+    expect(params.ExpressionAttributeValues?.[":handoffPrompt"]).toBe("# Handoff — acme/widget");
+  });
+
+  it("stores null handoffPrompt when omitted", () => {
+    const params = buildMarkAwaitingParams("table", "acme/widget", {
+      repoUrl: "https://github.com/acme/widget",
+      taskToken: "tok",
+    });
+    expect(params.ExpressionAttributeValues?.[":handoffPrompt"]).toBeNull();
+  });
 });
