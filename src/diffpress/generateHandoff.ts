@@ -1,0 +1,55 @@
+// src/diffpress/generateHandoff.ts
+import type { RepoCandidate, SeedIdea } from "./types";
+
+/** Pure: assemble the Gemini instruction that produces the handoff brief. */
+export function buildMetaPrompt(input: {
+  repo: RepoCandidate;
+  documentation: string;
+  seedIdeas: SeedIdea[];
+}): string {
+  const { repo, documentation, seedIdeas } = input;
+  const coverage =
+    (repo.coverageSources ?? [])
+      .map((s) => `- "${s.title}" (${s.domain}) — ${s.abstract}`)
+      .join("\n") || "(none found)";
+  const seeds =
+    seedIdeas.map((s) => `- ${s.text}`).join("\n") || "(none — invent an original idea)";
+  return [
+    `You are the assignment editor for DiffPress, a publication that covers emerging open-source projects through the lens of a real demo project built with them.`,
+    ``,
+    `Produce a Markdown "handoff brief" that a developer will follow to build a demo project featuring the open-source project below, and to log the build so the log becomes the first draft of an article.`,
+    ``,
+    `## Decide the mode first`,
+    `- If this repo is a good basis for an original, NON-trivial demo project, choose "narrative".`,
+    `- If it is NOT a good fit for any real demo idea (e.g. it is a library best shown by explanation, not a standalone build), choose "explainer".`,
+    `Never propose a hello-world or trivial example. If the only honest demo would be trivial, choose "explainer" instead.`,
+    ``,
+    `## narrative mode`,
+    `Propose ONE specific, real demo project that exercises this repo meaningfully. Use the author's seed ideas below as LOOSE inspiration — lean on one if it genuinely fits, otherwise invent an original idea. The demo MUST differentiate from the existing coverage listed below (find an angle those pieces miss; do not rebuild what is already written about). The brief must cover: what to build and why it is interesting; which specific repo features/APIs to exercise; and logging guidance.`,
+    ``,
+    `## explainer mode`,
+    `A lighter brief: clone, run, and critically evaluate the repo. No standalone demo build is required.`,
+    ``,
+    `## Logging guidance (REQUIRED in both modes)`,
+    `Instruct the developer to create a file named DIFFPRESS.md at the ROOT of the demo project repo and log there as they work. The log should capture: decisions and why; friction points, surprises, and rough edges; timings worth quoting; specific details about ${repo.repoName}; and a critical-evaluation section near the end. Frame the log as the first draft of a narrative, demo-centric article that features ${repo.repoName} as its subject.`,
+    ``,
+    `## Open-source project`,
+    `- Name: ${repo.repoName}`,
+    `- URL: ${repo.repoUrl}`,
+    `- Description: ${repo.description || "(none)"}`,
+    `- Primary language: ${repo.language ?? "(unknown)"}`,
+    `- Stars: ${repo.stars}`,
+    ``,
+    `## Repo documentation (README)`,
+    documentation || "(none available)",
+    ``,
+    `## Author's seed ideas (loose inspiration only)`,
+    seeds,
+    ``,
+    `## Existing coverage (differentiate from these)`,
+    coverage,
+    ``,
+    `## Output`,
+    `Return a JSON object with two fields: "mode" (either "narrative" or "explainer") and "handoffMarkdown" (the full handoff brief in GitHub-flavored Markdown, beginning at a level-1 heading like "# Handoff — ${repo.repoName}").`,
+  ].join("\n");
+}
