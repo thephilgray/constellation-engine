@@ -37,6 +37,16 @@ describe("buildDraftPrompt", () => {
     expect(p).toContain("narrative");
     expect(p.toLowerCase()).toContain("mode:");
   });
+
+  it("injects an authoritative mode directive when mode is provided", () => {
+    const p = buildDraftPrompt({ repo, enrichment, notes: "thin notes", mode: "narrative" });
+    expect(p).toContain("MODE DIRECTIVE: narrative");
+  });
+
+  it("omits the authoritative directive when mode is absent", () => {
+    const p = buildDraftPrompt({ repo, enrichment, notes: "thin notes" });
+    expect(p).not.toContain("MODE DIRECTIVE");
+  });
 });
 
 describe("parseDraftResponse", () => {
