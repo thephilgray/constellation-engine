@@ -135,6 +135,10 @@ declare module "sst" {
       "name": string
       "type": "sst.aws.Dynamo"
     }
+    "TAVILY_API_KEY": {
+      "type": "sst.sst.Secret"
+      "value": string
+    }
     "UnifiedLake": {
       "name": string
       "type": "sst.aws.Dynamo"
