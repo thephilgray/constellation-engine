@@ -21,6 +21,7 @@ export interface HandoffItem {
   repoUrl?: string;
   taskToken?: string;
   discoveredAt?: string;
+  handoffPrompt?: string;
 }
 
 export interface DraftingItem {
@@ -66,6 +67,7 @@ export function bucketBoard(items: PublicationRecord[]): Board {
           repoUrl: item.repoUrl,
           taskToken: item.taskToken,
           discoveredAt: item.discoveredAt,
+          handoffPrompt: item.handoffPrompt,
         });
         break;
       case "DRAFTING":
