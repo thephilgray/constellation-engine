@@ -39,6 +39,7 @@ describe("mapTavilyResponse", () => {
     expect(EXCLUDE_DOMAINS).toContain("twitter.com");
     expect(EXCLUDE_DOMAINS).toContain("x.com");
     expect(EXCLUDE_DOMAINS).toContain("facebook.com");
+    expect(EXCLUDE_DOMAINS).toContain("instagram.com");
     expect(EXCLUDE_DOMAINS).toContain("reddit.com");
   });
 });

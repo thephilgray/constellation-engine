@@ -31,6 +31,7 @@ export const EXCLUDE_DOMAINS = [
   "twitter.com",
   "x.com",
   "facebook.com",
+  "instagram.com",
   "reddit.com",
   "medium.com",
 ];
