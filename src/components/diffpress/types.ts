@@ -34,6 +34,8 @@ export interface HandoffCard {
   taskToken?: string;
   /** Prefill for the resume form, when the discovered repo URL is known. */
   repoUrl?: string;
+  /** LLM-generated handoff brief from the backend; falls back to boilerplate if absent. */
+  handoffPrompt?: string;
 }
 
 export interface DraftingCard {
@@ -124,6 +126,7 @@ export interface HandoffsResponse {
     repoUrl?: string;
     taskToken?: string;
     discoveredAt?: string;
+    handoffPrompt?: string;
   }[];
   drafting: {
     repoName: string;
