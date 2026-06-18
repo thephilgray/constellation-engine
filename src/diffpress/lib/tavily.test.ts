@@ -33,4 +33,12 @@ describe("mapTavilyResponse", () => {
     expect(EXCLUDE_DOMAINS).toContain("npmjs.com");
     expect(EXCLUDE_DOMAINS).toContain("github.com");
   });
+
+  it("excludes social/aggregator domains that are not real coverage", () => {
+    expect(EXCLUDE_DOMAINS).toContain("linkedin.com");
+    expect(EXCLUDE_DOMAINS).toContain("twitter.com");
+    expect(EXCLUDE_DOMAINS).toContain("x.com");
+    expect(EXCLUDE_DOMAINS).toContain("facebook.com");
+    expect(EXCLUDE_DOMAINS).toContain("reddit.com");
+  });
 });

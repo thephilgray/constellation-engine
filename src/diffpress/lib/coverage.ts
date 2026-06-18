@@ -9,6 +9,12 @@ export const DOMAIN_SATURATION = 6;
 export const RESULT_SATURATION = 5;
 /** A result counts toward depth only if its relevance score >= this. */
 export const RELEVANCE_FLOOR = 0.5;
+/**
+ * A result is kept as a persisted/drafter-facing source only if its relevance
+ * score >= this. Lower than the depth floor: marginally-relevant pages are
+ * still useful literature context, but near-zero noise (e.g. 0.0074) is dropped.
+ */
+export const SOURCE_RELEVANCE_FLOOR = 0.3;
 /** Candidates with coverageScore strictly above this are dropped. */
 export const DROP_THRESHOLD = 0.65;
 export const BREADTH_WEIGHT = 0.6;
@@ -56,6 +62,7 @@ export function scoreCoverage(
   const domains = new Set<string>();
   let qualifying = 0;
   for (const r of results) {
+    if (r.score < SOURCE_RELEVANCE_FLOOR) continue; // near-zero noise never counts
     const d = domainOf(r.url);
     if (!d || excluded.has(d)) continue;
     domains.add(d);
@@ -94,6 +101,7 @@ export function toCoverageSources(
 ): CoverageSource[] {
   const out: CoverageSource[] = [];
   for (const r of results) {
+    if (r.score < SOURCE_RELEVANCE_FLOOR) continue;
     const domain = domainOf(r.url);
     if (!domain) continue;
     out.push({

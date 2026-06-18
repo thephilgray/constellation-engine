@@ -14,7 +14,11 @@ function apiKey(): string {
     .TAVILY_API_KEY.value;
 }
 
-/** Registry / mirror domains that are never third-party coverage. */
+/**
+ * Domains that are never genuine third-party coverage: package registries /
+ * mirrors, plus social/aggregator sites whose profile and post pages otherwise
+ * inflate breadth with noise (e.g. a stranger's LinkedIn profile).
+ */
 export const EXCLUDE_DOMAINS = [
   "github.com",
   "npmjs.com",
@@ -23,6 +27,12 @@ export const EXCLUDE_DOMAINS = [
   "libraries.io",
   "packagist.org",
   "rubygems.org",
+  "linkedin.com",
+  "twitter.com",
+  "x.com",
+  "facebook.com",
+  "reddit.com",
+  "medium.com",
 ];
 
 /** One normalized Tavily search result. */
