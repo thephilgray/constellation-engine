@@ -162,6 +162,13 @@ DiscoverRepos → EnrichRepos(+README) → SeedIdeas(brain-dump)
 - **Both modes** frame the dev log as the first draft of a **narrative,
   demo-centric article** featuring the repo as its subject — what `draftArticle`
   then expands.
+- **Logging location (both modes).** The prompt must instruct the builder to
+  create a **`DIFFPRESS.md` file at the root of the demo project repo** and log
+  there. This is the existing convention: `draftArticle` reads `DIFFPRESS.md`
+  from the demo repo root via `fetchDevNotes` (`NOTES_FILENAME = "DIFFPRESS.md"`)
+  as the primary source, falling back to the UI handoff log. No backend change
+  is needed for this — only the generated prompt must name the file and direct
+  logging there.
 
 `GenerateHandoff` owns the fit + idea + mode decision; `draftArticle` consumes
 the resulting `mode`.
