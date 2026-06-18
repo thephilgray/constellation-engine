@@ -58,6 +58,10 @@ declare module "sst" {
       "name": string
       "type": "sst.aws.Function"
     }
+    "DiscoveryConfig": {
+      "name": string
+      "type": "sst.aws.Dynamo"
+    }
     "DiscoverySignals": {
       "name": string
       "type": "sst.aws.Dynamo"
