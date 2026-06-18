@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildMetaPrompt } from "./generateHandoff";
+import { buildMetaPrompt, fallbackHandoffPrompt, resolveHandoff } from "./generateHandoff";
 import type { RepoCandidate, SeedIdea, EnrichmentPayload } from "./types";
 
 const repo: RepoCandidate = {
@@ -56,5 +56,47 @@ describe("buildMetaPrompt", () => {
     const p = buildMetaPrompt({ repo: bare, documentation: "", seedIdeas: [] });
     expect(p).toContain("acme/widget");
     expect(p).toContain("(none");
+  });
+});
+
+describe("fallbackHandoffPrompt", () => {
+  it("produces a runnable boilerplate brief naming the repo and DIFFPRESS.md", () => {
+    const p = fallbackHandoffPrompt("acme/widget");
+    expect(p).toContain("acme/widget");
+    expect(p).toContain("DIFFPRESS.md");
+  });
+});
+
+describe("resolveHandoff", () => {
+  it("parses valid model output into mode + prompt", () => {
+    const raw = JSON.stringify({ mode: "narrative", handoffMarkdown: "# Handoff — acme/widget\nBuild X." });
+    expect(resolveHandoff(raw, "acme/widget")).toEqual({
+      mode: "narrative",
+      handoffPrompt: "# Handoff — acme/widget\nBuild X.",
+    });
+  });
+
+  it("accepts explainer mode", () => {
+    const raw = JSON.stringify({ mode: "explainer", handoffMarkdown: "# Handoff — acme/widget\nExplain it." });
+    expect(resolveHandoff(raw, "acme/widget").mode).toBe("explainer");
+  });
+
+  it("falls back (no mode, boilerplate prompt) on empty output", () => {
+    const r = resolveHandoff("", "acme/widget");
+    expect(r.mode).toBeUndefined();
+    expect(r.handoffPrompt).toContain("acme/widget");
+    expect(r.handoffPrompt).toContain("DIFFPRESS.md");
+  });
+
+  it("falls back on non-JSON output", () => {
+    const r = resolveHandoff("not json at all", "acme/widget");
+    expect(r.mode).toBeUndefined();
+    expect(r.handoffPrompt).toContain("DIFFPRESS.md");
+  });
+
+  it("falls back on JSON missing fields or invalid mode", () => {
+    expect(resolveHandoff(JSON.stringify({ mode: "weird", handoffMarkdown: "x" }), "a/b").mode).toBeUndefined();
+    expect(resolveHandoff(JSON.stringify({ handoffMarkdown: "x" }), "a/b").mode).toBeUndefined();
+    expect(resolveHandoff(JSON.stringify({ mode: "narrative" }), "a/b").mode).toBeUndefined();
   });
 });

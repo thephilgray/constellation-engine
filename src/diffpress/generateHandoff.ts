@@ -53,3 +53,43 @@ export function buildMetaPrompt(input: {
     `Return a JSON object with two fields: "mode" (either "narrative" or "explainer") and "handoffMarkdown" (the full handoff brief in GitHub-flavored Markdown, beginning at a level-1 heading like "# Handoff — ${repo.repoName}").`,
   ].join("\n");
 }
+
+/** Pure: minimal boilerplate brief used when generation fails. */
+export function fallbackHandoffPrompt(repoName: string): string {
+  return [
+    `# Handoff — ${repoName}`,
+    ``,
+    `Clone the repository and build a small but real demo project that uses it (avoid hello-world). If it is a poor fit for a demo, clone and critically evaluate it instead.`,
+    ``,
+    `## Logging`,
+    `Create a \`DIFFPRESS.md\` file at the root of your demo project repo and log as you work: decisions, friction, timings, specific details about ${repoName}, and a critical evaluation near the end. This log is the first draft of the article.`,
+    ``,
+    `## Deliverable`,
+    `Paste your demo project's GitHub URL and developer log below, then resume the workflow to draft the article.`,
+  ].join("\n");
+}
+
+/** Pure: turn raw model text into { mode?, handoffPrompt }, falling back safely. */
+export function resolveHandoff(
+  rawText: string,
+  repoName: string
+): { mode?: "narrative" | "explainer"; handoffPrompt: string } {
+  const text = (rawText ?? "").trim();
+  if (text) {
+    try {
+      const obj = JSON.parse(text) as { mode?: unknown; handoffMarkdown?: unknown };
+      const modeOk = obj.mode === "narrative" || obj.mode === "explainer";
+      if (
+        modeOk &&
+        typeof obj.handoffMarkdown === "string" &&
+        obj.handoffMarkdown.trim()
+      ) {
+        return { mode: obj.mode as "narrative" | "explainer", handoffPrompt: obj.handoffMarkdown };
+      }
+    } catch {
+      // fall through to boilerplate
+    }
+  }
+  console.warn(`[generateHandoff] using fallback prompt for ${repoName}`);
+  return { handoffPrompt: fallbackHandoffPrompt(repoName) };
+}
