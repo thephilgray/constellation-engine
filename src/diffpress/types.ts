@@ -72,6 +72,10 @@ export interface ContentEngineState {
   candidates?: RepoCandidate[];
   enrichment?: PayloadLocation;
   seedIdeas?: SeedIdea[];
+  /** Article mode chosen by generateHandoff; draftArticle honors it authoritatively. */
+  mode?: "narrative" | "explainer";
+  /** LLM-generated handoff brief shown in the Ready-for-Dev drawer. */
+  handoffPrompt?: string;
   handoff?: HandoffData;
   article?: DraftedArticle;
 }
@@ -95,6 +99,8 @@ export interface PublicationRecord {
   status: PublicationStatus;
   repoUrl?: string;
   taskToken?: string;
+  /** LLM-generated handoff brief, persisted on the AWAITING_HANDOFF record. */
+  handoffPrompt?: string;
   payloadKey?: string;
   title?: string;
   articleMarkdown?: string;
