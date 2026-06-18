@@ -228,9 +228,9 @@ export const useDiffPress = create<DiffPressState>((set, get) => ({
   resuming: false,
   resumed: false,
   openDrawer: async (id) => {
-    // The handoff card already carries everything the drawer needs (repo name +
-    // discovered URL); there is no separate backend handoff-prompt generator, so
-    // we synthesize a short prompt client-side.
+    // The handoff card carries the backend-generated handoffPrompt (from the
+    // GenerateHandoff step); legacy records without one fall back to a short
+    // client-side prompt synthesized from the repo name.
     const card = get().pipeline.readyForDev.find((c) => c.id === id);
     set({
       drawerId: id,

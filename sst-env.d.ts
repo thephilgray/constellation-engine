@@ -46,6 +46,10 @@ declare module "sst" {
       "name": string
       "type": "sst.aws.Function"
     }
+    "DiffPressGenerateHandoff": {
+      "name": string
+      "type": "sst.aws.Function"
+    }
     "DiffPressNotifyHandoff": {
       "name": string
       "type": "sst.aws.Function"
