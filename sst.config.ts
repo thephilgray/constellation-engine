@@ -414,6 +414,23 @@ export default $config({
       },
     });
 
+    // Board card actions: dismiss (releases the paused execution for
+    // Ready-for-Dev cards) and regenerate-handoff (re-rolls the brief in place).
+    api.route("POST /api/board-action", {
+      handler: "src/diffpress/boardAction.handler",
+      link: [auth, publicationLifecycle, GEMINI_API_KEY, contentPayloadBucket],
+      permissions: [
+        { actions: ["states:SendTaskFailure"], resources: ["*"] },
+      ],
+      timeout: "60 seconds",
+    }, {
+      auth: {
+        jwt: {
+          authorizer: authorizer.id,
+        },
+      },
+    });
+
     // Read a single published article's markdown (?repo=owner/name).
     api.route("GET /api/articles", {
       handler: "src/diffpress/getArticle.handler",
