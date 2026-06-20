@@ -83,6 +83,43 @@ export function buildMarkAwaitingParams(
   };
 }
 
+/** Pure: flip an item to DISMISSED (only if not already PUBLISHED). */
+export function buildMarkDismissedParams(
+  table: string,
+  repoName: string
+): UpdateCommandInput {
+  return {
+    TableName: table,
+    Key: { repoName },
+    UpdateExpression: "SET #status = :dismissed",
+    ConditionExpression:
+      "attribute_not_exists(#status) OR #status <> :published",
+    ExpressionAttributeNames: { "#status": "status" },
+    ExpressionAttributeValues: { ":dismissed": "DISMISSED", ":published": "PUBLISHED" },
+  };
+}
+
+/** Pure: overwrite the handoff brief in place, only while still AWAITING_HANDOFF. */
+export function buildSetHandoffPromptParams(
+  table: string,
+  repoName: string,
+  meta: { handoffPrompt: string; mode?: "narrative" | "explainer" }
+): UpdateCommandInput {
+  return {
+    TableName: table,
+    Key: { repoName },
+    UpdateExpression: "SET handoffPrompt = :handoffPrompt, #mode = :mode",
+    ConditionExpression: "#status = :awaiting",
+    // `mode` and `status` are DynamoDB reserved words.
+    ExpressionAttributeNames: { "#status": "status", "#mode": "mode" },
+    ExpressionAttributeValues: {
+      ":handoffPrompt": meta.handoffPrompt,
+      ":mode": meta.mode ?? null,
+      ":awaiting": "AWAITING_HANDOFF",
+    },
+  };
+}
+
 /** Pure: is this error a DynamoDB conditional-check failure (already published)? */
 export function isAlreadyPublishedError(err: unknown): boolean {
   return (
@@ -152,6 +189,31 @@ export async function markDrafting(repoName: string): Promise<void> {
     }
     throw err;
   }
+}
+
+/** Flip an item to DISMISSED. Swallows the conditional-check failure (idempotent). */
+export async function markDismissed(repoName: string): Promise<void> {
+  try {
+    await docClient.send(
+      new UpdateCommand(buildMarkDismissedParams(tableName(), repoName))
+    );
+  } catch (err) {
+    if (isAlreadyPublishedError(err)) {
+      console.log(`[ledger] ${repoName} already published; skip DISMISSED.`);
+      return;
+    }
+    throw err;
+  }
+}
+
+/** Overwrite the handoff brief for an AWAITING_HANDOFF item. */
+export async function setHandoffPrompt(
+  repoName: string,
+  meta: { handoffPrompt: string; mode?: "narrative" | "explainer" }
+): Promise<void> {
+  await docClient.send(
+    new UpdateCommand(buildSetHandoffPromptParams(tableName(), repoName, meta))
+  );
 }
 
 /** Flip a DISCOVERED item to AWAITING_HANDOFF with resume metadata. */
