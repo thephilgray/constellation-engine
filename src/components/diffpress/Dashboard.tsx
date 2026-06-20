@@ -1,4 +1,4 @@
-import { ChevronRight, ListFilter, SquarePen } from "lucide-react";
+import { ChevronRight, ListFilter, SquarePen, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useDiffPress } from "./store";
 import { Segmented } from "./ui";
@@ -87,8 +87,16 @@ function Desc({ children }: { children: React.ReactNode }) {
 function DiscoveryArticle({ card }: { card: DiscoveryCard }) {
   const badge = reasonBadge(card);
   const coverage = coverageTier(card.coverageScore);
+  const dismissCard = useDiffPress((s) => s.dismissCard);
   return (
-    <article className={CARD_BASE}>
+    <article className={cn(CARD_BASE, "group relative")}>
+      <button
+        onClick={() => dismissCard(card.id)}
+        aria-label={`Dismiss ${card.repo}`}
+        className="absolute right-[10px] top-[10px] hidden cursor-pointer border-none bg-transparent p-1 text-dp-faint-3 hover:text-dp-ink group-hover:block"
+      >
+        <X size={14} strokeWidth={1.7} />
+      </button>
       <RepoName>
         {card.repoUrl ? (
           <a

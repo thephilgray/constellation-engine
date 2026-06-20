@@ -1,4 +1,4 @@
-import { Copy, X } from "lucide-react";
+import { Copy, RefreshCw, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useDiffPress } from "./store";
 
@@ -15,6 +15,9 @@ export function HandoffDrawer() {
   const setDevLog = useDiffPress((s) => s.setDevLog);
   const copyHandoff = useDiffPress((s) => s.copyHandoff);
   const submitResume = useDiffPress((s) => s.submitResume);
+  const regenerating = useDiffPress((s) => s.regenerating);
+  const regenerateHandoff = useDiffPress((s) => s.regenerateHandoff);
+  const dismissCard = useDiffPress((s) => s.dismissCard);
 
   if (!drawerId) return null;
   const canResume = repoUrl.trim().length > 0 && !resuming;
@@ -58,13 +61,23 @@ export function HandoffDrawer() {
           <span className="text-[12.5px] font-medium text-dp-muted">
             Handoff Prompt
           </span>
-          <button
-            onClick={copyHandoff}
-            className="flex cursor-pointer items-center gap-[6px] border-none bg-transparent p-0 text-[12px] font-medium text-dp-slate hover:opacity-70"
-          >
-            <Copy size={13} strokeWidth={1.7} />
-            {copied ? "Copied" : "Copy"}
-          </button>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={regenerateHandoff}
+              disabled={regenerating}
+              className="flex cursor-pointer items-center gap-[6px] border-none bg-transparent p-0 text-[12px] font-medium text-dp-slate hover:opacity-70 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <RefreshCw size={13} strokeWidth={1.7} className={regenerating ? "dp-pulse" : ""} />
+              {regenerating ? "Regenerating…" : "Regenerate"}
+            </button>
+            <button
+              onClick={copyHandoff}
+              className="flex cursor-pointer items-center gap-[6px] border-none bg-transparent p-0 text-[12px] font-medium text-dp-slate hover:opacity-70"
+            >
+              <Copy size={13} strokeWidth={1.7} />
+              {copied ? "Copied" : "Copy"}
+            </button>
+          </div>
         </div>
         <div className="mb-[34px] whitespace-pre-wrap rounded-[10px] bg-dp-wash px-[18px] py-4 font-dp-mono text-[12.5px] leading-[1.72] text-[#3a3833]">
           {doc?.handoff ?? ""}
@@ -124,6 +137,13 @@ export function HandoffDrawer() {
             </button>
           </div>
         )}
+
+        <button
+          onClick={() => dismissCard(drawerId)}
+          className="mt-8 cursor-pointer border-none bg-transparent p-0 text-[12.5px] font-medium text-dp-faint hover:text-dp-ink"
+        >
+          Dismiss this card
+        </button>
       </aside>
     </>
   );

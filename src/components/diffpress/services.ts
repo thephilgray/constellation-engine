@@ -84,6 +84,29 @@ export async function publishHandoff(input: {
   if (!res.ok) throw new Error(`Failed to resume workflow (${res.status})`);
 }
 
+/** Dismiss a board card (Discovery or Ready-for-Dev) via `POST /api/board-action`. */
+export async function dismissCard(repoName: string): Promise<void> {
+  const res = await authedFetch("/api/board-action", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ repoName, action: "dismiss" }),
+  });
+  if (!res.ok) throw new Error(`Failed to dismiss card (${res.status})`);
+}
+
+/** Re-roll a Ready-for-Dev handoff brief via `POST /api/board-action`. */
+export async function regenerateHandoff(
+  repoName: string,
+): Promise<{ handoffPrompt: string }> {
+  const res = await authedFetch("/api/board-action", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ repoName, action: "regenerate-handoff" }),
+  });
+  if (!res.ok) throw new Error(`Failed to regenerate handoff (${res.status})`);
+  return res.json();
+}
+
 /** Load the Pipeline Command Center config from the backend. */
 export async function fetchDiscoveryConfig(): Promise<DiscoveryConfig> {
   const res = await authedFetch("/api/discovery-config");

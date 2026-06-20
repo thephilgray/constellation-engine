@@ -91,7 +91,8 @@ export type PublicationStatus =
   | "DISCOVERED"
   | "AWAITING_HANDOFF"
   | "DRAFTING"
-  | "PUBLISHED";
+  | "PUBLISHED"
+  | "DISMISSED";
 
 /** An item in the PublicationLifecycle table (PK: repoName). */
 export interface PublicationRecord {

@@ -2,11 +2,13 @@ import { create } from "zustand";
 import { ARTICLE_HTML, EMPTY_DEPLOY, TECH_EDITOR_NOTES } from "./data";
 import {
   deployArticle,
+  dismissCard as dismissCardApi,
   fetchArticle,
   fetchCandidates,
   fetchDiscoveryConfig,
   saveDiscoveryConfig,
   publishHandoff,
+  regenerateHandoff as regenerateHandoffApi,
   triggerTechEditor,
 } from "./services";
 import type {
@@ -55,6 +57,19 @@ function persistConfigDebounced(get: () => DiffPressState) {
   configTimer = setTimeout(() => persistConfig(get), 400);
 }
 
+/** Pure: drop a card by id from every board column. */
+export function removeFromPipeline(
+  pipeline: PipelineData,
+  repoName: string,
+): PipelineData {
+  return {
+    discovery: pipeline.discovery.filter((c) => c.id !== repoName),
+    readyForDev: pipeline.readyForDev.filter((c) => c.id !== repoName),
+    drafting: pipeline.drafting.filter((c) => c.id !== repoName),
+    inReview: pipeline.inReview.filter((c) => c.id !== repoName),
+  };
+}
+
 interface DiffPressState {
   // ---- navigation ----
   view: "dashboard" | "editor";
@@ -66,6 +81,7 @@ interface DiffPressState {
   // ---- pipeline board ----
   pipeline: PipelineData;
   loadPipeline: () => Promise<void>;
+  dismissCard: (repoName: string) => Promise<void>;
 
   // ---- live draft (uncontrolled contentEditable, persisted across modes) ----
   articleHtml: string;
@@ -103,6 +119,8 @@ interface DiffPressState {
   setDevLog: (v: string) => void;
   copyHandoff: () => void;
   submitResume: () => Promise<void>;
+  regenerating: boolean;
+  regenerateHandoff: () => Promise<void>;
 
   // ---- marginalia (AI Tech Editor, streamed) ----
   streaming: boolean;
@@ -154,6 +172,17 @@ export const useDiffPress = create<DiffPressState>((set, get) => ({
       // present stale or mock data as real.
       console.warn("[diffpress] failed to load pipeline:", err);
       set({ pipeline: { discovery: [], readyForDev: [], drafting: [], inReview: [] } });
+    }
+  },
+  dismissCard: async (repoName) => {
+    // Optimistic: remove immediately, then persist. On failure, reload to resync.
+    const prev = get().pipeline;
+    set({ pipeline: removeFromPipeline(prev, repoName), drawerId: null });
+    try {
+      await dismissCardApi(repoName);
+    } catch (err) {
+      console.warn("[diffpress] dismiss failed; reloading board:", err);
+      await get().loadPipeline();
     }
   },
 
@@ -227,6 +256,7 @@ export const useDiffPress = create<DiffPressState>((set, get) => ({
   copied: false,
   resuming: false,
   resumed: false,
+  regenerating: false,
   openDrawer: async (id) => {
     // The handoff card carries the backend-generated handoffPrompt (from the
     // GenerateHandoff step); legacy records without one fall back to a short
@@ -288,6 +318,28 @@ export const useDiffPress = create<DiffPressState>((set, get) => ({
         readyForDev: pipeline.readyForDev.filter((c) => c.id !== drawerId),
       },
     });
+  },
+  regenerateHandoff: async () => {
+    const { drawerId, handoffDoc } = get();
+    if (!drawerId || !handoffDoc) return;
+    set({ regenerating: true });
+    try {
+      const { handoffPrompt } = await regenerateHandoffApi(drawerId);
+      // Update the open drawer and the cached card so a reopen shows the new brief.
+      set((s) => ({
+        regenerating: false,
+        handoffDoc: s.handoffDoc ? { ...s.handoffDoc, handoff: handoffPrompt } : null,
+        pipeline: {
+          ...s.pipeline,
+          readyForDev: s.pipeline.readyForDev.map((c) =>
+            c.id === drawerId ? { ...c, handoffPrompt } : c,
+          ),
+        },
+      }));
+    } catch (err) {
+      console.error("[diffpress] regenerate failed:", err);
+      set({ regenerating: false });
+    }
   },
 
   streaming: false,

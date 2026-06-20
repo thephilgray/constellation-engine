@@ -4,6 +4,8 @@ import {
   isAlreadyPublishedError,
   buildMarkDraftingParams,
   buildMarkAwaitingParams,
+  buildMarkDismissedParams,
+  buildSetHandoffPromptParams,
   BOARD_PROJECTION,
 } from "./ledger";
 
@@ -87,6 +89,51 @@ describe("buildMarkAwaitingParams", () => {
       taskToken: "tok",
     });
     expect(params.ExpressionAttributeValues?.[":handoffPrompt"]).toBeNull();
+  });
+});
+
+describe("buildMarkDismissedParams", () => {
+  it("flips status to DISMISSED, guarding against PUBLISHED", () => {
+    const params = buildMarkDismissedParams("tbl", "owner/repo");
+    expect(params.TableName).toBe("tbl");
+    expect(params.Key).toEqual({ repoName: "owner/repo" });
+    expect(params.UpdateExpression).toBe("SET #status = :dismissed");
+    expect(params.ConditionExpression).toBe(
+      "attribute_not_exists(#status) OR #status <> :published",
+    );
+    expect(params.ExpressionAttributeValues).toMatchObject({
+      ":dismissed": "DISMISSED",
+      ":published": "PUBLISHED",
+    });
+  });
+});
+
+describe("buildSetHandoffPromptParams", () => {
+  it("sets handoffPrompt + mode only on an AWAITING_HANDOFF row", () => {
+    const params = buildSetHandoffPromptParams("tbl", "owner/repo", {
+      handoffPrompt: "# new brief",
+      mode: "narrative",
+    });
+    expect(params.UpdateExpression).toBe(
+      "SET handoffPrompt = :handoffPrompt, #mode = :mode",
+    );
+    expect(params.ConditionExpression).toBe("#status = :awaiting");
+    expect(params.ExpressionAttributeNames).toMatchObject({
+      "#status": "status",
+      "#mode": "mode",
+    });
+    expect(params.ExpressionAttributeValues).toMatchObject({
+      ":handoffPrompt": "# new brief",
+      ":mode": "narrative",
+      ":awaiting": "AWAITING_HANDOFF",
+    });
+  });
+
+  it("stores null mode when omitted", () => {
+    const params = buildSetHandoffPromptParams("tbl", "owner/repo", {
+      handoffPrompt: "# brief",
+    });
+    expect(params.ExpressionAttributeValues?.[":mode"]).toBeNull();
   });
 });
 

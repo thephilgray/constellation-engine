@@ -114,7 +114,7 @@ function getGenAI(): GoogleGenAI {
 }
 
 /** Thin wrapper around the Gemini structured-output call. Returns "" on any error. */
-async function generateBrief(prompt: string): Promise<string> {
+export async function generateBrief(prompt: string): Promise<string> {
   try {
     const result = await getGenAI().models.generateContent({
       model: MODEL,
