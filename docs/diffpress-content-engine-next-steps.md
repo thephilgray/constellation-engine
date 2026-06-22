@@ -1,105 +1,97 @@
 # DiffPress Content Engine — Next Steps
 
-**As of:** 2026-06-14. The backend Content Engine is implemented and merged to `main`
-(merge commit `3d17d76`). This doc captures what remains and a ready-to-use handoff
-prompt for the next recommended step.
+**As of:** 2026-06-20. The discovery → handoff → draft → record pipeline is built,
+deployed to prod, and e2e-verified. What remains is the **publishing platform** and the
+**inline LLM editor** — both currently frontend mocks with no backend.
 
 ## Current state
 
-**Done & merged** (see `docs/superpowers/specs/2026-06-14-diffpress-content-engine-design.md`
-and `docs/superpowers/plans/2026-06-14-diffpress-content-engine.md`):
-- Step Functions workflow: DiscoverRepos → EnrichRepos → SeedIdeas → AwaitHandoff
-  (paused via `lambdaInvoke integration:"token"`) → DraftArticle → RecordPublication.
-- `PublicationLifecycle` DynamoDB table (PK `repoName`), `ContentPayloadBucket` S3 bucket,
-  weekly `ContentEngineCron`, manual `ContentEngineTrigger` (function URL).
-- `POST /api/publish-handoff` on the existing `IngestApi`, behind Cognito JWT, resumes the
-  paused execution via `SendTaskSuccess`.
-- 10 unit tests pass; `tsc` clean; `sst diff` synthesizes all resources.
+**Done & deployed (prod):**
+- Step Functions pipeline: DiscoverRepos → EnrichRepos → SeedIdeas → GenerateHandoff →
+  AwaitHandoff (task-token pause) → DraftArticle → RecordPublication.
+- Real discovery (GH Archive star-velocity + Tavily interest→coverage scoring), DynamoDB-backed.
+- `draftArticle` does real Gemini drafting; `generateHandoff` produces repo-specific briefs.
+- Board UI with dismiss (Discovery ✕) + regenerate-handoff; `GET /api/handoffs`,
+  `POST /api/publish-handoff`, board-action Lambda — all live behind Cognito JWT.
 
-**Never deployed.** The app has not been `sst deploy`'d with these resources yet.
+**Mocks / not built (no backend):**
+- **Publishing / syndication** — `services.ts` `deployArticle` + `PublishConsole.tsx` are pure
+  frontend fakes (900ms delay, hardcoded "State of the Art: Helix" title). The pipeline's
+  `recordPublication.ts` only marks the ledger `PUBLISHED` — **it publishes nowhere.**
+- **Inline LLM reviewer (AI Tech Editor / "Marginalia")** — `triggerTechEditor` replays static
+  `TECH_EDITOR_NOTES` over a simulated SSE stream. Review mode is a deliberate no-op in `store.ts`.
+  `DraftEditor.tsx` is a real contenteditable editor but has zero LLM wiring.
 
 ## Remaining work
 
-### 1. Wire the `/diffpress` UI to the backend  ← RECOMMENDED NEXT
-The frontend (`src/components/diffpress/`) has async **service stubs** in
-`src/components/diffpress/services.ts`: `fetchCandidates`, `publishHandoff`,
-`deployArticle`, `triggerTechEditor` (SSE simulation). Wiring them surfaces a real gap the
-spec deliberately deferred:
+### 1. Publishing platform  ← RECOMMENDED NEXT (biggest gap)
 
-- **Missing read endpoint.** `notifyHandoff` persists `AWAITING_HANDOFF` items (carrying the
-  `taskToken` + `payloadKey`) to `PublicationLifecycle`, but nothing exposes them. The UI's
-  `fetchCandidates` has no API to call, and `publishHandoff` **cannot obtain the `taskToken`**
-  needed to resume the workflow. → Need (at least) `GET /api/handoffs` returning pending
-  handoffs, likely also a way to fetch the drafted article / enrichment payload.
-- **Auth threading.** `/api/publish-handoff` is behind Cognito JWT; the frontend must attach
-  the token. Follow the existing pattern used for `/ingest`, `/dashboard`, etc.
-- **Service-contract mapping.** Confirm what `deployArticle` and `triggerTechEditor` should
-  do. After `/api/publish-handoff` resumes, `draftArticle`→`recordPublication` already run
-  server-side automatically — so `deployArticle` may be redundant or may mean something else.
-  `triggerTechEditor` (SSE) has **no backend counterpart** yet; decide whether to build one
-  or drop it.
+Goal: configure all destinations in the app UI, **no webhook URLs / API keys / tokens hardcoded.**
 
-This step has genuine design decisions, so it should be **brainstormed into a short spec**
-before coding. First action: read `services.ts` + `store.ts` to pin the real frontend
-contract.
+Key reality check — there is **no shared webhook standard** across platforms:
+- **dev.to (Forem):** real REST API — `POST /api/articles`, `api-key` header. ✅
+- **Ghost / WordPress / Hashnode:** real APIs (Admin JWT / REST / GraphQL). ✅
+- **Medium:** API effectively retired — treat as manual/unsupported. ⚠️
+- **Substack:** no official publishing API — treat as manual/unsupported. ⚠️
+- **Custom personal site:** site exposes a publish webhook; engine POSTs the article to it. ✅
 
-### 2. Fill the three backend stubs
-In priority order:
-- **`draftArticle.ts` (`composeArticle`)** — replace the template with a real LLM call
-  (Gemini via the existing `getGenAI()` in `src/utils.ts`). Highest value.
-- **`enrichRepos.ts` (`gatherEnrichment`)** — real Exa/Tavily doc fetch + HN/Reddit sentiment.
-  Decide whether to add `EXA_API_KEY`/`TAVILY_API_KEY` secrets.
-- **`seedIdeas.ts`** — settle the **Pinecone namespace** (other modules query a named
-  namespace e.g. `ideas`; this currently hits the default and will always fall through to the
-  stub). Then replace the generate-fallback with a real generation path if desired.
+Proposed minimal design (brainstorm before coding):
+- One generic **HTTP publish target** = `{ url, authHeaderName, secretRef, bodyTemplate }`,
+  covering custom blogs + dev.to/Ghost/WP/Hashnode. Thin per-platform adapter only where the API
+  genuinely deviates. Unsupported platforms marked manual, not faked.
+- **Destinations config** stored in DynamoDB (per-user). API keys/tokens in a secret store
+  (SST Secret / SSM) referenced **by name** — never the raw token in the config record.
+- **Config page** in the app UI to manage destinations + which secret each uses.
+- Replace/extend the `recordPublication` terminal step to actually POST to each enabled destination.
+- Reuse the `generateHandoff` Lambda pattern to produce a "set up this publish webhook on your
+  site" brief for personal sites we own.
 
-### 3. Deploy + verify end-to-end
-- Ensure secrets are set (`sst secret set ...` — the app already needs GITHUB_*, GEMINI,
-  PINECONE, INGEST_API_KEY, GOOGLE_BOOKS_API_KEY).
-- `sst deploy` (the repo uses `npm run deploy:prod` which strips Homebrew from PATH to avoid a
-  conflicting `sst`).
-- Note: running `sst diff`/`deploy` regenerates `sst-env.d.ts`; if it ever gets clobbered in a
-  no-secrets context, restore with `git checkout -- sst-env.d.ts` (see the
-  `sst-typegen-gotchas` memory).
+This has real branching decisions (v1 platform set, secret-store choice) → **brainstorm into a
+short spec first.**
 
-## Minor cleanups (optional)
-- `getByRepo` in `src/diffpress/lib/ledger.ts` is exported but unused — trim for YAGNI, or
-  keep for the read endpoint in step 1.
-- `/api/publish-handoff` grants `states:SendTaskFailure` but only `SendTaskSuccess` is called.
+### 2. Inline LLM reviewer editor
+Wire `DraftEditor.tsx` to a real model. Decide: streaming margin notes (real SSE backend for
+`triggerTechEditor`) vs. inline accept/reject suggestions in the contenteditable. Currently
+mock-only and review mode is disabled. Separate effort from publishing.
+
+### 3. Minor backend stubs (low priority)
+- `enrichRepos.ts:50` — HN/Reddit sentiment is a hardcoded placeholder `{ source: "stub", score: 0 }`.
+- `seedIdeas.ts` — empty-Pinecone fallback emits one templated idea; confirm the namespace and
+  replace if desired.
+
+## Notes
+- Deploy via `npm run deploy:prod` (strips Homebrew from PATH to avoid a conflicting `sst`).
+- `sst diff`/`deploy` regenerates `sst-env.d.ts`; if clobbered in a no-secrets context,
+  `git checkout -- sst-env.d.ts` (see `sst-typegen-gotchas` memory).
+- Engine only advances `laned[0]`/the running execution; the DISCOVERED backlog is inert.
 
 ---
 
-## Handoff prompt — Step 1 (UI ↔ backend integration)
+## Handoff prompt — Step 1 (publishing platform)
 
-> Copy-paste this into a fresh session to start the next recommended step.
+> Copy-paste into a fresh session to start the next recommended step.
 
 ```
-We just merged the DiffPress Content Engine backend to main (see
-docs/diffpress-content-engine-next-steps.md and
-docs/superpowers/specs/2026-06-14-diffpress-content-engine-design.md). Now I want to wire the
-/diffpress React UI to that backend.
+I want to build the DiffPress publishing platform (see
+docs/diffpress-content-engine-next-steps.md). Today deploy/syndication is a frontend mock
+(services.ts deployArticle + PublishConsole.tsx) and recordPublication.ts only marks the
+ledger PUBLISHED — nothing actually publishes anywhere.
 
-Please start by brainstorming this integration into a short spec (use the brainstorming skill).
-Before asking me questions, read these to ground the design:
-- Frontend service stubs:   src/components/diffpress/services.ts
-- Frontend store/state:     src/components/diffpress/store.ts
-- Backend handlers:         src/diffpress/ (esp. notifyHandoff.ts, publishHandoff.ts,
-                            lib/ledger.ts)
-- API + auth wiring:        sst.config.ts (the IngestApi routes + Cognito authorizer pattern)
+Please brainstorm this into a short spec (use the brainstorming skill) before any code.
+Ground the design by reading:
+- Frontend mock + UI:   src/components/diffpress/services.ts, PublishConsole.tsx, store.ts
+- Pipeline end:         src/diffpress/recordPublication.ts, lib/ledger.ts
+- API + auth + secrets: sst.config.ts (IngestApi routes, Cognito authorizer, SST secrets)
 
-Key gap to design around: the workflow pauses at a Step Functions task-token state, and
-notifyHandoff persists an AWAITING_HANDOFF item (with the taskToken) to the PublicationLifecycle
-table — but there is NO endpoint to read those items, so the UI can't get the taskToken needed
-to call POST /api/publish-handoff. So the integration almost certainly needs a new authenticated
-read endpoint (e.g. GET /api/handoffs) plus possibly a way to fetch the drafted article.
+Requirements:
+- Configure ALL destinations in the app UI — no webhook URLs / API keys / tokens hardcoded.
+- Generic HTTP publish target (url + auth header + body template) covering custom blogs and
+  dev.to/Ghost/WP/Hashnode; per-platform adapter only where the API deviates. Medium/Substack
+  have no usable publishing API — mark them manual/unsupported, don't fake them.
+- Custom personal site = a publish webhook the site exposes; engine POSTs the article to it.
+  Reuse the generateHandoff pattern to produce a "set up this webhook" brief.
+- Destinations config in DynamoDB; secrets in SST Secret/SSM referenced by name.
 
-Also resolve, during brainstorming:
-- How the frontend obtains/sends the Cognito JWT (match existing /ingest, /dashboard usage).
-- What deployArticle and triggerTechEditor (SSE) in services.ts should map to on the backend —
-  note that after publish-handoff resumes, draftArticle -> recordPublication already run
-  server-side automatically.
-
-Match existing repo conventions (handlers under src/, link[]-based IAM, the JWT authorizer
-already defined in sst.config.ts). Keep it minimal/YAGNI. End brainstorming with a written spec,
-then a plan.
+Match repo conventions (handlers under src/, link[]-based IAM, existing JWT authorizer).
+Keep it minimal/YAGNI. End brainstorming with a written spec, then a plan.
 ```
