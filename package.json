@@ -30,6 +30,7 @@
     "astro": "^5.16.6",
     "astro-sst": "3.1.4",
     "aws-amplify": "^6.16.0",
+    "aws-jwt-verify": "^5.2.1",
     "axios": "^1.13.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
