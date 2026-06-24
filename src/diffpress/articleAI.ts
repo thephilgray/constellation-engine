@@ -5,11 +5,11 @@ import { Resource } from "sst";
 import { sanitizeMarkdown } from "../utils";
 import { parseDraftResponse } from "./draftArticle";
 
-const MODEL = "gemini-2.5-pro";
+export const MODEL = "gemini-2.5-pro";
 
 // Lazy init so importing this module in unit tests needs no SST bindings.
 let genAI: GoogleGenAI | undefined;
-function getGenAI(): GoogleGenAI {
+export function getGenAI(): GoogleGenAI {
   if (!genAI) genAI = new GoogleGenAI({ apiKey: Resource.GEMINI_API_KEY.value });
   return genAI;
 }
