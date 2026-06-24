@@ -1,19 +1,15 @@
+import { DraftEditor } from "./DraftEditor";
 import { useDiffPress } from "./store";
-import { cn } from "@/lib/utils";
 
 /**
- * Editable view of an In-Review article's markdown. Loads from
- * GET /api/articles and saves edits back via PUT /api/articles. A plain
- * markdown textarea — no WYSIWYG; the orphaned DraftEditor stays unused.
+ * In-Review article surface. Loads an article's markdown from GET /api/articles,
+ * then hands off to the WYSIWYG DraftEditor (which renders the markdown, lets
+ * you edit it, and saves back via PUT /api/articles). Keyed by repo so the
+ * editor remounts — and re-seeds — when a different article is opened.
  */
 export function ArticleView() {
   const repo = useDiffPress((s) => s.articleRepo);
   const loading = useDiffPress((s) => s.articleLoading);
-  const markdown = useDiffPress((s) => s.articleMarkdown);
-  const saving = useDiffPress((s) => s.articleSaving);
-  const saved = useDiffPress((s) => s.articleSaved);
-  const setMarkdown = useDiffPress((s) => s.setArticleMarkdown);
-  const save = useDiffPress((s) => s.saveArticle);
 
   if (!repo) {
     return (
@@ -41,31 +37,5 @@ export function ArticleView() {
     );
   }
 
-  return (
-    <div>
-      <textarea
-        value={markdown}
-        onChange={(e) => setMarkdown(e.target.value)}
-        spellCheck
-        className="dp-prose min-h-[420px] w-full resize-y border-none bg-transparent font-dp-mono text-[14px] leading-[1.7] text-dp-ink outline-none"
-      />
-      <div className="mt-6 flex items-center gap-[13px]">
-        <button
-          onClick={save}
-          disabled={saving}
-          className={cn(
-            "whitespace-nowrap rounded-[9px] border-none px-[18px] py-[11px] text-[14px] font-medium tracking-[-0.01em] transition-opacity",
-            saving
-              ? "cursor-not-allowed bg-dp-line-2 text-dp-faint-3"
-              : "cursor-pointer bg-dp-ink text-dp-paper hover:opacity-[0.88]",
-          )}
-        >
-          {saving ? "Saving…" : "Save changes"}
-        </button>
-        {saved && !saving && (
-          <span className="text-[13px] text-dp-green">✓ Saved</span>
-        )}
-      </div>
-    </div>
-  );
+  return <DraftEditor key={repo} />;
 }

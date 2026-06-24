@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { ARTICLE_HTML, EMPTY_DEPLOY, TECH_EDITOR_NOTES } from "./data";
+import { EMPTY_DEPLOY, TECH_EDITOR_NOTES } from "./data";
 import {
   deployArticle,
   dismissCard as dismissCardApi,
@@ -84,10 +84,6 @@ interface DiffPressState {
   loadPipeline: () => Promise<void>;
   dismissCard: (repoName: string) => Promise<void>;
 
-  // ---- live draft (uncontrolled contentEditable, persisted across modes) ----
-  articleHtml: string;
-  saveArticleHtml: (html: string) => void;
-
   // ---- editable article view (real, fetched from + saved to the backend) ----
   articleRepo: string | null;
   articleTitle: string;
@@ -97,6 +93,7 @@ interface DiffPressState {
   articleSaved: boolean;
   openArticle: (repoName: string) => Promise<void>;
   setArticleMarkdown: (md: string) => void;
+  markArticleDirty: () => void;
   saveArticle: () => Promise<void>;
 
   // ---- command center ----
@@ -191,9 +188,6 @@ export const useDiffPress = create<DiffPressState>((set, get) => ({
     }
   },
 
-  articleHtml: ARTICLE_HTML,
-  saveArticleHtml: (articleHtml) => set({ articleHtml }),
-
   articleRepo: null,
   articleTitle: "",
   articleMarkdown: "",
@@ -225,6 +219,7 @@ export const useDiffPress = create<DiffPressState>((set, get) => ({
     }
   },
   setArticleMarkdown: (md) => set({ articleMarkdown: md, articleSaved: false }),
+  markArticleDirty: () => set({ articleSaved: false }),
   saveArticle: async () => {
     const { articleRepo, articleMarkdown } = get();
     if (!articleRepo) return;

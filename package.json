@@ -26,6 +26,7 @@
     "@tailwindcss/vite": "^4.1.18",
     "@types/react": "^19.2.9",
     "@types/react-dom": "^19.2.3",
+    "@types/turndown": "^5.0.6",
     "astro": "^5.16.6",
     "astro-sst": "3.1.4",
     "aws-amplify": "^6.16.0",
@@ -36,6 +37,7 @@
     "fast-xml-parser": "^5.3.3",
     "ksuid": "^3.0.0",
     "lucide-react": "^0.562.0",
+    "marked": "^18.0.5",
     "octokit": "^5.0.5",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
@@ -43,6 +45,7 @@
     "sst": "3.17.12",
     "tailwind-merge": "^3.4.0",
     "tailwindcss": "^4.1.18",
+    "turndown": "^7.2.4",
     "zod": "^3.25.76",
     "zustand": "^5.0.14"
   },

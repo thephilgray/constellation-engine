@@ -7,11 +7,11 @@ import {
   Plus,
   Quote as QuoteIcon,
   Type,
-  Video,
   WandSparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "./hooks";
+import { mdToHtml, htmlToMd } from "./markdownHtml";
 import { useDiffPress } from "./store";
 
 interface Rect {
@@ -20,8 +20,12 @@ interface Rect {
 }
 
 export function DraftEditor() {
-  const articleHtml = useDiffPress((s) => s.articleHtml);
-  const saveArticleHtml = useDiffPress((s) => s.saveArticleHtml);
+  const articleMarkdown = useDiffPress((s) => s.articleMarkdown);
+  const setArticleMarkdown = useDiffPress((s) => s.setArticleMarkdown);
+  const markArticleDirty = useDiffPress((s) => s.markArticleDirty);
+  const saveArticle = useDiffPress((s) => s.saveArticle);
+  const saving = useDiffPress((s) => s.articleSaving);
+  const saved = useDiffPress((s) => s.articleSaved);
   const isMobile = useIsMobile();
 
   const proseRef = useRef<HTMLDivElement | null>(null);
@@ -73,18 +77,25 @@ export function DraftEditor() {
     setSelBar(null);
   }, [closestBlock]);
 
-  // seed the editor once (uncontrolled) + wire selection tracking
+  // seed the editor once from the article markdown (uncontrolled) + wire
+  // selection tracking. The component is remounted (keyed by repo) per article,
+  // so this mount-only seed re-runs whenever a different article is opened.
   useEffect(() => {
     const el = proseRef.current;
-    if (el && el.innerHTML !== articleHtml) el.innerHTML = articleHtml;
+    if (el) el.innerHTML = mdToHtml(articleMarkdown);
     document.addEventListener("selectionchange", onSelChange);
-    return () => {
-      document.removeEventListener("selectionchange", onSelChange);
-      if (proseRef.current) saveArticleHtml(proseRef.current.innerHTML);
-    };
-    // mount-only: articleHtml is the seed, not a controlled value
+    return () => document.removeEventListener("selectionchange", onSelChange);
+    // mount-only: articleMarkdown is the seed, not a controlled value
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Serialize the edited HTML back to markdown and persist.
+  const save = useCallback(() => {
+    const el = proseRef.current;
+    if (!el) return;
+    setArticleMarkdown(htmlToMd(el.innerHTML));
+    void saveArticle();
+  }, [setArticleMarkdown, saveArticle]);
 
   // ---- formatting commands ----
   const exec = useCallback(
@@ -171,33 +182,20 @@ export function DraftEditor() {
     setInsertOpen(false);
     onSelChange();
   };
-  const embedHTML = (kind: "image" | "video") => {
-    const tag = kind === "video" ? "VIDEO" : "IMAGE";
-    const hint =
-      kind === "video"
-        ? "embed video · paste a YouTube, Loom or Vimeo URL"
-        : "image · drag a file in or paste a URL";
-    const glyph =
-      kind === "video"
-        ? '<span class="dp-play"></span>'
-        : '<span class="dp-imgmark"></span>';
-    return (
-      `<figure class="dp-embed" data-kind="${kind}" contenteditable="false">` +
-      `<div class="dp-embed-media"><span class="dp-embed-ico">${glyph}</span>` +
-      `<span class="dp-embed-tag">${tag}</span>` +
-      `<span class="dp-embed-hint">${hint}</span></div>` +
-      `<figcaption class="dp-cap" contenteditable="true">Add a caption…</figcaption></figure><p><br></p>`
-    );
-  };
-
   const insHeading = () => formatBlockFromMenu("H2");
   const insQuote = () => formatBlockFromMenu("BLOCKQUOTE");
   const insText = () => formatBlockFromMenu("P");
   const insCode = () =>
     insBlock('<pre class="dp-code"><code>// your code here</code></pre><p><br></p>');
   const insDivider = () => insBlock('<hr class="dp-hr"><p><br></p>');
-  const insImage = () => insBlock(embedHTML("image"));
-  const insVideo = () => insBlock(embedHTML("video"));
+  // Real <img> (serializes to markdown ![alt](url)); skip the mock embed figures
+  // and video, which have no markdown representation.
+  const insImage = () => {
+    const url = window.prompt("Image URL", "https://");
+    if (!url) return;
+    const alt = window.prompt("Alt text", "") ?? "";
+    insBlock(`<p><img src="${url}" alt="${alt}"></p><p><br></p>`);
+  };
 
   // ---- markdown shortcuts ----
   const onKeyDown = (e: React.KeyboardEvent) => {
@@ -263,11 +261,30 @@ export function DraftEditor() {
         suppressContentEditableWarning
         spellCheck
         onKeyDown={onKeyDown}
+        onInput={markArticleDirty}
         onMouseUp={onSelChange}
         onFocus={onSelChange}
         className="dp-prose min-h-[340px] w-full pb-10 outline-none"
         style={{ paddingLeft: isMobile ? 34 : 0 }}
       />
+
+      <div className="mt-2 flex items-center gap-[13px]">
+        <button
+          onClick={save}
+          disabled={saving}
+          className={cn(
+            "whitespace-nowrap rounded-[9px] border-none px-[18px] py-[11px] text-[14px] font-medium tracking-[-0.01em] transition-opacity",
+            saving
+              ? "cursor-not-allowed bg-dp-line-2 text-dp-faint-3"
+              : "cursor-pointer bg-dp-ink text-dp-paper hover:opacity-[0.88]",
+          )}
+        >
+          {saving ? "Saving…" : "Save changes"}
+        </button>
+        {saved && !saving && (
+          <span className="text-[13px] text-dp-green">✓ Saved</span>
+        )}
+      </div>
 
       {/* caret "+" gutter button */}
       {showPlus && (
@@ -312,11 +329,6 @@ export function DraftEditor() {
               label="Image"
             />
             <PopoverItem
-              onClick={insVideo}
-              icon={<Video size={15} strokeWidth={1.7} />}
-              label="Video"
-            />
-            <PopoverItem
               onClick={insDivider}
               icon={<Minus size={15} strokeWidth={1.8} />}
               label="Divider"
@@ -354,7 +366,6 @@ export function DraftEditor() {
               <SheetTile onClick={insQuote} icon={<QuoteIcon size={16} strokeWidth={1.7} />} label="Quote" />
               <SheetTile onClick={insCode} icon={<Code size={16} strokeWidth={1.8} />} label="Code" />
               <SheetTile onClick={insImage} icon={<ImageIcon size={16} strokeWidth={1.7} />} label="Image" />
-              <SheetTile onClick={insVideo} icon={<Video size={16} strokeWidth={1.7} />} label="Video" />
               <SheetTile onClick={insDivider} icon={<Minus size={16} strokeWidth={1.8} />} label="Divider" />
             </div>
           </div>
