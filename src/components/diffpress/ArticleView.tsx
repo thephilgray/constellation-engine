@@ -10,6 +10,7 @@ import { useDiffPress } from "./store";
 export function ArticleView() {
   const repo = useDiffPress((s) => s.articleRepo);
   const loading = useDiffPress((s) => s.articleLoading);
+  const seed = useDiffPress((s) => s.articleSeed);
 
   if (!repo) {
     return (
@@ -37,5 +38,5 @@ export function ArticleView() {
     );
   }
 
-  return <DraftEditor key={repo} />;
+  return <DraftEditor key={`${repo}:${seed}`} />;
 }

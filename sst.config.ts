@@ -444,11 +444,37 @@ export default $config({
       },
     });
 
-    // Save edits to an existing article's markdown in place.
+    // Save edits to an existing article's markdown in place (also snapshots a draft).
     api.route("PUT /api/articles", {
       handler: "src/diffpress/saveArticle.handler",
-      link: [auth, publicationLifecycle],
+      link: [auth, publicationLifecycle, contentPayloadBucket],
       timeout: "30 seconds",
+    }, {
+      auth: {
+        jwt: {
+          authorizer: authorizer.id,
+        },
+      },
+    });
+
+    // List/restore versioned article drafts (S3-backed). `?ts=` fetches one draft.
+    api.route("GET /api/articles/drafts", {
+      handler: "src/diffpress/articleDrafts.handler",
+      link: [auth, publicationLifecycle, contentPayloadBucket],
+      timeout: "30 seconds",
+    }, {
+      auth: {
+        jwt: {
+          authorizer: authorizer.id,
+        },
+      },
+    });
+
+    // AI editor: review / reply / revise actions (Gemini). `action` discriminates.
+    api.route("POST /api/articles/ai", {
+      handler: "src/diffpress/articleAI.handler",
+      link: [auth, GEMINI_API_KEY],
+      timeout: "120 seconds",
     }, {
       auth: {
         jwt: {

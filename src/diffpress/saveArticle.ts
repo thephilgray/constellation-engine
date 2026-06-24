@@ -1,6 +1,7 @@
 // src/diffpress/saveArticle.ts
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from "aws-lambda";
 import { saveArticle } from "./lib/ledger";
+import { putDraft } from "./lib/draftStore";
 
 export type SaveArticleInput =
   | { ok: true; repo: string; articleMarkdown: string; title?: string }
@@ -45,7 +46,13 @@ export async function handler(
       articleMarkdown: parsed.articleMarkdown,
       title: parsed.title,
     });
-    return { statusCode: 200, body: JSON.stringify({ ok: true }) };
+    // Dynamo is source of truth; snapshot a versioned draft after. Awaited so a
+    // draft-write failure surfaces as a 500 rather than passing silently.
+    const ts = await putDraft(parsed.repo, {
+      articleMarkdown: parsed.articleMarkdown,
+      title: parsed.title,
+    });
+    return { statusCode: 200, body: JSON.stringify({ ok: true, draftTs: ts }) };
   } catch (error: any) {
     if (error?.name === "ConditionalCheckFailedException") {
       return { statusCode: 404, body: JSON.stringify({ message: "Article not found." }) };

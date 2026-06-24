@@ -26,7 +26,16 @@ export function DraftEditor() {
   const saveArticle = useDiffPress((s) => s.saveArticle);
   const saving = useDiffPress((s) => s.articleSaving);
   const saved = useDiffPress((s) => s.articleSaved);
+  const drafts = useDiffPress((s) => s.drafts);
+  const restoreDraft = useDiffPress((s) => s.restoreDraft);
+  const setEditorMode = useDiffPress((s) => s.setEditorMode);
+  const runReview = useDiffPress((s) => s.runReview);
+  const reviseArticle = useDiffPress((s) => s.reviseArticle);
+  const revising = useDiffPress((s) => s.revising);
   const isMobile = useIsMobile();
+
+  const [instruction, setInstruction] = useState("");
+  const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const proseRef = useRef<HTMLDivElement | null>(null);
   const savedRange = useRef<Range | null>(null);
@@ -93,9 +102,44 @@ export function DraftEditor() {
   const save = useCallback(() => {
     const el = proseRef.current;
     if (!el) return;
+    if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
     setArticleMarkdown(htmlToMd(el.innerHTML));
     void saveArticle();
   }, [setArticleMarkdown, saveArticle]);
+
+  // Debounced autosave: ~2s after the last keystroke. The store's in-flight
+  // guard skips overlapping saves; the next input reschedules anyway.
+  const onInput = useCallback(() => {
+    markArticleDirty();
+    if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+    autosaveTimer.current = setTimeout(save, 2000);
+  }, [markArticleDirty, save]);
+
+  useEffect(
+    () => () => {
+      if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+    },
+    [],
+  );
+
+  // Push the latest editor DOM into the store before an AI action reads it.
+  const syncMarkdown = useCallback(() => {
+    const el = proseRef.current;
+    if (el) setArticleMarkdown(htmlToMd(el.innerHTML));
+  }, [setArticleMarkdown]);
+
+  const onRunReview = useCallback(() => {
+    syncMarkdown();
+    setEditorMode("review");
+    void runReview();
+  }, [syncMarkdown, setEditorMode, runReview]);
+
+  const onRevise = useCallback(() => {
+    if (!instruction.trim()) return;
+    syncMarkdown();
+    void reviseArticle(instruction.trim());
+    setInstruction("");
+  }, [instruction, syncMarkdown, reviseArticle]);
 
   // ---- formatting commands ----
   const exec = useCallback(
@@ -261,7 +305,7 @@ export function DraftEditor() {
         suppressContentEditableWarning
         spellCheck
         onKeyDown={onKeyDown}
-        onInput={markArticleDirty}
+        onInput={onInput}
         onMouseUp={onSelChange}
         onFocus={onSelChange}
         className="dp-prose min-h-[340px] w-full pb-10 outline-none"
@@ -284,7 +328,64 @@ export function DraftEditor() {
         {saved && !saving && (
           <span className="text-[13px] text-dp-green">✓ Saved</span>
         )}
+        <button
+          onClick={onRunReview}
+          className="ml-auto flex cursor-pointer items-center gap-[6px] rounded-[9px] border border-dp-line-3 bg-transparent px-[14px] py-[10px] text-[13px] font-medium text-dp-slate transition-colors hover:bg-dp-hover"
+        >
+          <WandSparkles size={14} strokeWidth={1.8} />
+          Run AI review
+        </button>
       </div>
+
+      {/* General "revise the whole article" instruction box. */}
+      <div className="mt-5 flex items-center gap-2 rounded-[11px] border border-dp-line-2 bg-dp-wash px-[13px] py-[9px]">
+        <WandSparkles size={15} strokeWidth={1.7} className="flex-[0_0_auto] text-dp-faint-3" />
+        <input
+          value={instruction}
+          onChange={(e) => setInstruction(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") onRevise();
+          }}
+          disabled={revising}
+          placeholder="Tell the editor what to change…"
+          className="flex-1 border-none bg-transparent text-[14px] text-dp-ink outline-none disabled:opacity-60"
+        />
+        <button
+          onClick={onRevise}
+          disabled={revising || !instruction.trim()}
+          className={cn(
+            "whitespace-nowrap rounded-[8px] border-none px-[13px] py-[7px] text-[12.5px] font-medium transition-opacity",
+            revising || !instruction.trim()
+              ? "cursor-not-allowed bg-dp-line-2 text-dp-faint-3"
+              : "cursor-pointer bg-dp-slate text-white hover:opacity-[0.88]",
+          )}
+        >
+          {revising ? "Revising…" : "Revise"}
+        </button>
+      </div>
+
+      {drafts.length > 0 && (
+        <div className="mt-6 border-t border-dp-line-2 pt-4">
+          <div className="mb-2 text-[10.5px] uppercase tracking-[0.11em] text-dp-faint-2">
+            Version history
+          </div>
+          <ul className="flex flex-col gap-1">
+            {drafts.map((d) => (
+              <li key={d.ts} className="flex items-center justify-between text-[13px] text-dp-muted">
+                <span className="font-dp-mono text-[12px] text-dp-faint">
+                  {new Date(d.ts).toLocaleString()}
+                </span>
+                <button
+                  onClick={() => void restoreDraft(d.ts)}
+                  className="cursor-pointer rounded-md border-none bg-transparent px-2 py-1 text-[12.5px] text-dp-slate hover:bg-dp-hover"
+                >
+                  Restore
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* caret "+" gutter button */}
       {showPlus && (

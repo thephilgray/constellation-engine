@@ -68,18 +68,6 @@ export interface HandoffDoc {
   repoUrl?: string;
 }
 
-/** A single marginalia note streamed from the AI Tech Editor (SSE). */
-export interface TechEditorNote {
-  id: string; // n1..n4
-  note: string; // the editorial rationale
-  diff: DiffLine[]; // the suggested change
-}
-
-export interface DiffLine {
-  kind: "context" | "remove" | "add";
-  text: string;
-}
-
 export type DiscoveryMode = "frontier" | "balanced" | "ecosystem";
 export type EngineState = "active" | "paused" | "off";
 export type Timing = "now" | "schedule";
@@ -145,4 +133,22 @@ export interface ArticleResponse {
   articleMarkdown: string;
   publishedAt?: string;
   status: string;
+}
+
+export interface DraftMeta {
+  ts: string;
+}
+
+export interface ReviewNote {
+  id: string;
+  anchorText: string;
+  note: string;
+  replacement: string;
+}
+
+export interface DraftBody {
+  ts: string;
+  savedAt: string;
+  title?: string;
+  articleMarkdown: string;
 }

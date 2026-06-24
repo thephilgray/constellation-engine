@@ -49,8 +49,10 @@ export function TopBar() {
   const engineState = useDiffPress((s) => s.engineState);
   const discoveryMode = useDiffPress((s) => s.discoveryMode);
   const cmdOpen = useDiffPress((s) => s.cmdOpen);
+  const editorMode = useDiffPress((s) => s.editorMode);
   const goDashboard = useDiffPress((s) => s.goDashboard);
   const goEditor = useDiffPress((s) => s.goEditor);
+  const setEditorMode = useDiffPress((s) => s.setEditorMode);
   const toggleCmd = useDiffPress((s) => s.toggleCmd);
 
   const modeName =
@@ -110,14 +112,16 @@ export function TopBar() {
           </button>
         ) : (
           <div className="flex items-center gap-[18px]">
-            <NavLink label="Article" active onClick={() => {}} />
-            <button
-              disabled
-              title="AI Tech Editor — coming soon"
-              className="cursor-not-allowed border-none bg-transparent px-px py-1 text-sm font-[450] tracking-[-0.01em] text-dp-faint opacity-40"
-            >
-              Review
-            </button>
+            <NavLink
+              label="Article"
+              active={editorMode === "draft"}
+              onClick={() => setEditorMode("draft")}
+            />
+            <NavLink
+              label="Review"
+              active={editorMode === "review"}
+              onClick={() => setEditorMode("review")}
+            />
           </div>
         )}
       </div>

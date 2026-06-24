@@ -6,14 +6,15 @@
 // stubs below are retained but never invoked.
 
 import { authedFetch } from "@/lib/authedApi";
-import { TECH_EDITOR_NOTES } from "./data";
 import type {
   ArticleResponse,
   DeployPayload,
   DiscoveryConfig,
+  DraftBody,
+  DraftMeta,
   HandoffsResponse,
   PipelineData,
-  TechEditorNote,
+  ReviewNote,
 } from "./types";
 
 const delay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
@@ -144,6 +145,71 @@ export async function saveArticle(
   if (!res.ok) throw new Error(`Failed to save article (${res.status})`);
 }
 
+/** List an article's versioned drafts (newest-first) via `GET /api/articles/drafts`. */
+export async function listDrafts(repoName: string): Promise<DraftMeta[]> {
+  const res = await authedFetch(
+    `/api/articles/drafts?repo=${encodeURIComponent(repoName)}`,
+  );
+  if (!res.ok) throw new Error(`Failed to list drafts (${res.status})`);
+  const body: { drafts: DraftMeta[] } = await res.json();
+  return body.drafts;
+}
+
+/** Fetch a single draft's full body via `GET /api/articles/drafts?ts=`. */
+export async function getDraft(repoName: string, ts: string): Promise<DraftBody> {
+  const res = await authedFetch(
+    `/api/articles/drafts?repo=${encodeURIComponent(repoName)}&ts=${encodeURIComponent(ts)}`,
+  );
+  if (!res.ok) throw new Error(`Failed to load draft (${res.status})`);
+  return res.json();
+}
+
+/** Run the AI Tech Editor over the article via `POST /api/articles/ai`. */
+export async function runReview(
+  repo: string,
+  articleMarkdown: string,
+): Promise<ReviewNote[]> {
+  const res = await authedFetch("/api/articles/ai", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "review", repo, articleMarkdown }),
+  });
+  if (!res.ok) throw new Error(`Failed to run review (${res.status})`);
+  const body: { notes: ReviewNote[] } = await res.json();
+  return body.notes;
+}
+
+/** Push back on a single review note; the editor may revise its `replacement`. */
+export async function replyToNote(input: {
+  articleMarkdown: string;
+  note: string;
+  conversation: string[];
+  message: string;
+}): Promise<{ reply: string; replacement?: string }> {
+  const res = await authedFetch("/api/articles/ai", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "reply", ...input }),
+  });
+  if (!res.ok) throw new Error(`Failed to reply to note (${res.status})`);
+  return res.json();
+}
+
+/** Whole-article rewrite from a general instruction. Returns the new article. */
+export async function reviseArticle(
+  repo: string,
+  articleMarkdown: string,
+  instruction: string,
+): Promise<{ title: string; articleMarkdown: string }> {
+  const res = await authedFetch("/api/articles/ai", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "revise", repo, articleMarkdown, instruction }),
+  });
+  if (!res.ok) throw new Error(`Failed to revise article (${res.status})`);
+  return res.json();
+}
+
 /** Deploy / syndicate the finished article. Eventually a deploy Step Function. */
 export async function deployArticle(
   payload: DeployPayload,
@@ -165,42 +231,3 @@ export async function deployArticle(
   return { ok: true, summary };
 }
 
-export interface TechEditorStream {
-  /** Called once per note as it "arrives" over the stream. */
-  onNote: (note: TechEditorNote) => void;
-  onDone?: () => void;
-  onError?: (err: unknown) => void;
-}
-
-/**
- * Trigger the Marginalia AI Tech Editor. Simulates a Server-Sent Events stream:
- * the model emits notes one at a time with realistic gaps, so the margin
- * indicators can pop in progressively. Returns a cancel function (mirrors
- * `EventSource.close()`), which the caller should invoke on unmount.
- */
-export function triggerTechEditor(
-  articleId: string,
-  { onNote, onDone, onError }: TechEditorStream,
-): () => void {
-  let cancelled = false;
-
-  (async () => {
-    try {
-      // initial "thinking" gap before the first note lands
-      await delay(600);
-      for (const note of TECH_EDITOR_NOTES) {
-        if (cancelled) return;
-        await delay(700 + Math.random() * 700);
-        if (cancelled) return;
-        onNote(note);
-      }
-      if (!cancelled) onDone?.();
-    } catch (err) {
-      if (!cancelled) onError?.(err);
-    }
-  })();
-
-  return () => {
-    cancelled = true;
-  };
-}

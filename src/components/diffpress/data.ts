@@ -1,7 +1,7 @@
 // Static mock data for the DiffPress workspace. In production these payloads
 // arrive from the API; here they seed the stubbed services in `services.ts`.
 
-import type { DeployPayload, TechEditorNote } from "./types";
+import type { DeployPayload } from "./types";
 
 // The article body for the live Draft editor (contentEditable seed HTML).
 export const ARTICLE_HTML = `<div class="dp-meta">helix-labs/helix&nbsp;&nbsp;·&nbsp;&nbsp;★ 14.2k&nbsp;&nbsp;·&nbsp;&nbsp;+2.1k this week</div>
@@ -20,49 +20,6 @@ async def research(topic: str) -> Brief:
 <p>The elegance has a cost. Because recovery replays your function from the top, every side-effect above a checkpoint must be deterministic.</p>
 <h2>Verdict</h2>
 <p>Helix is the most coherent answer to durable agents we have reviewed. It is not yet the easy one — but for teams comfortable with event-sourced systems, the model will feel inevitable.</p>`;
-
-// The marginalia notes the AI Tech Editor streams over SSE, in arrival order.
-export const TECH_EDITOR_NOTES: TechEditorNote[] = [
-  {
-    id: "n1",
-    note: '"Compiles it into a state machine" overstates what happens at decoration time — registration is lazy. Hedge to a resumable step and keep the transaction line as the punchline.',
-    diff: [
-      { kind: "context", text: "…decorate a function with @step, and Helix" },
-      { kind: "remove", text: "compiles it into a state machine that survives" },
-      { kind: "add", text: "registers it as a resumable step whose state survives" },
-      { kind: "context", text: "process restarts, redeploys, and timeouts." },
-    ],
-  },
-  {
-    id: "n2",
-    note: 'Sharp observation, but "every line" is too strong — pure logic replays fine. Only side-effects above the checkpoint are dangerous. Scope the claim so readers don\'t over-correct.',
-    diff: [
-      { kind: "context", text: "…replays your function from the top," },
-      { kind: "remove", text: "every line above a checkpoint must be deterministic." },
-      { kind: "add", text: "every side-effect above a checkpoint must be deterministic" },
-      { kind: "add", text: "(pure logic is free to re-run)." },
-    ],
-  },
-  {
-    id: "n3",
-    note: "Cite the log precisely — the forty-minute figure is the p50 across the three machines in the log, not one heroic bad run. The qualifier protects us if a maintainer disputes it.",
-    diff: [
-      { kind: "context", text: "…log clocks a clean-clone-to-first-run at" },
-      { kind: "remove", text: "just under forty minutes," },
-      { kind: "add", text: "a p50 of 38 minutes across three machines," },
-      { kind: "context", text: "most of it spent discovering Postgres." },
-    ],
-  },
-  {
-    id: "n4",
-    note: "Strong close. Name the one fix that flips the verdict — it makes the review actionable for the maintainers and shows we did the homework.",
-    diff: [
-      { kind: "context", text: "…an agent is just a while-loop." },
-      { kind: "add", text: "A first-run `helix doctor` that provisions" },
-      { kind: "add", text: "Postgres would move this from coherent to recommended." },
-    ],
-  },
-];
 
 export const EMPTY_DEPLOY: Omit<DeployPayload, "articleId"> = {
   targets: { devto: true, linkedin: false, substack: true, portfolio: true },

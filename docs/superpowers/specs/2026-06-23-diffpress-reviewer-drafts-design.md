@@ -1,7 +1,7 @@
 # DiffPress: Real Reviewer + General Feedback + Drafts + Autosave
 
 **Date:** 2026-06-23
-**Status:** Design approved, pending implementation plan
+**Status:** Implemented 2026-06-23 (Phases A/B/C). Not yet deployed or e2e-verified.
 
 ## Problem
 
