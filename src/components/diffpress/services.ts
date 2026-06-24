@@ -131,6 +131,19 @@ export async function fetchArticle(repoName: string): Promise<ArticleResponse> {
   return res.json();
 }
 
+/** Persist edits to an existing article via `PUT /api/articles`. */
+export async function saveArticle(
+  repoName: string,
+  articleMarkdown: string,
+): Promise<void> {
+  const res = await authedFetch("/api/articles", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ repo: repoName, articleMarkdown }),
+  });
+  if (!res.ok) throw new Error(`Failed to save article (${res.status})`);
+}
+
 /** Deploy / syndicate the finished article. Eventually a deploy Step Function. */
 export async function deployArticle(
   payload: DeployPayload,

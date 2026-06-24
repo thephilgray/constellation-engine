@@ -120,6 +120,27 @@ export function buildSetHandoffPromptParams(
   };
 }
 
+/** Pure: overwrite an existing article's markdown (and title) in place. */
+export function buildSaveArticleParams(
+  table: string,
+  repoName: string,
+  meta: { articleMarkdown: string; title?: string }
+): UpdateCommandInput {
+  return {
+    TableName: table,
+    Key: { repoName },
+    UpdateExpression: meta.title
+      ? "SET articleMarkdown = :article, title = :title"
+      : "SET articleMarkdown = :article",
+    // Edit only an existing record; never conjure a new one from a stray repoName.
+    ConditionExpression: "attribute_exists(repoName)",
+    ExpressionAttributeValues: {
+      ":article": meta.articleMarkdown,
+      ...(meta.title ? { ":title": meta.title } : {}),
+    },
+  };
+}
+
 /** Pure: is this error a DynamoDB conditional-check failure (already published)? */
 export function isAlreadyPublishedError(err: unknown): boolean {
   return (
@@ -153,6 +174,16 @@ export async function markPublished(
     }
     throw err;
   }
+}
+
+/** Overwrite an existing article's markdown (and title) in place. */
+export async function saveArticle(
+  repoName: string,
+  meta: { articleMarkdown: string; title?: string }
+): Promise<void> {
+  await docClient.send(
+    new UpdateCommand(buildSaveArticleParams(tableName(), repoName, meta))
+  );
 }
 
 /**

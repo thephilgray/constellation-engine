@@ -4,6 +4,7 @@ import {
   deployArticle,
   dismissCard as dismissCardApi,
   fetchArticle,
+  saveArticle as saveArticleApi,
   fetchCandidates,
   fetchDiscoveryConfig,
   saveDiscoveryConfig,
@@ -87,12 +88,16 @@ interface DiffPressState {
   articleHtml: string;
   saveArticleHtml: (html: string) => void;
 
-  // ---- read-only article view (real, fetched from the backend) ----
+  // ---- editable article view (real, fetched from + saved to the backend) ----
   articleRepo: string | null;
   articleTitle: string;
   articleMarkdown: string;
   articleLoading: boolean;
+  articleSaving: boolean;
+  articleSaved: boolean;
   openArticle: (repoName: string) => Promise<void>;
+  setArticleMarkdown: (md: string) => void;
+  saveArticle: () => Promise<void>;
 
   // ---- command center ----
   cmdOpen: boolean;
@@ -193,6 +198,8 @@ export const useDiffPress = create<DiffPressState>((set, get) => ({
   articleTitle: "",
   articleMarkdown: "",
   articleLoading: false,
+  articleSaving: false,
+  articleSaved: false,
   openArticle: async (repoName) => {
     set({
       view: "editor",
@@ -200,6 +207,7 @@ export const useDiffPress = create<DiffPressState>((set, get) => ({
       articleTitle: "",
       articleMarkdown: "",
       articleLoading: true,
+      articleSaved: false,
     });
     try {
       const article = await fetchArticle(repoName);
@@ -214,6 +222,19 @@ export const useDiffPress = create<DiffPressState>((set, get) => ({
     } catch (err) {
       console.warn("[diffpress] failed to load article:", err);
       if (get().articleRepo === repoName) set({ articleLoading: false });
+    }
+  },
+  setArticleMarkdown: (md) => set({ articleMarkdown: md, articleSaved: false }),
+  saveArticle: async () => {
+    const { articleRepo, articleMarkdown } = get();
+    if (!articleRepo) return;
+    set({ articleSaving: true });
+    try {
+      await saveArticleApi(articleRepo, articleMarkdown);
+      set({ articleSaving: false, articleSaved: true });
+    } catch (err) {
+      console.warn("[diffpress] failed to save article:", err);
+      set({ articleSaving: false });
     }
   },
 

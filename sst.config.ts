@@ -444,6 +444,19 @@ export default $config({
       },
     });
 
+    // Save edits to an existing article's markdown in place.
+    api.route("PUT /api/articles", {
+      handler: "src/diffpress/saveArticle.handler",
+      link: [auth, publicationLifecycle],
+      timeout: "30 seconds",
+    }, {
+      auth: {
+        jwt: {
+          authorizer: authorizer.id,
+        },
+      },
+    });
+
     // Read/write the Pipeline Command Center config (engine state, mode, velocity).
     for (const method of ["GET", "POST"] as const) {
       api.route(`${method} /api/discovery-config`, {
