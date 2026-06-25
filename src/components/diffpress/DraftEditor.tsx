@@ -170,9 +170,36 @@ export function DraftEditor() {
   const doQuote = () =>
     exec("formatBlock", curBlockTag() === "BLOCKQUOTE" ? "P" : "BLOCKQUOTE");
   const doText = () => exec("formatBlock", "P");
+  // Walk up from the selection to find an enclosing <a>, if any.
+  const currentAnchor = useCallback((): HTMLAnchorElement | null => {
+    const sel = window.getSelection();
+    if (!sel || !sel.rangeCount) return null;
+    let n: Node | null = sel.getRangeAt(0).startContainer;
+    while (n && n !== proseRef.current) {
+      if (n.nodeType === 1 && (n as HTMLElement).tagName === "A") return n as HTMLAnchorElement;
+      n = n.parentNode;
+    }
+    return null;
+  }, []);
+  // ponytail: reuse window.prompt like image insert; build an inline popover only if the dialog clashes with the new design
   const doLink = () => {
-    const u = window.prompt("Link URL", "https://");
-    if (u) exec("createLink", u);
+    const existing = currentAnchor();
+    const current = existing?.getAttribute("href") ?? "https://";
+    const u = window.prompt("Link URL (empty to remove)", current);
+    if (u === null) return; // cancelled
+    if (u.trim() === "" && existing) {
+      exec("unlink");
+      return;
+    }
+    if (existing) {
+      // Re-select the whole anchor so createLink replaces its href cleanly.
+      const r = document.createRange();
+      r.selectNode(existing);
+      const s = window.getSelection();
+      s?.removeAllRanges();
+      s?.addRange(r);
+    }
+    if (u.trim()) exec("createLink", u.trim());
   };
   const doCode = () => {
     const sel = window.getSelection();
