@@ -28,27 +28,32 @@ are just things that produce new drafts.
 | Question | Decision |
 |---|---|
 | Reviewer shape | Real critique with per-note proposed change + apply + per-note pushback + publish gating |
-| Note placement | **Side panel of note cards** (no DOM anchoring — see below) |
-| Note anchoring | `anchorText` is a verbatim snippet used as *data* (for Apply + display), **not** for DOM positioning |
+| Note placement | ~~Side panel of note cards~~ → **REVERSED 2026-06-24: margin-anchored cards per `docs/diffpress/DiffPress.source.html`** (see below) |
+| Note anchoring | `anchorText` is data for Apply **and** DOM positioning: the note's dot/card anchor to the block whose text contains `anchorText`; unlocatable notes fall back to a list |
 | Pushback | Real per-note conversation with the LLM (may revise the proposed change) |
-| General feedback | Separate global "revise whole article" box |
-| Reviewer trigger | On-demand "Run AI review" button |
+| General feedback | Docked revise bar; **the same input also focuses Run review** (typed text → review emphasis; empty → general review) — added 2026-06-24 |
+| Reviewer trigger | On-demand "Run review" in the docked bar (passes the focus text) |
 | Draft storage | S3 timestamped objects in the existing `ContentPayloadBucket` |
 | Autosave | Debounced (~2s after input), alongside manual save |
 
-### Why no DOM anchoring
+### DOM anchoring — REVERSED 2026-06-24
 
-`anchorText` has two possible uses. (1) **As data for Apply:** applying a note string-replaces
-`anchorText → replacement` in the markdown — a pure string op, needed regardless; if the
-snippet isn't found, Apply is disabled for that note. (2) **As DOM positioning:** walking
-rendered text nodes to float a margin dot next to the exact paragraph — brittle (breaks on
-duplicate/paraphrased text), expensive bounding-rect math, the one real risk in the plan.
+The original spec dropped DOM anchoring as brittle and shipped a side panel. In use, the side
+panel forced a "find the quoted line, apply, then re-find it to confirm" search loop. Per user
+direction, we restore the **margin-anchored design** from `docs/diffpress/DiffPress.source.html`:
 
-We keep (1) and drop (2). The reviewer renders the article read-only with a **side panel** of
-note cards; each card shows the quoted snippet (so you see what it refers to), the critique,
-the before→after diff, Apply, and pushback. This delivers the full critique-and-apply loop
-and loses only the cosmetic marginalia placement. Inline positioning, if later wanted, is a
-purely additive enhancement.
+- Review mode widens to a ~1068px wrapper; the prose stays a 680px column.
+- The article HTML is split into block elements; each renders in a `position: relative` wrapper.
+- For each note, its **gutter dot** (`left: calc(100% + 20px)`) and, when open, its **card**
+  (`left: calc(100% + 48px)`, 332px) anchor to the **first block whose text contains
+  `anchorText`** — block-level matching, no per-text-node bounding-rect math.
+- One card open at a time (`openNote`). Dot states: hollow (closed) · filled (open) · solid
+  (resolved). Apply edit & resolve string-replaces `anchorText → replacement` as before.
+- Below ~1080px viewport it falls back to **inline**: a dot+label under the paragraph and a
+  full-width card (the old side-panel card body, reused).
+- **Robustness:** a note whose `anchorText` matches no block is not lost — it renders in a
+  fallback list under the article. `applyNote`/`canApply` logic is unchanged (still a pure
+  string op on the markdown).
 
 ## Data model
 
