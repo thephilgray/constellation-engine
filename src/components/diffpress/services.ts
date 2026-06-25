@@ -199,8 +199,9 @@ export async function runReviewStream(
   repo: string,
   articleMarkdown: string,
   onNote: (n: ReviewNote) => void,
+  focus?: string,
 ): Promise<void> {
-  for await (const msg of sseStream({ action: "review", repo, articleMarkdown })) {
+  for await (const msg of sseStream({ action: "review", repo, articleMarkdown, focus })) {
     if (msg.error) throw new Error(msg.error);
     if (msg.note) onNote(msg.note);
     if (msg.done) return;

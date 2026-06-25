@@ -17,7 +17,7 @@ export function getGenAI(): GoogleGenAI {
 export type ReviewNote = { id: string; anchorText: string; note: string; replacement: string };
 
 export type AIRequest =
-  | { ok: true; action: "review"; repo: string; articleMarkdown: string }
+  | { ok: true; action: "review"; repo: string; articleMarkdown: string; focus?: string }
   | {
       ok: true;
       action: "reply";
@@ -47,7 +47,13 @@ export function parseAIRequest(event: APIGatewayProxyEventV2): AIRequest {
     case "review":
       if (!str(body.repo) || !body.repo.trim()) return bad("Missing required `repo`.");
       if (!str(body.articleMarkdown)) return bad("Missing required `articleMarkdown`.");
-      return { ok: true, action: "review", repo: body.repo, articleMarkdown: body.articleMarkdown };
+      return {
+        ok: true,
+        action: "review",
+        repo: body.repo,
+        articleMarkdown: body.articleMarkdown,
+        ...(str(body.focus) && body.focus.trim() ? { focus: body.focus.trim() } : {}),
+      };
     case "reply":
       if (!str(body.articleMarkdown)) return bad("Missing required `articleMarkdown`.");
       if (!str(body.note)) return bad("Missing required `note`.");
@@ -78,9 +84,12 @@ export function parseAIRequest(event: APIGatewayProxyEventV2): AIRequest {
 
 // ---- review ----
 
-export function buildReviewPrompt(articleMarkdown: string): string {
+export function buildReviewPrompt(articleMarkdown: string, focus?: string): string {
   return [
     `You are the AI Tech Editor for DiffPress. Critique the Markdown article below and return concrete, actionable line edits.`,
+    ...(focus?.trim()
+      ? [``, `Focus especially on: ${focus.trim()}. Still flag any other serious issues you notice.`]
+      : []),
     ``,
     `For each note, return:`,
     `- "anchorText": a VERBATIM substring copied exactly from the article that the note refers to (do NOT paraphrase or trim — it must appear character-for-character in the article so it can be located and replaced).`,
@@ -204,7 +213,7 @@ export async function handler(
   }
   try {
     if (req.action === "review") {
-      const raw = await generateJSON(buildReviewPrompt(req.articleMarkdown), {
+      const raw = await generateJSON(buildReviewPrompt(req.articleMarkdown, req.focus), {
         type: Type.OBJECT,
         properties: {
           notes: {

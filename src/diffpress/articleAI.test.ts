@@ -37,6 +37,19 @@ describe("parseAIRequest", () => {
     expect(r.ok).toBe(false);
   });
 
+  it("carries an optional review focus when provided", () => {
+    const r = parseAIRequest(
+      eventWith("u1", { action: "review", repo: "a/b", articleMarkdown: "## Body", focus: "tighten the intro" }),
+    );
+    expect(r).toEqual({
+      ok: true,
+      action: "review",
+      repo: "a/b",
+      articleMarkdown: "## Body",
+      focus: "tighten the intro",
+    });
+  });
+
   it("parses a reply request, defaulting conversation to []", () => {
     const r = parseAIRequest(
       eventWith("u1", { action: "reply", articleMarkdown: "x", note: "n", message: "m" }),
@@ -70,6 +83,16 @@ describe("buildReviewPrompt", () => {
     const p = buildReviewPrompt("## My article body");
     expect(p).toContain("## My article body");
     expect(p.toLowerCase()).toContain("verbatim");
+  });
+
+  it("weaves in a review focus when given", () => {
+    const p = buildReviewPrompt("## Body", "the benchmark section");
+    expect(p).toContain("the benchmark section");
+    expect(p.toLowerCase()).toContain("focus");
+  });
+
+  it("omits focus framing when none is given", () => {
+    expect(buildReviewPrompt("## Body").toLowerCase()).not.toContain("focus especially");
   });
 });
 

@@ -133,8 +133,10 @@ export function DraftEditor() {
   const onRunReview = useCallback(() => {
     syncMarkdown();
     setEditorMode("review");
-    void runReview();
-  }, [syncMarkdown, setEditorMode, runReview]);
+    // The same input doubles as the review focus: typed text → emphasis, empty → general.
+    void runReview(instruction.trim() || undefined);
+    setInstruction("");
+  }, [instruction, syncMarkdown, setEditorMode, runReview]);
 
   const onRevise = useCallback(() => {
     if (!instruction.trim()) return;
@@ -374,7 +376,7 @@ export function DraftEditor() {
             if (e.key === "Enter") onRevise();
           }}
           disabled={revising}
-          placeholder="Tell the editor what to change…"
+          placeholder="Tell the editor what to change, or focus the review…"
           className="flex-1 border-none bg-transparent text-[14px] text-dp-ink outline-none disabled:opacity-60"
         />
         <button

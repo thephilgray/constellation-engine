@@ -99,7 +99,7 @@ async function streamHandler(
       let buf = "";
       const result = await getGenAI().models.generateContentStream({
         model: MODEL,
-        contents: [{ text: buildReviewPrompt(req.articleMarkdown) }],
+        contents: [{ text: buildReviewPrompt(req.articleMarkdown, req.focus) }],
         config: { responseMimeType: "application/json", responseSchema: NOTE_SCHEMA },
       });
       for await (const chunk of result) buf += chunk.text ?? "";

@@ -145,7 +145,7 @@ interface DiffPressState {
   chat: Record<string, string[]>;
   noteBusy: Record<string, boolean>;
   revising: boolean;
-  runReview: () => Promise<void>;
+  runReview: (focus?: string) => Promise<void>;
   toggleNote: (id: string) => void;
   applyNote: (id: string) => Promise<void>;
   replyToNote: (id: string, message: string) => Promise<void>;
@@ -417,7 +417,7 @@ export const useDiffPress = create<DiffPressState>((set, get) => ({
   chat: {},
   noteBusy: {},
   revising: false,
-  runReview: async () => {
+  runReview: async (focus) => {
     const { articleRepo, articleMarkdown } = get();
     if (!articleRepo) return;
     set({ reviewing: true, reviewError: null, notes: [], revealedNoteIds: [], resolvedNotes: {}, chat: {}, openNote: null });
@@ -426,7 +426,7 @@ export const useDiffPress = create<DiffPressState>((set, get) => ({
       await runReviewStream(articleRepo, articleMarkdown, (note) => {
         if (get().articleRepo !== articleRepo) return;
         set((s) => ({ notes: [...s.notes, note], revealedNoteIds: [...s.revealedNoteIds, note.id] }));
-      });
+      }, focus?.trim() || undefined);
       if (get().articleRepo === articleRepo) set({ reviewing: false });
     } catch (err) {
       console.warn("[diffpress] review failed:", err);
