@@ -86,8 +86,16 @@ function NoteCard({ note }: { note: ReviewNote }) {
 
 function ReviewBanner() {
   const reviewing = useDiffPress((s) => s.reviewing);
+  const reviewError = useDiffPress((s) => s.reviewError);
   const total = useDiffPress((s) => s.notes.length);
   const revealed = useDiffPress((s) => s.revealedNoteIds.length);
+  if (reviewError) {
+    return (
+      <div className="mb-7 text-[12.5px] text-dp-rust">
+        Review failed: {reviewError}. Try again.
+      </div>
+    );
+  }
   if (reviewing) {
     return (
       <div className="mb-7 flex items-center gap-[9px] text-[12.5px] text-dp-faint-2">
