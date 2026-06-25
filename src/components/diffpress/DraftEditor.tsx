@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  ArrowUp,
   Code,
+  History,
   Image as ImageIcon,
   Link as LinkIcon,
   Minus,
@@ -25,9 +27,8 @@ export function DraftEditor() {
   const markArticleDirty = useDiffPress((s) => s.markArticleDirty);
   const saveArticle = useDiffPress((s) => s.saveArticle);
   const saving = useDiffPress((s) => s.articleSaving);
-  const saved = useDiffPress((s) => s.articleSaved);
-  const drafts = useDiffPress((s) => s.drafts);
-  const restoreDraft = useDiffPress((s) => s.restoreDraft);
+  const lastSavedAt = useDiffPress((s) => s.lastSavedAt);
+  const openHistory = useDiffPress((s) => s.openHistory);
   const setEditorMode = useDiffPress((s) => s.setEditorMode);
   const runReview = useDiffPress((s) => s.runReview);
   const reviseArticle = useDiffPress((s) => s.reviseArticle);
@@ -35,6 +36,7 @@ export function DraftEditor() {
   const isMobile = useIsMobile();
 
   const [instruction, setInstruction] = useState("");
+  const [reviseFocused, setReviseFocused] = useState(false);
   const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const proseRef = useRef<HTMLDivElement | null>(null);
@@ -312,37 +314,35 @@ export function DraftEditor() {
         style={{ paddingLeft: isMobile ? 34 : 0 }}
       />
 
-      <div className="mt-2 flex items-center gap-[13px]">
-        <button
-          onClick={save}
-          disabled={saving}
-          className={cn(
-            "whitespace-nowrap rounded-[9px] border-none px-[18px] py-[11px] text-[14px] font-medium tracking-[-0.01em] transition-opacity",
-            saving
-              ? "cursor-not-allowed bg-dp-line-2 text-dp-faint-3"
-              : "cursor-pointer bg-dp-ink text-dp-paper hover:opacity-[0.88]",
-          )}
-        >
-          {saving ? "Saving…" : "Save changes"}
-        </button>
-        {saved && !saving && (
-          <span className="text-[13px] text-dp-green">✓ Saved</span>
-        )}
-        <button
-          onClick={onRunReview}
-          className="ml-auto flex cursor-pointer items-center gap-[6px] rounded-[9px] border border-dp-line-3 bg-transparent px-[14px] py-[10px] text-[13px] font-medium text-dp-slate transition-colors hover:bg-dp-hover"
-        >
-          <WandSparkles size={14} strokeWidth={1.8} />
-          Run AI review
-        </button>
-      </div>
+      {/* Quiet autosave status — also the entry point to version history. */}
+      <button
+        onClick={openHistory}
+        className="mt-2 flex items-center gap-2 border-none bg-transparent p-0 text-[12.5px] text-dp-faint-2 transition-colors hover:text-dp-muted"
+      >
+        <span className={cn("h-[6px] w-[6px] rounded-full", saving ? "dp-pulse bg-dp-slate" : "bg-dp-green")} />
+        {saving
+          ? "Saving…"
+          : lastSavedAt
+            ? `Saved · ${new Date(lastSavedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`
+            : "Not saved yet"}
+        <History size={13} strokeWidth={1.7} />
+      </button>
 
-      {/* General "revise the whole article" instruction box. */}
-      <div className="mt-5 flex items-center gap-2 rounded-[11px] border border-dp-line-2 bg-dp-wash px-[13px] py-[9px]">
+      {/* Docked AI revise bar — calm by default, lifts on focus. */}
+      <div
+        className={cn(
+          "sticky bottom-3 z-20 mt-6 flex items-center gap-2 rounded-[12px] border bg-white px-[13px] py-[9px] transition-shadow",
+          reviseFocused
+            ? "border-dp-slate shadow-[0_10px_30px_rgba(26,24,20,0.14)]"
+            : "border-dp-line-2 shadow-[0_2px_10px_rgba(26,24,20,0.06)]",
+        )}
+      >
         <WandSparkles size={15} strokeWidth={1.7} className="flex-[0_0_auto] text-dp-faint-3" />
         <input
           value={instruction}
           onChange={(e) => setInstruction(e.target.value)}
+          onFocus={() => setReviseFocused(true)}
+          onBlur={() => setReviseFocused(false)}
           onKeyDown={(e) => {
             if (e.key === "Enter") onRevise();
           }}
@@ -351,41 +351,25 @@ export function DraftEditor() {
           className="flex-1 border-none bg-transparent text-[14px] text-dp-ink outline-none disabled:opacity-60"
         />
         <button
+          onClick={onRunReview}
+          className="flex-[0_0_auto] cursor-pointer whitespace-nowrap border-none bg-transparent px-1 text-[12.5px] font-medium text-dp-slate hover:opacity-70"
+        >
+          Run review
+        </button>
+        <button
           onClick={onRevise}
           disabled={revising || !instruction.trim()}
+          aria-label="Revise"
           className={cn(
-            "whitespace-nowrap rounded-[8px] border-none px-[13px] py-[7px] text-[12.5px] font-medium transition-opacity",
+            "flex h-[30px] w-[30px] flex-[0_0_auto] items-center justify-center rounded-full border-none transition-opacity",
             revising || !instruction.trim()
               ? "cursor-not-allowed bg-dp-line-2 text-dp-faint-3"
               : "cursor-pointer bg-dp-slate text-white hover:opacity-[0.88]",
           )}
         >
-          {revising ? "Revising…" : "Revise"}
+          <ArrowUp size={16} strokeWidth={2} />
         </button>
       </div>
-
-      {drafts.length > 0 && (
-        <div className="mt-6 border-t border-dp-line-2 pt-4">
-          <div className="mb-2 text-[10.5px] uppercase tracking-[0.11em] text-dp-faint-2">
-            Version history
-          </div>
-          <ul className="flex flex-col gap-1">
-            {drafts.map((d) => (
-              <li key={d.ts} className="flex items-center justify-between text-[13px] text-dp-muted">
-                <span className="font-dp-mono text-[12px] text-dp-faint">
-                  {new Date(d.ts).toLocaleString()}
-                </span>
-                <button
-                  onClick={() => void restoreDraft(d.ts)}
-                  className="cursor-pointer rounded-md border-none bg-transparent px-2 py-1 text-[12.5px] text-dp-slate hover:bg-dp-hover"
-                >
-                  Restore
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
 
       {/* caret "+" gutter button */}
       {showPlus && (

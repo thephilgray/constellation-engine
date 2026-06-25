@@ -93,15 +93,19 @@ interface DiffPressState {
   articleLoading: boolean;
   articleSaving: boolean;
   articleSaved: boolean;
+  lastSavedAt: number | null;
   // Bumped on draft-restore so the keyed DraftEditor remounts + re-seeds.
   articleSeed: number;
   drafts: DraftMeta[];
+  historyOpen: boolean;
   openArticle: (repoName: string) => Promise<void>;
   setArticleMarkdown: (md: string) => void;
   markArticleDirty: () => void;
   saveArticle: () => Promise<void>;
   loadDrafts: () => Promise<void>;
   restoreDraft: (ts: string) => Promise<void>;
+  openHistory: () => void;
+  closeHistory: () => void;
 
   // ---- command center ----
   cmdOpen: boolean;
@@ -205,8 +209,10 @@ export const useDiffPress = create<DiffPressState>((set, get) => ({
   articleLoading: false,
   articleSaving: false,
   articleSaved: false,
+  lastSavedAt: null,
   articleSeed: 0,
   drafts: [],
+  historyOpen: false,
   openArticle: async (repoName) => {
     set({
       view: "editor",
@@ -241,7 +247,7 @@ export const useDiffPress = create<DiffPressState>((set, get) => ({
     set({ articleSaving: true });
     try {
       await saveArticleApi(articleRepo, articleMarkdown);
-      set({ articleSaving: false, articleSaved: true });
+      set({ articleSaving: false, articleSaved: true, lastSavedAt: Date.now() });
       void get().loadDrafts(); // surface the just-written draft
     } catch (err) {
       console.warn("[diffpress] failed to save article:", err);
@@ -274,6 +280,8 @@ export const useDiffPress = create<DiffPressState>((set, get) => ({
       console.warn("[diffpress] failed to restore draft:", err);
     }
   },
+  openHistory: () => set({ historyOpen: true }),
+  closeHistory: () => set({ historyOpen: false }),
 
   cmdOpen: false,
   engineState: "active",
