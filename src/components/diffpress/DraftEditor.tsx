@@ -315,11 +315,11 @@ export function DraftEditor() {
 
   return (
     <>
-      {/* Editor header: quiet autosave status on the right, the entry to version history. */}
-      <div className="mb-5 flex items-center justify-end">
+      {/* Editor header: autosave/history entry on the left, format hint on the right (per design). */}
+      <div className="mb-[30px] flex items-center justify-between gap-3">
         <button
           onClick={openHistory}
-          className="flex items-center gap-2 border-none bg-transparent p-0 text-[12.5px] text-dp-faint-2 transition-colors hover:text-dp-muted"
+          className="flex items-center gap-2 rounded-lg border-none bg-transparent px-[7px] py-[5px] text-[12.5px] text-dp-faint-2 transition-colors hover:bg-black/[0.04] hover:text-dp-muted"
         >
           <span className={cn("h-[6px] w-[6px] rounded-full", saving ? "dp-pulse bg-dp-slate" : "bg-dp-green")} />
           {saving
@@ -329,20 +329,14 @@ export function DraftEditor() {
               : "Not saved yet"}
           <History size={13} strokeWidth={1.7} />
         </button>
-      </div>
-
-      <div className="mb-7 flex items-center gap-[9px] text-[12.5px] leading-[1.5] text-dp-faint-2">
-        <span className="flex flex-[0_0_auto] text-dp-faint-3">
-          <WandSparkles size={14} strokeWidth={1.7} />
-        </span>
-        <span>
-          Live editor — select text to format, click{" "}
-          <strong className="font-semibold text-dp-muted">+</strong> to insert a
-          block, or type Markdown (
-          <code className="rounded bg-dp-chip px-1 font-dp-mono">## </code>{" "}
-          <code className="rounded bg-dp-chip px-1 font-dp-mono">&gt; </code>{" "}
-          <code className="rounded bg-dp-chip px-1 font-dp-mono">`</code>).
-        </span>
+        {!isMobile && (
+          <span className="text-[12px] text-dp-faint-3">
+            Select to format&nbsp;&nbsp;·&nbsp;&nbsp;
+            <code className="rounded bg-dp-chip px-1 font-dp-mono text-[11px]">##</code>{" "}
+            <code className="rounded bg-dp-chip px-1 font-dp-mono text-[11px]">&gt;</code> for
+            blocks&nbsp;&nbsp;·&nbsp;&nbsp;<strong className="font-bold text-dp-muted">+</strong> to insert
+          </span>
+        )}
       </div>
 
       <div
