@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { allNotesResolved, resolvedCount, useDiffPress } from "./store";
 import { mdToHtml } from "./markdownHtml";
+import { useMediaQuery } from "./hooks";
 import { cn } from "@/lib/utils";
 import type { ReviewNote } from "./types";
 
@@ -158,28 +159,136 @@ function PublishTrigger() {
   );
 }
 
+/** The gutter dot that toggles a note's card. Hollow = closed, filled = open, solid = resolved. */
+function NoteDot({ note, inline, offset }: { note: ReviewNote; inline: boolean; offset: number }) {
+  const open = useDiffPress((s) => s.openNote === note.id);
+  const resolved = useDiffPress((s) => !!s.resolvedNotes[note.id]);
+  const toggleNote = useDiffPress((s) => s.toggleNote);
+
+  const inner = resolved
+    ? { width: 9, height: 9, borderRadius: "50%", background: "#5a6178" }
+    : open
+      ? { width: 9, height: 9, borderRadius: "50%", background: "#5a6178", boxShadow: "0 0 0 4px rgba(90,97,120,0.14)" }
+      : { width: 9, height: 9, borderRadius: "50%", background: "transparent", border: "1.5px solid #c2c0b8" };
+
+  if (inline) {
+    return (
+      <button
+        onClick={() => toggleNote(note.id)}
+        className="-mt-[14px] mb-7 inline-flex cursor-pointer items-center gap-[7px] border-none bg-transparent p-0 text-[12.5px] font-medium text-dp-slate"
+      >
+        <span style={inner} />
+        {resolved ? "Resolved" : "Editor note"}
+      </button>
+    );
+  }
+  return (
+    <button
+      onClick={() => toggleNote(note.id)}
+      style={{ position: "absolute", left: "calc(100% + 20px)", top: 3 + offset, width: 22, height: 22 }}
+      className="flex cursor-pointer items-center justify-center border-none bg-transparent p-0 transition-transform hover:scale-125"
+    >
+      <span style={inner} />
+    </button>
+  );
+}
+
+/** A note anchored to its block: the gutter dot, plus its card when open. */
+function AnchoredNote({ note, wide, offset }: { note: ReviewNote; wide: boolean; offset: number }) {
+  const open = useDiffPress((s) => s.openNote === note.id);
+  return (
+    <>
+      <NoteDot note={note} inline={!wide} offset={offset} />
+      {open &&
+        (wide ? (
+          <div
+            style={{ position: "absolute", left: "calc(100% + 48px)", top: -6 + offset, width: 332, zIndex: 5 }}
+          >
+            <NoteCard note={note} />
+          </div>
+        ) : (
+          <div className="mb-[30px] mt-0.5">
+            <NoteCard note={note} />
+          </div>
+        ))}
+    </>
+  );
+}
+
+/**
+ * Anchor each note to the first block whose text contains its verbatim `anchorText`.
+ * Notes matching no block are returned as `orphans` (rendered in a fallback list).
+ */
+export function anchorNotesToBlocks(
+  blocks: { text: string }[],
+  notes: ReviewNote[],
+): { byBlock: Map<number, ReviewNote[]>; orphans: ReviewNote[] } {
+  const byBlock = new Map<number, ReviewNote[]>();
+  const matched = new Set<string>();
+  for (const note of notes) {
+    if (!note.anchorText) continue;
+    const idx = blocks.findIndex((b) => b.text.includes(note.anchorText));
+    if (idx === -1) continue;
+    matched.add(note.id);
+    byBlock.set(idx, [...(byBlock.get(idx) ?? []), note]);
+  }
+  return { byBlock, orphans: notes.filter((n) => !matched.has(n.id)) };
+}
+
+/** Split rendered article HTML into top-level block elements (client-only island). */
+function useBlocks(html: string): { html: string; text: string }[] {
+  return useMemo(() => {
+    if (typeof DOMParser === "undefined") return [{ html, text: html }];
+    const doc = new DOMParser().parseFromString(html, "text/html");
+    return Array.from(doc.body.children).map((el) => ({
+      html: el.outerHTML,
+      text: el.textContent ?? "",
+    }));
+  }, [html]);
+}
+
 export function ReviewArticle() {
   const articleMarkdown = useDiffPress((s) => s.articleMarkdown);
   const notes = useDiffPress((s) => s.notes);
   const revealedNoteIds = useDiffPress((s) => s.revealedNoteIds);
+  const wide = useMediaQuery("(min-width: 1080px)");
   const html = useMemo(() => mdToHtml(articleMarkdown), [articleMarkdown]);
+  const blocks = useBlocks(html);
   const visible = notes.filter((n) => revealedNoteIds.includes(n.id));
 
+  const { byBlock: notesByBlock, orphans } = anchorNotesToBlocks(blocks, visible);
+
   return (
-    <div className="flex flex-col gap-10 min-[1080px]:flex-row min-[1080px]:gap-12">
-      <div className="min-w-0 flex-1">
-        <ReviewBanner />
-        <div className="dp-prose" dangerouslySetInnerHTML={{ __html: html }} />
-        <PublishTrigger />
+    <div style={wide ? { maxWidth: 1068, margin: "0 auto", position: "relative" } : undefined}>
+      <ReviewBanner />
+      <div className="dp-prose" style={wide ? { width: 680, position: "relative" } : undefined}>
+        {blocks.map((b, i) => {
+          const blockNotes = notesByBlock.get(i);
+          return (
+            <div key={i} style={{ position: "relative" }}>
+              <div dangerouslySetInnerHTML={{ __html: b.html }} />
+              {blockNotes?.map((note, j) => (
+                <AnchoredNote key={note.id} note={note} wide={wide} offset={j * 30} />
+              ))}
+            </div>
+          );
+        })}
       </div>
 
-      {visible.length > 0 && (
-        <aside className="flex flex-col gap-5 min-[1080px]:w-[340px] min-[1080px]:flex-[0_0_340px]">
-          {visible.map((n) => (
-            <NoteCard key={n.id} note={n} />
-          ))}
-        </aside>
+      {orphans.length > 0 && (
+        <div className="mt-12 border-t border-dp-line-2 pt-6">
+          <div className="mb-4 text-[10.5px] uppercase tracking-[0.11em] text-dp-faint-2">
+            Notes without a matching line
+          </div>
+          <div className="flex flex-col gap-4">
+            {orphans.map((n) => (
+              <NoteCard key={n.id} note={n} />
+            ))}
+          </div>
+        </div>
       )}
+
+      <PublishTrigger />
     </div>
   );
 }

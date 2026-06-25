@@ -315,6 +315,22 @@ export function DraftEditor() {
 
   return (
     <>
+      {/* Editor header: quiet autosave status on the right, the entry to version history. */}
+      <div className="mb-5 flex items-center justify-end">
+        <button
+          onClick={openHistory}
+          className="flex items-center gap-2 border-none bg-transparent p-0 text-[12.5px] text-dp-faint-2 transition-colors hover:text-dp-muted"
+        >
+          <span className={cn("h-[6px] w-[6px] rounded-full", saving ? "dp-pulse bg-dp-slate" : "bg-dp-green")} />
+          {saving
+            ? "Saving…"
+            : lastSavedAt
+              ? `Saved · ${new Date(lastSavedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`
+              : "Not saved yet"}
+          <History size={13} strokeWidth={1.7} />
+        </button>
+      </div>
+
       <div className="mb-7 flex items-center gap-[9px] text-[12.5px] leading-[1.5] text-dp-faint-2">
         <span className="flex flex-[0_0_auto] text-dp-faint-3">
           <WandSparkles size={14} strokeWidth={1.7} />
@@ -342,20 +358,6 @@ export function DraftEditor() {
         className="dp-prose min-h-[340px] w-full pb-10 outline-none"
         style={{ paddingLeft: isMobile ? 34 : 0 }}
       />
-
-      {/* Quiet autosave status — also the entry point to version history. */}
-      <button
-        onClick={openHistory}
-        className="mt-2 flex items-center gap-2 border-none bg-transparent p-0 text-[12.5px] text-dp-faint-2 transition-colors hover:text-dp-muted"
-      >
-        <span className={cn("h-[6px] w-[6px] rounded-full", saving ? "dp-pulse bg-dp-slate" : "bg-dp-green")} />
-        {saving
-          ? "Saving…"
-          : lastSavedAt
-            ? `Saved · ${new Date(lastSavedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`
-            : "Not saved yet"}
-        <History size={13} strokeWidth={1.7} />
-      </button>
 
       {/* Docked AI revise bar — calm by default, lifts on focus. */}
       <div
