@@ -10,3 +10,4 @@ Amplify.configure({
 });
 
 export const API_URL = import.meta.env.PUBLIC_API_URL;
+export const AI_STREAM_URL = import.meta.env.PUBLIC_AI_STREAM_URL as string;

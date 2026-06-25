@@ -6,6 +6,8 @@
 // stubs below are retained but never invoked.
 
 import { authedFetch } from "@/lib/authedApi";
+import { fetchAuthSession } from "aws-amplify/auth";
+import { AI_STREAM_URL } from "@/lib/amplify";
 import type {
   ArticleResponse,
   DeployPayload,
@@ -165,18 +167,44 @@ export async function getDraft(repoName: string, ts: string): Promise<DraftBody>
 }
 
 /** Run the AI Tech Editor over the article via `POST /api/articles/ai`. */
-export async function runReview(
+/** POST to the streaming Function URL with the Cognito id token; yield parsed SSE `data:` frames. */
+async function* sseStream(body: unknown): AsyncGenerator<any> {
+  const session = await fetchAuthSession();
+  const token = session.tokens?.idToken?.toString();
+  if (!token) throw new Error("Not authenticated");
+  const res = await fetch(AI_STREAM_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok || !res.body) throw new Error(`AI stream failed (${res.status})`);
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = "";
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    const frames = buf.split("\n\n");
+    buf = frames.pop() ?? "";
+    for (const frame of frames) {
+      const line = frame.replace(/^data:\s*/, "").trim();
+      if (line) yield JSON.parse(line);
+    }
+  }
+}
+
+/** Run the AI review over the streaming Function URL, revealing each note as it arrives. */
+export async function runReviewStream(
   repo: string,
   articleMarkdown: string,
-): Promise<ReviewNote[]> {
-  const res = await authedFetch("/api/articles/ai", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ action: "review", repo, articleMarkdown }),
-  });
-  if (!res.ok) throw new Error(`Failed to run review (${res.status})`);
-  const body: { notes: ReviewNote[] } = await res.json();
-  return body.notes;
+  onNote: (n: ReviewNote) => void,
+): Promise<void> {
+  for await (const msg of sseStream({ action: "review", repo, articleMarkdown })) {
+    if (msg.error) throw new Error(msg.error);
+    if (msg.note) onNote(msg.note);
+    if (msg.done) return;
+  }
 }
 
 /** Push back on a single review note; the editor may revise its `replacement`. */
@@ -195,19 +223,21 @@ export async function replyToNote(input: {
   return res.json();
 }
 
-/** Whole-article rewrite from a general instruction. Returns the new article. */
-export async function reviseArticle(
+/** Whole-article rewrite over the streaming Function URL. `onChunk` receives the
+ *  revised markdown (the server emits it as a single chunk after parsing). */
+export async function reviseArticleStream(
   repo: string,
   articleMarkdown: string,
   instruction: string,
-): Promise<{ title: string; articleMarkdown: string }> {
-  const res = await authedFetch("/api/articles/ai", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ action: "revise", repo, articleMarkdown, instruction }),
-  });
-  if (!res.ok) throw new Error(`Failed to revise article (${res.status})`);
-  return res.json();
+  onChunk: (md: string) => void,
+): Promise<{ title: string }> {
+  let title = "";
+  for await (const msg of sseStream({ action: "revise", repo, articleMarkdown, instruction })) {
+    if (msg.error) throw new Error(msg.error);
+    if (msg.chunk) onChunk(msg.chunk);
+    if (msg.done) title = msg.title ?? "";
+  }
+  return { title };
 }
 
 /** Deploy / syndicate the finished article. Eventually a deploy Step Function. */
