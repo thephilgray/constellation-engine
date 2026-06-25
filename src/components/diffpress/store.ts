@@ -13,9 +13,9 @@ import {
   regenerateHandoff as regenerateHandoffApi,
   listDrafts as listDraftsApi,
   getDraft as getDraftApi,
-  runReview as runReviewApi,
+  runReviewStream,
   replyToNote as replyToNoteApi,
-  reviseArticle as reviseArticleApi,
+  reviseArticleStream,
 } from "./services";
 import type {
   DiscoveryMode,
@@ -44,7 +44,6 @@ Paste the GitHub URL and your developer log below, then resume the
 workflow to draft the article.`;
 
 let copyTimer: ReturnType<typeof setTimeout> | null = null;
-let revealTimers: ReturnType<typeof setTimeout>[] = [];
 let configTimer: ReturnType<typeof setTimeout> | null = null;
 
 /** Fire-and-forget POST of the current Command Center config. */
@@ -135,6 +134,7 @@ interface DiffPressState {
   // ---- AI Tech Editor (real, API-driven) ----
   notes: ReviewNote[];
   reviewing: boolean;
+  reviewError: string | null;
   revealedNoteIds: string[];
   openNote: string | null;
   resolvedNotes: Record<string, boolean>;
@@ -402,6 +402,7 @@ export const useDiffPress = create<DiffPressState>((set, get) => ({
 
   notes: [],
   reviewing: false,
+  reviewError: null,
   revealedNoteIds: [],
   openNote: null,
   resolvedNotes: {},
@@ -411,25 +412,17 @@ export const useDiffPress = create<DiffPressState>((set, get) => ({
   runReview: async () => {
     const { articleRepo, articleMarkdown } = get();
     if (!articleRepo) return;
-    revealTimers.forEach(clearTimeout);
-    revealTimers = [];
-    set({ reviewing: true, notes: [], revealedNoteIds: [], resolvedNotes: {}, chat: {}, openNote: null });
+    set({ reviewing: true, reviewError: null, notes: [], revealedNoteIds: [], resolvedNotes: {}, chat: {}, openNote: null });
     try {
-      const notes = await runReviewApi(articleRepo, articleMarkdown);
-      if (get().articleRepo !== articleRepo) return;
-      set({ notes, reviewing: false });
-      // Reveal notes progressively for the streamed-review feel.
-      notes.forEach((n, i) => {
-        revealTimers.push(
-          setTimeout(
-            () => set((s) => ({ revealedNoteIds: [...s.revealedNoteIds, n.id] })),
-            350 + i * 500,
-          ),
-        );
+      // Notes stream in from the Function URL; reveal each the moment it arrives.
+      await runReviewStream(articleRepo, articleMarkdown, (note) => {
+        if (get().articleRepo !== articleRepo) return;
+        set((s) => ({ notes: [...s.notes, note], revealedNoteIds: [...s.revealedNoteIds, note.id] }));
       });
+      if (get().articleRepo === articleRepo) set({ reviewing: false });
     } catch (err) {
       console.warn("[diffpress] review failed:", err);
-      set({ reviewing: false });
+      set({ reviewing: false, reviewError: err instanceof Error ? err.message : "Review failed" });
     }
   },
   toggleNote: (id) => set((s) => ({ openNote: s.openNote === id ? null : id })),
@@ -478,11 +471,16 @@ export const useDiffPress = create<DiffPressState>((set, get) => ({
     if (!articleRepo || !instruction.trim()) return;
     set({ revising: true });
     try {
-      const article = await reviseArticleApi(articleRepo, articleMarkdown, instruction);
+      // Accumulate the streamed markdown, then re-seed the editor once.
+      // ponytail: accumulate then re-seed; live-render only if streaming-into-editor is wanted
+      let md = "";
+      const { title } = await reviseArticleStream(articleRepo, articleMarkdown, instruction, (chunk) => {
+        md += chunk;
+      });
       if (get().articleRepo !== articleRepo) return;
       set((s) => ({
-        articleMarkdown: article.articleMarkdown,
-        articleTitle: article.title,
+        articleMarkdown: md,
+        articleTitle: title || s.articleTitle,
         articleSaved: false,
         articleSeed: s.articleSeed + 1,
         revising: false,

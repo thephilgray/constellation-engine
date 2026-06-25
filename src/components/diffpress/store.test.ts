@@ -1,5 +1,14 @@
-import { describe, it, expect } from "vitest";
-import { removeFromPipeline } from "./store";
+import { describe, it, expect, vi } from "vitest";
+
+vi.mock("./services", async (orig) => ({
+  ...(await orig<typeof import("./services")>()),
+  runReviewStream: vi.fn(async (_r: string, _m: string, onNote: (n: any) => void) => {
+    onNote({ id: "n1", anchorText: "a", note: "x", replacement: "b" });
+    onNote({ id: "n2", anchorText: "c", note: "y", replacement: "d" });
+  }),
+}));
+
+import { removeFromPipeline, useDiffPress } from "./store";
 import type { PipelineData } from "./types";
 
 const base: PipelineData = {
@@ -29,5 +38,17 @@ describe("removeFromPipeline", () => {
     const next = removeFromPipeline(base, "x/y");
     expect(next.discovery).toHaveLength(2);
     expect(next.readyForDev).toHaveLength(1);
+  });
+});
+
+describe("runReview (streaming)", () => {
+  it("appends each streamed note and reveals it immediately", async () => {
+    useDiffPress.setState({ articleRepo: "a/b", articleMarkdown: "# hi", notes: [], revealedNoteIds: [] });
+    await useDiffPress.getState().runReview();
+    const s = useDiffPress.getState();
+    expect(s.notes).toHaveLength(2);
+    expect(s.revealedNoteIds).toEqual(["n1", "n2"]);
+    expect(s.reviewing).toBe(false);
+    expect(s.reviewError).toBeNull();
   });
 });
