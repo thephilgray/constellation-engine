@@ -18,6 +18,8 @@ export default $config({
     const INGEST_API_KEY = new sst.Secret("INGEST_API_KEY");
     const GOOGLE_BOOKS_API_KEY = new sst.Secret("GOOGLE_BOOKS_API_KEY");
     const TAVILY_API_KEY = new sst.Secret("TAVILY_API_KEY");
+    const DEVTO_API_KEY = new sst.Secret("DEVTO_API_KEY");
+    const PUBLISH_WEBHOOKS = new sst.Secret("PUBLISH_WEBHOOKS");
 
     // NEW: Authentication (with Google Identity Provider)
     // Note: 'identityProviders' is not a direct property of CognitoUserPool args in this version.
@@ -407,6 +409,18 @@ export default $config({
       },
     });
 
+    api.route("POST /api/publish", {
+      handler: "src/diffpress/publishArticle.handler",
+      link: [auth, publicationLifecycle, DEVTO_API_KEY, PUBLISH_WEBHOOKS],
+      timeout: "30 seconds",
+    }, {
+      auth: {
+        jwt: {
+          authorizer: authorizer.id,
+        },
+      },
+    });
+
     // Read the pending/published board (Ready for Dev + In Review columns).
     api.route("GET /api/handoffs", {
       handler: "src/diffpress/listHandoffs.handler",
@@ -674,6 +688,16 @@ export default $config({
         // 2 GB gives a full vCPU; gunzip + JSON.parse are CPU-bound, so this
         // roughly halves the run at ~flat GB-second cost.
         memory: "2048 MB",
+      },
+    });
+
+    // Every 5 minutes — publish any SCHEDULED article whose time has come.
+    const publishScheduledCron = new sst.aws.Cron("PublishScheduledCron", {
+      schedule: "rate(5 minutes)",
+      job: {
+        handler: "src/diffpress/publishScheduled.handler",
+        link: [publicationLifecycle, DEVTO_API_KEY, PUBLISH_WEBHOOKS],
+        timeout: "60 seconds",
       },
     });
 
