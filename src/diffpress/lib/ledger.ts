@@ -239,7 +239,7 @@ export const STATUS_INDEX = "status-index";
  * DynamoDB returns ONLY the listed attributes, so omissions are silent data loss.
  */
 export const BOARD_PROJECTION =
-  "repoName, #status, repoUrl, taskToken, discoveredAt, title, publishedAt, description, stars, #lang, pushedAt, signalType, starsGained, releaseTag, coverageScore, handoffPrompt";
+  "repoName, #status, repoUrl, taskToken, discoveredAt, title, publishedAt, description, stars, #lang, pushedAt, signalType, starsGained, releaseTag, coverageScore, handoffPrompt, scheduleAt";
 
 /** Flip an item to DRAFTING. Swallows the conditional-check failure (idempotent). */
 export async function markDrafting(repoName: string): Promise<void> {

@@ -121,4 +121,20 @@ describe("parsePublishInput", () => {
     expect(r.ok).toBe(true);
     if (r.ok) expect(r.value.repoName).toBe("o/r");
   });
+  it("rejects scheduling with an empty scheduleAt (400)", () => {
+    const r = parsePublishInput({
+      requestContext: ctx("u1"),
+      body: JSON.stringify({ ...good, timing: "schedule", scheduleAt: "" }),
+    });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.statusCode).toBe(400);
+  });
+  it("accepts scheduling with a real ISO scheduleAt", () => {
+    const r = parsePublishInput({
+      requestContext: ctx("u1"),
+      body: JSON.stringify({ ...good, timing: "schedule", scheduleAt: "2026-07-01T09:00:00.000Z" }),
+    });
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.value.scheduleAt).toBe("2026-07-01T09:00:00.000Z");
+  });
 });

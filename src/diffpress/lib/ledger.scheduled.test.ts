@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildMarkScheduledParams } from "./ledger";
+import { buildMarkScheduledParams, BOARD_PROJECTION } from "./ledger";
 
 const targets = {
   devto: true, diffpress: false, thephilgray: true, linkedin: false, substack: false,
@@ -20,5 +20,17 @@ describe("buildMarkScheduledParams", () => {
   it("does not overwrite an already-PUBLISHED item", () => {
     const p = buildMarkScheduledParams("T", "o/r", { scheduleAt: "x", targets, seriesLink: "" });
     expect(p.ConditionExpression).toContain("<> :published");
+  });
+});
+
+describe("BOARD_PROJECTION", () => {
+  it("includes scheduleAt so queryScheduledDue's time filter is not always-true", () => {
+    // queryScheduledDue filters SCHEDULED records by (r.scheduleAt ?? "") <= nowIso.
+    // Those records come from queryByStatus, which projects only BOARD_PROJECTION's
+    // attributes via the status GSI. If scheduleAt is dropped from the projection,
+    // every SCHEDULED record reads back as scheduleAt === undefined, the filter
+    // becomes vacuously true, and the cron publishes everything immediately.
+    const attrs = BOARD_PROJECTION.split(",").map((a) => a.trim());
+    expect(attrs).toContain("scheduleAt");
   });
 });

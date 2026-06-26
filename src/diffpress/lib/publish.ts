@@ -145,6 +145,9 @@ export function parsePublishInput(event: {
   if (timing !== "now" && timing !== "schedule") {
     return { ok: false, statusCode: 400, message: "timing must be 'now' or 'schedule'" };
   }
+  if (timing === "schedule" && (typeof scheduleAt !== "string" || scheduleAt.trim() === "")) {
+    return { ok: false, statusCode: 400, message: "scheduleAt is required when scheduling" };
+  }
   return {
     ok: true,
     value: {
