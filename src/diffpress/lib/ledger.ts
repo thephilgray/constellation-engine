@@ -10,6 +10,7 @@ import {
 } from "@aws-sdk/lib-dynamodb";
 import { Resource } from "sst";
 import type { PublicationRecord } from "../types";
+import type { PublishTargets } from "./publish";
 
 const docClient = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 
@@ -99,6 +100,30 @@ export function buildMarkDismissedParams(
   };
 }
 
+/** Pure: build an UpdateCommand input that flips an item to SCHEDULED. */
+export function buildMarkScheduledParams(
+  table: string,
+  repoName: string,
+  meta: { scheduleAt: string; targets: PublishTargets; seriesLink: string }
+): UpdateCommandInput {
+  return {
+    TableName: table,
+    Key: { repoName },
+    UpdateExpression:
+      "SET #status = :scheduled, scheduleAt = :scheduleAt, targets = :targets, seriesLink = :seriesLink",
+    ConditionExpression:
+      "attribute_not_exists(#status) OR #status <> :published",
+    ExpressionAttributeNames: { "#status": "status" },
+    ExpressionAttributeValues: {
+      ":scheduled": "SCHEDULED",
+      ":published": "PUBLISHED",
+      ":scheduleAt": meta.scheduleAt,
+      ":targets": meta.targets,
+      ":seriesLink": meta.seriesLink,
+    },
+  };
+}
+
 /** Pure: overwrite the handoff brief in place, only while still AWAITING_HANDOFF. */
 export function buildSetHandoffPromptParams(
   table: string,
@@ -174,6 +199,15 @@ export async function markPublished(
     }
     throw err;
   }
+}
+
+export async function markScheduled(
+  repoName: string,
+  meta: { scheduleAt: string; targets: PublishTargets; seriesLink: string }
+): Promise<void> {
+  await docClient.send(
+    new UpdateCommand(buildMarkScheduledParams(tableName(), repoName, meta))
+  );
 }
 
 /** Overwrite an existing article's markdown (and title) in place. */
@@ -308,4 +342,16 @@ export async function queryByStatus(status: string): Promise<PublicationRecord[]
     })
   );
   return (Items ?? []) as PublicationRecord[];
+}
+
+/**
+ * Return SCHEDULED items whose scheduleAt is at or before `nowIso`.
+ * Queries the status GSI (no scan), then filters by time and re-reads each
+ * full item (the GSI projects only board fields, not articleMarkdown).
+ */
+export async function queryScheduledDue(nowIso: string): Promise<PublicationRecord[]> {
+  const scheduled = await queryByStatus("SCHEDULED");
+  const due = scheduled.filter((r) => (r.scheduleAt ?? "") <= nowIso);
+  const full = await Promise.all(due.map((r) => getByRepo(r.repoName)));
+  return full.filter((r): r is PublicationRecord => r !== null);
 }
