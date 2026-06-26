@@ -91,6 +91,9 @@ interface DiffPressState {
   articleRepo: string | null;
   articleTitle: string;
   articleMarkdown: string;
+  // Captured on load to seed the publish console's Dev.to tags.
+  articleTags: string[];
+  articleLanguage: string | null;
   articleLoading: boolean;
   articleSaving: boolean;
   articleSaved: boolean;
@@ -162,12 +165,15 @@ interface DiffPressState {
   deployed: boolean;
   deploySummary: string;
   deployResults: PublishTargetResult[];
+  tags: string[];
   openPublish: () => void;
   closePublish: () => void;
   toggleTarget: (id: keyof SyndicationTargets) => void;
   setTiming: (t: Timing) => void;
   setScheduleAt: (v: string) => void;
   setSeriesLink: (v: string) => void;
+  addTag: (tag: string) => void;
+  removeTag: (idx: number) => void;
   deploy: () => Promise<void>;
   backToDashboard: () => void;
 }
@@ -208,6 +214,8 @@ export const useDiffPress = create<DiffPressState>((set, get) => ({
   articleRepo: null,
   articleTitle: "",
   articleMarkdown: "",
+  articleTags: [],
+  articleLanguage: null,
   articleLoading: false,
   articleSaving: false,
   articleSaved: false,
@@ -221,6 +229,8 @@ export const useDiffPress = create<DiffPressState>((set, get) => ({
       articleRepo: repoName,
       articleTitle: "",
       articleMarkdown: "",
+      articleTags: [],
+      articleLanguage: null,
       articleLoading: true,
       articleSaved: false,
       drafts: [],
@@ -232,6 +242,8 @@ export const useDiffPress = create<DiffPressState>((set, get) => ({
         set({
           articleTitle: article.title,
           articleMarkdown: article.articleMarkdown,
+          articleTags: article.tags ?? [],
+          articleLanguage: article.language ?? null,
           articleLoading: false,
         });
         void get().loadDrafts();
@@ -511,11 +523,15 @@ export const useDiffPress = create<DiffPressState>((set, get) => ({
   deployed: false,
   deploySummary: "",
   deployResults: [],
+  tags: [],
   openPublish: () => {
     // Publishable when nothing is outstanding: no review run, or all notes resolved.
-    const { notes, resolvedNotes } = get();
+    const { notes, resolvedNotes, articleTags, articleLanguage } = get();
     if (notes.every((n) => resolvedNotes[n.id])) {
-      set({ publishOpen: true, deployed: false });
+      // Seed Dev.to tags: the drafted LLM tags, else a single language-derived tag.
+      const langSeed = (articleLanguage ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
+      const seed = articleTags.length ? articleTags.slice(0, 4) : langSeed ? [langSeed] : [];
+      set({ publishOpen: true, deployed: false, tags: seed });
     }
   },
   closePublish: () => set({ publishOpen: false }),
@@ -524,8 +540,16 @@ export const useDiffPress = create<DiffPressState>((set, get) => ({
   setTiming: (timing) => set({ timing }),
   setScheduleAt: (scheduleAt) => set({ scheduleAt }),
   setSeriesLink: (seriesLink) => set({ seriesLink }),
+  addTag: (raw) => {
+    const tag = (raw ?? "").trim().replace(/,+$/, "").trim();
+    if (!tag) return;
+    set((s) =>
+      s.tags.length < 4 && !s.tags.includes(tag) ? { tags: [...s.tags, tag] } : {}
+    );
+  },
+  removeTag: (idx) => set((s) => ({ tags: s.tags.filter((_, i) => i !== idx) })),
   deploy: async () => {
-    const { targets, timing, scheduleAt, seriesLink, articleRepo } = get();
+    const { targets, timing, scheduleAt, seriesLink, articleRepo, tags } = get();
     if (!Object.values(targets).some(Boolean)) return;
     if (!articleRepo) return;
     set({ deploying: true });
@@ -536,6 +560,7 @@ export const useDiffPress = create<DiffPressState>((set, get) => ({
         timing,
         scheduleAt,
         seriesLink,
+        tags,
       });
       set({
         deploying: false,

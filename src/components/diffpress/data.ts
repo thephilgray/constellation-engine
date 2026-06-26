@@ -26,4 +26,5 @@ export const EMPTY_DEPLOY: Omit<DeployPayload, "repoName"> = {
   timing: "now",
   scheduleAt: "",
   seriesLink: "",
+  tags: [],
 };

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Check, Globe, Linkedin, Mail, SquareCode, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "./hooks";
@@ -59,8 +60,12 @@ export function PublishConsole() {
   const setTiming = useDiffPress((s) => s.setTiming);
   const setScheduleAt = useDiffPress((s) => s.setScheduleAt);
   const setSeriesLink = useDiffPress((s) => s.setSeriesLink);
+  const tags = useDiffPress((s) => s.tags);
+  const addTag = useDiffPress((s) => s.addTag);
+  const removeTag = useDiffPress((s) => s.removeTag);
   const deploy = useDiffPress((s) => s.deploy);
   const backToDashboard = useDiffPress((s) => s.backToDashboard);
+  const [tagDraft, setTagDraft] = useState("");
 
   if (!publishOpen) return null;
   const anyTarget = Object.values(targets).some(Boolean);
@@ -144,6 +149,55 @@ export function PublishConsole() {
                 </div>
               ))}
             </div>
+
+            {targets.devto && (
+              <>
+                <SectionLabel>
+                  Tags{" "}
+                  <span className="normal-case tracking-normal text-[#c2c0b8]">
+                    — up to 4, for Dev.to
+                  </span>
+                </SectionLabel>
+                <div className="mb-7 flex flex-wrap items-center gap-[7px]">
+                  {tags.map((tag, i) => (
+                    <span
+                      key={tag}
+                      className="flex items-center gap-[5px] rounded-[7px] bg-[#eef0f4] py-1 pl-[9px] pr-[6px] font-dp-mono text-[12.5px] text-[#3a3f4d]"
+                    >
+                      {tag}
+                      <button
+                        onClick={() => removeTag(i)}
+                        aria-label={`Remove ${tag}`}
+                        className="flex cursor-pointer border-none bg-transparent p-0 text-[#9aa0b0] hover:text-[#3a3f4d]"
+                      >
+                        <X size={12} strokeWidth={2} />
+                      </button>
+                    </span>
+                  ))}
+                  {tags.length < 4 && (
+                    <input
+                      value={tagDraft}
+                      onChange={(e) => setTagDraft(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          addTag(tagDraft);
+                          setTagDraft("");
+                        }
+                      }}
+                      onBlur={() => {
+                        if (tagDraft.trim()) {
+                          addTag(tagDraft);
+                          setTagDraft("");
+                        }
+                      }}
+                      placeholder="add tag…"
+                      className="min-w-[80px] flex-[1_1_80px] border-none bg-transparent py-1 font-dp-mono text-[14px] text-dp-ink outline-none"
+                    />
+                  )}
+                </div>
+              </>
+            )}
 
             <SectionLabel>Timing</SectionLabel>
             <Segmented

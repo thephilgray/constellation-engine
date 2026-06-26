@@ -99,6 +99,8 @@ export interface DeployPayload {
   timing: Timing;
   scheduleAt: string;
   seriesLink: string;
+  /** Dev.to tags (edited in the publish console); max 4 enforced server-side. */
+  tags: string[];
 }
 
 export interface DeployResponse {
@@ -146,6 +148,9 @@ export interface ArticleResponse {
   articleMarkdown: string;
   publishedAt?: string;
   status: string;
+  /** LLM-suggested Dev.to tags; seed for the publish console. */
+  tags?: string[];
+  language?: string | null;
 }
 
 export interface DraftMeta {
