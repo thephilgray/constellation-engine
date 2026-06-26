@@ -21,8 +21,8 @@ async def research(topic: str) -> Brief:
 <h2>Verdict</h2>
 <p>Helix is the most coherent answer to durable agents we have reviewed. It is not yet the easy one — but for teams comfortable with event-sourced systems, the model will feel inevitable.</p>`;
 
-export const EMPTY_DEPLOY: Omit<DeployPayload, "articleId"> = {
-  targets: { devto: true, linkedin: false, substack: true, portfolio: true },
+export const EMPTY_DEPLOY: Omit<DeployPayload, "repoName"> = {
+  targets: { devto: true, diffpress: true, thephilgray: false, linkedin: false, substack: false },
   timing: "now",
   scheduleAt: "",
   seriesLink: "",

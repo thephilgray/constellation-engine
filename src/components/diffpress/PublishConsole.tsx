@@ -1,11 +1,4 @@
-import {
-  Check,
-  LayoutDashboard,
-  Linkedin,
-  Mail,
-  SquareCode,
-  X,
-} from "lucide-react";
+import { Check, Globe, Linkedin, Mail, SquareCode, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "./hooks";
 import { useDiffPress } from "./store";
@@ -37,10 +30,16 @@ const TARGETS: {
     icon: <Mail size={19} strokeWidth={1.7} />,
   },
   {
-    id: "portfolio",
-    name: "DiffPress Portfolio",
-    desc: "Canonical home on your site",
-    icon: <LayoutDashboard size={19} strokeWidth={1.7} />,
+    id: "diffpress",
+    name: "diffpress.com",
+    desc: "Signed webhook to your DiffPress site",
+    icon: <Globe size={19} strokeWidth={1.7} />,
+  },
+  {
+    id: "thephilgray",
+    name: "thephilgray.com",
+    desc: "Signed webhook to your personal site",
+    icon: <Globe size={19} strokeWidth={1.7} />,
   },
 ];
 
@@ -50,6 +49,7 @@ export function PublishConsole() {
   const deployed = useDiffPress((s) => s.deployed);
   const deploying = useDiffPress((s) => s.deploying);
   const deploySummary = useDiffPress((s) => s.deploySummary);
+  const deployResults = useDiffPress((s) => s.deployResults);
   const targets = useDiffPress((s) => s.targets);
   const timing = useDiffPress((s) => s.timing);
   const scheduleAt = useDiffPress((s) => s.scheduleAt);
@@ -84,9 +84,21 @@ export function PublishConsole() {
             <div className="mb-[10px] text-[20px] font-semibold tracking-[-0.02em]">
               Article deployed
             </div>
-            <p className="mb-6 text-[14px] leading-[1.6] text-dp-muted">
-              {deploySummary}
-            </p>
+            {deployResults.length ? (
+              <ul className="mb-6 inline-block text-left text-[14px] leading-[1.8] text-dp-muted">
+                {deployResults.map((r) => (
+                  <li key={r.id}>
+                    <span className={r.ok ? "text-dp-green" : "text-red-500"}>
+                      {r.ok ? "✓" : "✗"}
+                    </span>{" "}
+                    {r.id}
+                    {r.ok ? "" : ` — ${r.detail}`}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mb-6 text-[14px] leading-[1.6] text-dp-muted">{deploySummary}</p>
+            )}
             <button
               onClick={backToDashboard}
               className="cursor-pointer rounded-[9px] border-none bg-dp-ink px-[22px] py-[11px] text-[14px] font-medium text-dp-paper hover:opacity-[0.88]"

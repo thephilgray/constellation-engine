@@ -1,4 +1,5 @@
 // src/diffpress/types.ts
+import type { PublishTargets } from "./lib/publish";
 
 /**
  * Why a repo surfaced in Discovery:
@@ -91,6 +92,7 @@ export type PublicationStatus =
   | "DISCOVERED"
   | "AWAITING_HANDOFF"
   | "DRAFTING"
+  | "SCHEDULED"
   | "PUBLISHED"
   | "DISMISSED";
 
@@ -107,6 +109,10 @@ export interface PublicationRecord {
   articleMarkdown?: string;
   discoveredAt?: string;
   publishedAt?: string;
+  // Scheduling fields (status === "SCHEDULED")
+  scheduleAt?: string;   // ISO 8601; when the cron should publish
+  targets?: PublishTargets;
+  seriesLink?: string;
   // Discovery-pool fields (status === "DISCOVERED")
   description?: string;
   stars?: number;

@@ -18,6 +18,8 @@ export default $config({
     const INGEST_API_KEY = new sst.Secret("INGEST_API_KEY");
     const GOOGLE_BOOKS_API_KEY = new sst.Secret("GOOGLE_BOOKS_API_KEY");
     const TAVILY_API_KEY = new sst.Secret("TAVILY_API_KEY");
+    const DEVTO_API_KEY = new sst.Secret("DEVTO_API_KEY");
+    const PUBLISH_WEBHOOKS = new sst.Secret("PUBLISH_WEBHOOKS");
 
     // NEW: Authentication (with Google Identity Provider)
     // Note: 'identityProviders' is not a direct property of CognitoUserPool args in this version.
@@ -207,6 +209,12 @@ export default $config({
         }
       }
     });
+
+    // Expose user-pool id + web client id as Linkables so the streaming
+    // Function URL handler (which can't use the API Gateway JWT authorizer)
+    // can verify Cognito id tokens in-handler via aws-jwt-verify.
+    const UserPoolId = new sst.Linkable("UserPoolId", { properties: { value: auth.id } });
+    const WebClientId = new sst.Linkable("WebClientId", { properties: { value: webClient.id } });
 
     // Dynamically determine the region from the User Pool ARN to construct the issuer URL
     const region = auth.nodes.userPool.arn.apply(arn => arn.split(":")[3]);
@@ -401,6 +409,18 @@ export default $config({
       },
     });
 
+    api.route("POST /api/publish", {
+      handler: "src/diffpress/publishArticle.handler",
+      link: [auth, publicationLifecycle, DEVTO_API_KEY, PUBLISH_WEBHOOKS],
+      timeout: "30 seconds",
+    }, {
+      auth: {
+        jwt: {
+          authorizer: authorizer.id,
+        },
+      },
+    });
+
     // Read the pending/published board (Ready for Dev + In Review columns).
     api.route("GET /api/handoffs", {
       handler: "src/diffpress/listHandoffs.handler",
@@ -483,6 +503,17 @@ export default $config({
       },
     });
 
+    // Streaming variant of the AI editor: review/revise on a Function URL with
+    // SSE response streaming, bypassing the HTTP API's hard 30s integration cap
+    // (gemini-2.5-pro review takes ~35s). Verifies the Cognito id token in-handler.
+    const articleAIStream = new sst.aws.Function("DiffPressArticleAIStream", {
+      handler: "src/diffpress/articleAIStream.handler",
+      link: [GEMINI_API_KEY, UserPoolId, WebClientId],
+      url: { cors: { allowOrigins: ["*"], allowHeaders: ["authorization", "content-type"] } },
+      streaming: true,
+      timeout: "120 seconds",
+    });
+
     // Read/write the Pipeline Command Center config (engine state, mode, velocity).
     for (const method of ["GET", "POST"] as const) {
       api.route(`${method} /api/discovery-config`, {
@@ -505,6 +536,7 @@ export default $config({
         PUBLIC_USER_POOL_ID: auth.id,
         PUBLIC_USER_POOL_CLIENT_ID: webClient.id,
         PUBLIC_API_URL: api.url,
+        PUBLIC_AI_STREAM_URL: articleAIStream.url,
       }
     });
 
@@ -659,6 +691,16 @@ export default $config({
       },
     });
 
+    // Every 5 minutes — publish any SCHEDULED article whose time has come.
+    const publishScheduledCron = new sst.aws.Cron("PublishScheduledCron", {
+      schedule: "rate(5 minutes)",
+      job: {
+        handler: "src/diffpress/publishScheduled.handler",
+        link: [publicationLifecycle, DEVTO_API_KEY, PUBLISH_WEBHOOKS],
+        timeout: "60 seconds",
+      },
+    });
+
     return {
       site: site.url,
       api: api.url,
@@ -666,6 +708,7 @@ export default $config({
       userPoolId: auth.id,
       userPoolClientId: webClient.id, // Access client ID from the client resource, not the pool
       contentEngineTrigger: contentEngineTrigger.url,
+      articleAIStreamUrl: articleAIStream.url,
       publicationTable: publicationLifecycle.name,
       contentPayloadBucket: contentPayloadBucket.name,
     };

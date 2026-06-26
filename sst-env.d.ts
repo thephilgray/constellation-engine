@@ -34,6 +34,11 @@ declare module "sst" {
       "arn": string
       "type": "sst.aws.StepFunctions"
     }
+    "DiffPressArticleAIStream": {
+      "name": string
+      "type": "sst.aws.Function"
+      "url": string
+    }
     "DiffPressDiscoverRepos": {
       "name": string
       "type": "sst.aws.Function"
@@ -147,6 +152,10 @@ declare module "sst" {
       "name": string
       "type": "sst.aws.Dynamo"
     }
+    "UserPoolId": {
+      "type": "sst.sst.Linkable"
+      "value": string
+    }
     "Web": {
       "type": "sst.aws.Astro"
       "url": string
@@ -155,6 +164,10 @@ declare module "sst" {
       "id": string
       "secret": string
       "type": "sst.aws.CognitoUserPoolClient"
+    }
+    "WebClientId": {
+      "type": "sst.sst.Linkable"
+      "value": string
     }
   }
 }

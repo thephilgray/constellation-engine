@@ -3595,6 +3595,11 @@ aws-amplify@^6.16.0:
     "@aws-amplify/storage" "6.12.0"
     tslib "^2.5.0"
 
+aws-jwt-verify@^5.2.1:
+  version "5.2.1"
+  resolved "https://registry.npmjs.org/aws-jwt-verify/-/aws-jwt-verify-5.2.1.tgz"
+  integrity sha512-J+buA4M+qvQDk58WXFBLkDodkEX3DDL1ac5XFQPW3opxAsaLXYu5hYnlSHsaBRDBUXBAn695kE/cw/mdyJKwJg==
+
 aws-sdk@2.1692.0:
   version "2.1692.0"
   resolved "https://registry.npmjs.org/aws-sdk/-/aws-sdk-2.1692.0.tgz"

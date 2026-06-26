@@ -13,9 +13,9 @@ import {
   regenerateHandoff as regenerateHandoffApi,
   listDrafts as listDraftsApi,
   getDraft as getDraftApi,
-  runReview as runReviewApi,
+  runReviewStream,
   replyToNote as replyToNoteApi,
-  reviseArticle as reviseArticleApi,
+  reviseArticleStream,
 } from "./services";
 import type {
   DiscoveryMode,
@@ -23,6 +23,7 @@ import type {
   EngineState,
   HandoffDoc,
   PipelineData,
+  PublishTargetResult,
   ReviewNote,
   SyndicationTargets,
   Timing,
@@ -44,7 +45,6 @@ Paste the GitHub URL and your developer log below, then resume the
 workflow to draft the article.`;
 
 let copyTimer: ReturnType<typeof setTimeout> | null = null;
-let revealTimers: ReturnType<typeof setTimeout>[] = [];
 let configTimer: ReturnType<typeof setTimeout> | null = null;
 
 /** Fire-and-forget POST of the current Command Center config. */
@@ -94,15 +94,19 @@ interface DiffPressState {
   articleLoading: boolean;
   articleSaving: boolean;
   articleSaved: boolean;
+  lastSavedAt: number | null;
   // Bumped on draft-restore so the keyed DraftEditor remounts + re-seeds.
   articleSeed: number;
   drafts: DraftMeta[];
+  historyOpen: boolean;
   openArticle: (repoName: string) => Promise<void>;
   setArticleMarkdown: (md: string) => void;
   markArticleDirty: () => void;
   saveArticle: () => Promise<void>;
   loadDrafts: () => Promise<void>;
   restoreDraft: (ts: string) => Promise<void>;
+  openHistory: () => void;
+  closeHistory: () => void;
 
   // ---- command center ----
   cmdOpen: boolean;
@@ -135,13 +139,14 @@ interface DiffPressState {
   // ---- AI Tech Editor (real, API-driven) ----
   notes: ReviewNote[];
   reviewing: boolean;
+  reviewError: string | null;
   revealedNoteIds: string[];
   openNote: string | null;
   resolvedNotes: Record<string, boolean>;
   chat: Record<string, string[]>;
   noteBusy: Record<string, boolean>;
   revising: boolean;
-  runReview: () => Promise<void>;
+  runReview: (focus?: string) => Promise<void>;
   toggleNote: (id: string) => void;
   applyNote: (id: string) => Promise<void>;
   replyToNote: (id: string, message: string) => Promise<void>;
@@ -156,6 +161,7 @@ interface DiffPressState {
   deploying: boolean;
   deployed: boolean;
   deploySummary: string;
+  deployResults: PublishTargetResult[];
   openPublish: () => void;
   closePublish: () => void;
   toggleTarget: (id: keyof SyndicationTargets) => void;
@@ -205,8 +211,10 @@ export const useDiffPress = create<DiffPressState>((set, get) => ({
   articleLoading: false,
   articleSaving: false,
   articleSaved: false,
+  lastSavedAt: null,
   articleSeed: 0,
   drafts: [],
+  historyOpen: false,
   openArticle: async (repoName) => {
     set({
       view: "editor",
@@ -241,7 +249,7 @@ export const useDiffPress = create<DiffPressState>((set, get) => ({
     set({ articleSaving: true });
     try {
       await saveArticleApi(articleRepo, articleMarkdown);
-      set({ articleSaving: false, articleSaved: true });
+      set({ articleSaving: false, articleSaved: true, lastSavedAt: Date.now() });
       void get().loadDrafts(); // surface the just-written draft
     } catch (err) {
       console.warn("[diffpress] failed to save article:", err);
@@ -274,6 +282,8 @@ export const useDiffPress = create<DiffPressState>((set, get) => ({
       console.warn("[diffpress] failed to restore draft:", err);
     }
   },
+  openHistory: () => set({ historyOpen: true }),
+  closeHistory: () => set({ historyOpen: false }),
 
   cmdOpen: false,
   engineState: "active",
@@ -402,34 +412,27 @@ export const useDiffPress = create<DiffPressState>((set, get) => ({
 
   notes: [],
   reviewing: false,
+  reviewError: null,
   revealedNoteIds: [],
   openNote: null,
   resolvedNotes: {},
   chat: {},
   noteBusy: {},
   revising: false,
-  runReview: async () => {
+  runReview: async (focus) => {
     const { articleRepo, articleMarkdown } = get();
     if (!articleRepo) return;
-    revealTimers.forEach(clearTimeout);
-    revealTimers = [];
-    set({ reviewing: true, notes: [], revealedNoteIds: [], resolvedNotes: {}, chat: {}, openNote: null });
+    set({ reviewing: true, reviewError: null, notes: [], revealedNoteIds: [], resolvedNotes: {}, chat: {}, openNote: null });
     try {
-      const notes = await runReviewApi(articleRepo, articleMarkdown);
-      if (get().articleRepo !== articleRepo) return;
-      set({ notes, reviewing: false });
-      // Reveal notes progressively for the streamed-review feel.
-      notes.forEach((n, i) => {
-        revealTimers.push(
-          setTimeout(
-            () => set((s) => ({ revealedNoteIds: [...s.revealedNoteIds, n.id] })),
-            350 + i * 500,
-          ),
-        );
-      });
+      // Notes stream in from the Function URL; reveal each the moment it arrives.
+      await runReviewStream(articleRepo, articleMarkdown, (note) => {
+        if (get().articleRepo !== articleRepo) return;
+        set((s) => ({ notes: [...s.notes, note], revealedNoteIds: [...s.revealedNoteIds, note.id] }));
+      }, focus?.trim() || undefined);
+      if (get().articleRepo === articleRepo) set({ reviewing: false });
     } catch (err) {
       console.warn("[diffpress] review failed:", err);
-      set({ reviewing: false });
+      set({ reviewing: false, reviewError: err instanceof Error ? err.message : "Review failed" });
     }
   },
   toggleNote: (id) => set((s) => ({ openNote: s.openNote === id ? null : id })),
@@ -478,11 +481,16 @@ export const useDiffPress = create<DiffPressState>((set, get) => ({
     if (!articleRepo || !instruction.trim()) return;
     set({ revising: true });
     try {
-      const article = await reviseArticleApi(articleRepo, articleMarkdown, instruction);
+      // Accumulate the streamed markdown, then re-seed the editor once.
+      // ponytail: accumulate then re-seed; live-render only if streaming-into-editor is wanted
+      let md = "";
+      const { title } = await reviseArticleStream(articleRepo, articleMarkdown, instruction, (chunk) => {
+        md += chunk;
+      });
       if (get().articleRepo !== articleRepo) return;
       set((s) => ({
-        articleMarkdown: article.articleMarkdown,
-        articleTitle: article.title,
+        articleMarkdown: md,
+        articleTitle: title || s.articleTitle,
         articleSaved: false,
         articleSeed: s.articleSeed + 1,
         revising: false,
@@ -502,6 +510,7 @@ export const useDiffPress = create<DiffPressState>((set, get) => ({
   deploying: false,
   deployed: false,
   deploySummary: "",
+  deployResults: [],
   openPublish: () => {
     // Publishable when nothing is outstanding: no review run, or all notes resolved.
     const { notes, resolvedNotes } = get();
@@ -516,17 +525,33 @@ export const useDiffPress = create<DiffPressState>((set, get) => ({
   setScheduleAt: (scheduleAt) => set({ scheduleAt }),
   setSeriesLink: (seriesLink) => set({ seriesLink }),
   deploy: async () => {
-    const { targets, timing, scheduleAt, seriesLink } = get();
+    const { targets, timing, scheduleAt, seriesLink, articleRepo } = get();
     if (!Object.values(targets).some(Boolean)) return;
+    if (!articleRepo) return;
     set({ deploying: true });
-    const res = await deployArticle({
-      articleId: "helix-article",
-      targets,
-      timing,
-      scheduleAt,
-      seriesLink,
-    });
-    set({ deploying: false, deployed: true, deploySummary: res.summary });
+    try {
+      const res = await deployArticle({
+        repoName: articleRepo,
+        targets,
+        timing,
+        scheduleAt,
+        seriesLink,
+      });
+      set({
+        deploying: false,
+        deployed: true,
+        deploySummary: res.summary,
+        deployResults: res.results ?? [],
+      });
+    } catch (err) {
+      set({
+        deploying: false,
+        deployed: true,
+        deploySummary: "Publish failed — see console.",
+        deployResults: [],
+      });
+      console.error("[deploy] failed:", err);
+    }
   },
   backToDashboard: () =>
     set({ publishOpen: false, view: "dashboard" }),

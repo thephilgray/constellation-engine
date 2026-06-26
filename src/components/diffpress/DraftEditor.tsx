@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  ArrowUp,
   Code,
+  History,
   Image as ImageIcon,
   Link as LinkIcon,
   Minus,
@@ -25,9 +27,8 @@ export function DraftEditor() {
   const markArticleDirty = useDiffPress((s) => s.markArticleDirty);
   const saveArticle = useDiffPress((s) => s.saveArticle);
   const saving = useDiffPress((s) => s.articleSaving);
-  const saved = useDiffPress((s) => s.articleSaved);
-  const drafts = useDiffPress((s) => s.drafts);
-  const restoreDraft = useDiffPress((s) => s.restoreDraft);
+  const lastSavedAt = useDiffPress((s) => s.lastSavedAt);
+  const openHistory = useDiffPress((s) => s.openHistory);
   const setEditorMode = useDiffPress((s) => s.setEditorMode);
   const runReview = useDiffPress((s) => s.runReview);
   const reviseArticle = useDiffPress((s) => s.reviseArticle);
@@ -35,6 +36,7 @@ export function DraftEditor() {
   const isMobile = useIsMobile();
 
   const [instruction, setInstruction] = useState("");
+  const [reviseFocused, setReviseFocused] = useState(false);
   const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const proseRef = useRef<HTMLDivElement | null>(null);
@@ -131,8 +133,10 @@ export function DraftEditor() {
   const onRunReview = useCallback(() => {
     syncMarkdown();
     setEditorMode("review");
-    void runReview();
-  }, [syncMarkdown, setEditorMode, runReview]);
+    // The same input doubles as the review focus: typed text → emphasis, empty → general.
+    void runReview(instruction.trim() || undefined);
+    setInstruction("");
+  }, [instruction, syncMarkdown, setEditorMode, runReview]);
 
   const onRevise = useCallback(() => {
     if (!instruction.trim()) return;
@@ -168,9 +172,36 @@ export function DraftEditor() {
   const doQuote = () =>
     exec("formatBlock", curBlockTag() === "BLOCKQUOTE" ? "P" : "BLOCKQUOTE");
   const doText = () => exec("formatBlock", "P");
+  // Walk up from the selection to find an enclosing <a>, if any.
+  const currentAnchor = useCallback((): HTMLAnchorElement | null => {
+    const sel = window.getSelection();
+    if (!sel || !sel.rangeCount) return null;
+    let n: Node | null = sel.getRangeAt(0).startContainer;
+    while (n && n !== proseRef.current) {
+      if (n.nodeType === 1 && (n as HTMLElement).tagName === "A") return n as HTMLAnchorElement;
+      n = n.parentNode;
+    }
+    return null;
+  }, []);
+  // ponytail: reuse window.prompt like image insert; build an inline popover only if the dialog clashes with the new design
   const doLink = () => {
-    const u = window.prompt("Link URL", "https://");
-    if (u) exec("createLink", u);
+    const existing = currentAnchor();
+    const current = existing?.getAttribute("href") ?? "https://";
+    const u = window.prompt("Link URL (empty to remove)", current);
+    if (u === null) return; // cancelled
+    if (u.trim() === "" && existing) {
+      exec("unlink");
+      return;
+    }
+    if (existing) {
+      // Re-select the whole anchor so createLink replaces its href cleanly.
+      const r = document.createRange();
+      r.selectNode(existing);
+      const s = window.getSelection();
+      s?.removeAllRanges();
+      s?.addRange(r);
+    }
+    if (u.trim()) exec("createLink", u.trim());
   };
   const doCode = () => {
     const sel = window.getSelection();
@@ -284,18 +315,28 @@ export function DraftEditor() {
 
   return (
     <>
-      <div className="mb-7 flex items-center gap-[9px] text-[12.5px] leading-[1.5] text-dp-faint-2">
-        <span className="flex flex-[0_0_auto] text-dp-faint-3">
-          <WandSparkles size={14} strokeWidth={1.7} />
-        </span>
-        <span>
-          Live editor — select text to format, click{" "}
-          <strong className="font-semibold text-dp-muted">+</strong> to insert a
-          block, or type Markdown (
-          <code className="rounded bg-dp-chip px-1 font-dp-mono">## </code>{" "}
-          <code className="rounded bg-dp-chip px-1 font-dp-mono">&gt; </code>{" "}
-          <code className="rounded bg-dp-chip px-1 font-dp-mono">`</code>).
-        </span>
+      {/* Editor header: autosave/history entry on the left, format hint on the right (per design). */}
+      <div className="mb-[30px] flex items-center justify-between gap-3">
+        <button
+          onClick={openHistory}
+          className="flex items-center gap-2 rounded-lg border-none bg-transparent px-[7px] py-[5px] text-[12.5px] text-dp-faint-2 transition-colors hover:bg-black/[0.04] hover:text-dp-muted"
+        >
+          <span className={cn("h-[6px] w-[6px] rounded-full", saving ? "dp-pulse bg-dp-slate" : "bg-dp-green")} />
+          {saving
+            ? "Saving…"
+            : lastSavedAt
+              ? `Saved · ${new Date(lastSavedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`
+              : "Not saved yet"}
+          <History size={13} strokeWidth={1.7} />
+        </button>
+        {!isMobile && (
+          <span className="text-[12px] text-dp-faint-3">
+            Select to format&nbsp;&nbsp;·&nbsp;&nbsp;
+            <code className="rounded bg-dp-chip px-1 font-dp-mono text-[11px]">##</code>{" "}
+            <code className="rounded bg-dp-chip px-1 font-dp-mono text-[11px]">&gt;</code> for
+            blocks&nbsp;&nbsp;·&nbsp;&nbsp;<strong className="font-bold text-dp-muted">+</strong> to insert
+          </span>
+        )}
       </div>
 
       <div
@@ -312,80 +353,48 @@ export function DraftEditor() {
         style={{ paddingLeft: isMobile ? 34 : 0 }}
       />
 
-      <div className="mt-2 flex items-center gap-[13px]">
-        <button
-          onClick={save}
-          disabled={saving}
-          className={cn(
-            "whitespace-nowrap rounded-[9px] border-none px-[18px] py-[11px] text-[14px] font-medium tracking-[-0.01em] transition-opacity",
-            saving
-              ? "cursor-not-allowed bg-dp-line-2 text-dp-faint-3"
-              : "cursor-pointer bg-dp-ink text-dp-paper hover:opacity-[0.88]",
-          )}
-        >
-          {saving ? "Saving…" : "Save changes"}
-        </button>
-        {saved && !saving && (
-          <span className="text-[13px] text-dp-green">✓ Saved</span>
+      {/* Docked AI revise bar — calm by default, lifts on focus. */}
+      <div
+        className={cn(
+          "sticky bottom-3 z-20 mt-6 flex items-center gap-2 rounded-[12px] border bg-white px-[13px] py-[9px] transition-shadow",
+          reviseFocused
+            ? "border-dp-slate shadow-[0_10px_30px_rgba(26,24,20,0.14)]"
+            : "border-dp-line-2 shadow-[0_2px_10px_rgba(26,24,20,0.06)]",
         )}
-        <button
-          onClick={onRunReview}
-          className="ml-auto flex cursor-pointer items-center gap-[6px] rounded-[9px] border border-dp-line-3 bg-transparent px-[14px] py-[10px] text-[13px] font-medium text-dp-slate transition-colors hover:bg-dp-hover"
-        >
-          <WandSparkles size={14} strokeWidth={1.8} />
-          Run AI review
-        </button>
-      </div>
-
-      {/* General "revise the whole article" instruction box. */}
-      <div className="mt-5 flex items-center gap-2 rounded-[11px] border border-dp-line-2 bg-dp-wash px-[13px] py-[9px]">
+      >
         <WandSparkles size={15} strokeWidth={1.7} className="flex-[0_0_auto] text-dp-faint-3" />
         <input
           value={instruction}
           onChange={(e) => setInstruction(e.target.value)}
+          onFocus={() => setReviseFocused(true)}
+          onBlur={() => setReviseFocused(false)}
           onKeyDown={(e) => {
             if (e.key === "Enter") onRevise();
           }}
           disabled={revising}
-          placeholder="Tell the editor what to change…"
+          placeholder="Tell the editor what to change, or focus the review…"
           className="flex-1 border-none bg-transparent text-[14px] text-dp-ink outline-none disabled:opacity-60"
         />
         <button
+          onClick={onRunReview}
+          className="flex-[0_0_auto] cursor-pointer whitespace-nowrap border-none bg-transparent px-1 text-[12.5px] font-medium text-dp-slate hover:opacity-70"
+        >
+          Run review
+        </button>
+        <button
           onClick={onRevise}
           disabled={revising || !instruction.trim()}
+          aria-label="Revise"
           className={cn(
-            "whitespace-nowrap rounded-[8px] border-none px-[13px] py-[7px] text-[12.5px] font-medium transition-opacity",
+            "flex h-[30px] w-[30px] flex-[0_0_auto] items-center justify-center rounded-full border-none transition-opacity",
             revising || !instruction.trim()
               ? "cursor-not-allowed bg-dp-line-2 text-dp-faint-3"
               : "cursor-pointer bg-dp-slate text-white hover:opacity-[0.88]",
           )}
         >
-          {revising ? "Revising…" : "Revise"}
+          <ArrowUp size={16} strokeWidth={2} />
         </button>
       </div>
-
-      {drafts.length > 0 && (
-        <div className="mt-6 border-t border-dp-line-2 pt-4">
-          <div className="mb-2 text-[10.5px] uppercase tracking-[0.11em] text-dp-faint-2">
-            Version history
-          </div>
-          <ul className="flex flex-col gap-1">
-            {drafts.map((d) => (
-              <li key={d.ts} className="flex items-center justify-between text-[13px] text-dp-muted">
-                <span className="font-dp-mono text-[12px] text-dp-faint">
-                  {new Date(d.ts).toLocaleString()}
-                </span>
-                <button
-                  onClick={() => void restoreDraft(d.ts)}
-                  className="cursor-pointer rounded-md border-none bg-transparent px-2 py-1 text-[12.5px] text-dp-slate hover:bg-dp-hover"
-                >
-                  Restore
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
 
       {/* caret "+" gutter button */}
       {showPlus && (
