@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   slugify,
   signWebhook,
-  canonicalUrlFor,
+  canonicalUrlFromWebhook,
   buildWebhookPayload,
   buildDevtoArticle,
   normalizeDevtoTags,
@@ -13,7 +13,7 @@ import {
 } from "./publish";
 
 const allOff: PublishTargets = {
-  devto: false, diffpress: false, thephilgray: false, linkedin: false, substack: false,
+  devto: false, linkedin: false, substack: false, webhooks: [],
 };
 
 describe("slugify", () => {
@@ -33,19 +33,6 @@ describe("signWebhook", () => {
     expect(signWebhook('{"a":1}', "topsecret")).toBe(sig);
     // Different secret -> different signature.
     expect(signWebhook('{"a":1}', "other")).not.toBe(sig);
-  });
-});
-
-describe("canonicalUrlFor", () => {
-  it("uses the single own-domain target", () => {
-    expect(canonicalUrlFor({ ...allOff, thephilgray: true }, "my-post"))
-      .toBe("https://thephilgray.com/my-post");
-  });
-  it("defaults to diffpress.com when multiple own-domains or none", () => {
-    expect(canonicalUrlFor({ ...allOff, diffpress: true, thephilgray: true }, "my-post"))
-      .toBe("https://diffpress.com/my-post");
-    expect(canonicalUrlFor({ ...allOff, devto: true }, "my-post"))
-      .toBe("https://diffpress.com/my-post");
   });
 });
 
@@ -89,7 +76,7 @@ describe("buildWebhookPayload", () => {
   it("derives slug + canonical and carries seriesLink as series", () => {
     const p = buildWebhookPayload({
       title: "My Post", markdown: "body", repoName: "o/r",
-      seriesLink: "https://x/prev", targets: { ...allOff, diffpress: true },
+      seriesLink: "https://x/prev", canonicalUrl: "https://diffpress.com/my-post",
       publishedAt: "2026-06-25T00:00:00.000Z",
     });
     expect(p).toEqual({
@@ -101,7 +88,7 @@ describe("buildWebhookPayload", () => {
   it("maps an empty seriesLink to null", () => {
     const p = buildWebhookPayload({
       title: "T", markdown: "b", repoName: "o/r", seriesLink: "",
-      targets: { ...allOff, diffpress: true }, publishedAt: "2026-06-25T00:00:00.000Z",
+      canonicalUrl: "https://diffpress.com/t", publishedAt: "2026-06-25T00:00:00.000Z",
     });
     expect(p.series).toBeNull();
   });
@@ -109,8 +96,8 @@ describe("buildWebhookPayload", () => {
 
 describe("selectedTargets", () => {
   it("returns only enabled ids", () => {
-    expect(selectedTargets({ ...allOff, devto: true, thephilgray: true }))
-      .toEqual(["devto", "thephilgray"]);
+    expect(selectedTargets({ ...allOff, devto: true, webhooks: ["wh_a"] }))
+      .toEqual(["devto", "wh_a"]);
   });
 });
 
@@ -118,8 +105,44 @@ describe("summarizeResults", () => {
   it("renders per-target ok/fail with names", () => {
     expect(summarizeResults([
       { id: "devto", ok: true, detail: "" },
-      { id: "thephilgray", ok: false, detail: "503" },
-    ])).toBe("Dev.to ✓ · thephilgray.com ✗");
+      { id: "wh_a", ok: false, detail: "503" },
+    ])).toBe("Dev.to ✓ · wh_a ✗");
+  });
+});
+
+describe("canonicalUrlFromWebhook", () => {
+  it("derives origin from the first webhook url + slug", () => {
+    expect(canonicalUrlFromWebhook("https://diffpress.com/x/y", "my-post")).toBe(
+      "https://diffpress.com/my-post"
+    );
+  });
+  it("returns empty string when no webhook url", () => {
+    expect(canonicalUrlFromWebhook(null, "my-post")).toBe("");
+  });
+});
+
+describe("selectedTargets (with dynamic webhooks)", () => {
+  it("returns enabled fixed targets followed by webhook ids", () => {
+    expect(
+      selectedTargets({ devto: true, linkedin: false, substack: false, webhooks: ["wh_a", "wh_b"] })
+    ).toEqual(["devto", "wh_a", "wh_b"]);
+  });
+});
+
+describe("parsePublishInput webhooks", () => {
+  const base = { requestContext: { authorizer: { jwt: { claims: { sub: "u1" } } } } };
+  it("accepts a webhooks string array and rejects non-strings", () => {
+    const ev = {
+      ...base,
+      body: JSON.stringify({
+        repoName: "o/r",
+        targets: { devto: false, webhooks: ["wh_a", 5, "wh_b"] },
+        timing: "now",
+      }),
+    };
+    const r = parsePublishInput(ev as any);
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.value.targets.webhooks).toEqual(["wh_a", "wh_b"]);
   });
 });
 
