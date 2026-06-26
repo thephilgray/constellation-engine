@@ -81,17 +81,30 @@ export interface DiscoveryConfig {
 
 export interface SyndicationTargets {
   devto: boolean;
+  diffpress: boolean;
+  thephilgray: boolean;
   linkedin: boolean;
   substack: boolean;
-  portfolio: boolean;
+}
+
+export interface PublishTargetResult {
+  id: keyof SyndicationTargets;
+  ok: boolean;
+  detail: string;
 }
 
 export interface DeployPayload {
-  articleId: string;
+  repoName: string;
   targets: SyndicationTargets;
   timing: Timing;
   scheduleAt: string;
   seriesLink: string;
+}
+
+export interface DeployResponse {
+  scheduled: boolean;
+  summary: string;
+  results?: PublishTargetResult[];
 }
 
 // ---- API response shapes (GET /api/handoffs, GET /api/articles) ----
