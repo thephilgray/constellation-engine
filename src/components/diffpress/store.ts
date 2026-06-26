@@ -23,6 +23,7 @@ import type {
   EngineState,
   HandoffDoc,
   PipelineData,
+  PublishTargetResult,
   ReviewNote,
   SyndicationTargets,
   Timing,
@@ -160,6 +161,7 @@ interface DiffPressState {
   deploying: boolean;
   deployed: boolean;
   deploySummary: string;
+  deployResults: PublishTargetResult[];
   openPublish: () => void;
   closePublish: () => void;
   toggleTarget: (id: keyof SyndicationTargets) => void;
@@ -508,6 +510,7 @@ export const useDiffPress = create<DiffPressState>((set, get) => ({
   deploying: false,
   deployed: false,
   deploySummary: "",
+  deployResults: [],
   openPublish: () => {
     // Publishable when nothing is outstanding: no review run, or all notes resolved.
     const { notes, resolvedNotes } = get();
@@ -522,17 +525,33 @@ export const useDiffPress = create<DiffPressState>((set, get) => ({
   setScheduleAt: (scheduleAt) => set({ scheduleAt }),
   setSeriesLink: (seriesLink) => set({ seriesLink }),
   deploy: async () => {
-    const { targets, timing, scheduleAt, seriesLink } = get();
+    const { targets, timing, scheduleAt, seriesLink, articleRepo } = get();
     if (!Object.values(targets).some(Boolean)) return;
+    if (!articleRepo) return;
     set({ deploying: true });
-    const res = await deployArticle({
-      articleId: "helix-article",
-      targets,
-      timing,
-      scheduleAt,
-      seriesLink,
-    });
-    set({ deploying: false, deployed: true, deploySummary: res.summary });
+    try {
+      const res = await deployArticle({
+        repoName: articleRepo,
+        targets,
+        timing,
+        scheduleAt,
+        seriesLink,
+      });
+      set({
+        deploying: false,
+        deployed: true,
+        deploySummary: res.summary,
+        deployResults: res.results ?? [],
+      });
+    } catch (err) {
+      set({
+        deploying: false,
+        deployed: true,
+        deploySummary: "Publish failed — see console.",
+        deployResults: [],
+      });
+      console.error("[deploy] failed:", err);
+    }
   },
   backToDashboard: () =>
     set({ publishOpen: false, view: "dashboard" }),
