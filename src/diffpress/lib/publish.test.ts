@@ -5,6 +5,7 @@ import {
   canonicalUrlFor,
   buildWebhookPayload,
   buildDevtoArticle,
+  normalizeDevtoTags,
   selectedTargets,
   summarizeResults,
   parsePublishInput,
@@ -48,12 +49,39 @@ describe("canonicalUrlFor", () => {
   });
 });
 
+describe("normalizeDevtoTags", () => {
+  it("lowercases, strips non-alphanumerics, drops empties", () => {
+    expect(normalizeDevtoTags(["React", "web-dev", "Machine Learning", "  ", "C++"]))
+      .toEqual(["react", "webdev", "machinelearning", "c"]);
+  });
+  it("dedupes after normalizing and caps at 4", () => {
+    expect(normalizeDevtoTags(["react", "React", "vue", "svelte", "angular", "solid"]))
+      .toEqual(["react", "vue", "svelte", "angular"]);
+  });
+  it("tolerates non-string entries", () => {
+    expect(normalizeDevtoTags(["ok", 5 as any, null as any, "two"]))
+      .toEqual(["ok", "two"]);
+  });
+});
+
 describe("buildDevtoArticle", () => {
-  it("wraps the markdown with published:true and the canonical url", () => {
-    const body = buildDevtoArticle({ title: "T", markdown: "# B", canonicalUrl: "https://diffpress.com/t" });
-    expect(body).toEqual({
-      article: { title: "T", body_markdown: "# B", published: true, canonical_url: "https://diffpress.com/t" },
+  it("wraps the markdown with published:true, the canonical url, and tags", () => {
+    const body = buildDevtoArticle({
+      title: "T", markdown: "# B", canonicalUrl: "https://diffpress.com/t", tags: ["react", "webdev"],
     });
+    expect(body).toEqual({
+      article: {
+        title: "T", body_markdown: "# B", published: true,
+        canonical_url: "https://diffpress.com/t", tags: ["react", "webdev"],
+      },
+    });
+  });
+  it("normalizes tags it is given (lowercase, alnum, max 4)", () => {
+    const body = buildDevtoArticle({
+      title: "T", markdown: "B", canonicalUrl: "https://diffpress.com/t",
+      tags: ["React", "web-dev", "Machine Learning", "Go", "Rust"],
+    });
+    expect(body.article.tags).toEqual(["react", "webdev", "machinelearning", "go"]);
   });
 });
 
@@ -120,6 +148,18 @@ describe("parsePublishInput", () => {
     const r = parsePublishInput({ requestContext: ctx("u1"), body: JSON.stringify(good) });
     expect(r.ok).toBe(true);
     if (r.ok) expect(r.value.repoName).toBe("o/r");
+  });
+  it("carries tags through, defaulting to [] when absent", () => {
+    const withTags = parsePublishInput({
+      requestContext: ctx("u1"),
+      body: JSON.stringify({ ...good, tags: ["react", "webdev"] }),
+    });
+    expect(withTags.ok).toBe(true);
+    if (withTags.ok) expect(withTags.value.tags).toEqual(["react", "webdev"]);
+
+    const noTags = parsePublishInput({ requestContext: ctx("u1"), body: JSON.stringify(good) });
+    expect(noTags.ok).toBe(true);
+    if (noTags.ok) expect(noTags.value.tags).toEqual([]);
   });
   it("rejects scheduling with an empty scheduleAt (400)", () => {
     const r = parsePublishInput({

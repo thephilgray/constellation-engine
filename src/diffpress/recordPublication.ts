@@ -12,6 +12,7 @@ export async function handler(
     title: state.article.title,
     publishedAt: new Date().toISOString(),
     articleMarkdown: state.article.articleMarkdown,
+    tags: state.article.tags ?? [],
   });
 
   console.log(`[recordPublication] ledger updated: ${state.repo.repoName} -> PUBLISHED`);

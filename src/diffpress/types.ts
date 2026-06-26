@@ -86,6 +86,8 @@ export interface DraftedArticle {
   title: string;
   articleMarkdown: string;
   draftedAt: string;
+  /** Up to 4 Dev.to-style tags the model suggested; the editable publish seed. */
+  tags?: string[];
 }
 
 export type PublicationStatus =
@@ -107,12 +109,16 @@ export interface PublicationRecord {
   payloadKey?: string;
   title?: string;
   articleMarkdown?: string;
+  /** Drafted Dev.to tag seed (LLM-suggested); surfaced by getArticle to seed the publish console. */
+  tags?: string[];
   discoveredAt?: string;
   publishedAt?: string;
   // Scheduling fields (status === "SCHEDULED")
   scheduleAt?: string;   // ISO 8601; when the cron should publish
   targets?: PublishTargets;
   seriesLink?: string;
+  /** Edited tags captured at schedule time, replayed by the cron at publish. */
+  publishTags?: string[];
   // Discovery-pool fields (status === "DISCOVERED")
   description?: string;
   stars?: number;

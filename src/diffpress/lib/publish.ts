@@ -16,7 +16,11 @@ export interface PublishInput {
   timing: "now" | "schedule";
   scheduleAt: string;
   seriesLink: string;
+  tags: string[];
 }
+
+// Dev.to accepts at most 4 tags.
+const MAX_DEVTO_TAGS = 4;
 
 export interface TargetResult {
   id: TargetId;
@@ -85,17 +89,46 @@ export function buildWebhookPayload(args: {
   };
 }
 
+/**
+ * Coerce arbitrary tag input into Dev.to's accepted form: lowercase,
+ * alphanumeric only (Dev.to rejects separators/spaces), de-duplicated, max 4.
+ * Applied at the trust boundary so a bad tag can't 422 the whole article POST.
+ */
+export function normalizeDevtoTags(tags: string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const raw of tags) {
+    if (typeof raw !== "string") continue;
+    const tag = raw.toLowerCase().replace(/[^a-z0-9]/g, "");
+    if (!tag || seen.has(tag)) continue;
+    seen.add(tag);
+    out.push(tag);
+    if (out.length === MAX_DEVTO_TAGS) break;
+  }
+  return out;
+}
+
 export function buildDevtoArticle(args: {
   title: string;
   markdown: string;
   canonicalUrl: string;
-}): { article: { title: string; body_markdown: string; published: true; canonical_url: string } } {
+  tags: string[];
+}): {
+  article: {
+    title: string;
+    body_markdown: string;
+    published: true;
+    canonical_url: string;
+    tags: string[];
+  };
+} {
   return {
     article: {
       title: args.title,
       body_markdown: args.markdown,
       published: true,
       canonical_url: args.canonicalUrl,
+      tags: normalizeDevtoTags(args.tags),
     },
   };
 }
@@ -125,7 +158,7 @@ export function parsePublishInput(event: {
     return { ok: false, statusCode: 400, message: "Invalid JSON body" };
   }
 
-  const { repoName, targets, timing, scheduleAt, seriesLink } = parsed ?? {};
+  const { repoName, targets, timing, scheduleAt, seriesLink, tags } = parsed ?? {};
   if (typeof repoName !== "string" || repoName.trim() === "") {
     return { ok: false, statusCode: 400, message: "repoName is required" };
   }
@@ -156,6 +189,7 @@ export function parsePublishInput(event: {
       timing,
       scheduleAt: typeof scheduleAt === "string" ? scheduleAt : "",
       seriesLink: typeof seriesLink === "string" ? seriesLink : "",
+      tags: Array.isArray(tags) ? tags.filter((t): t is string => typeof t === "string") : [],
     },
   };
 }

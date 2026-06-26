@@ -76,14 +76,15 @@ export function buildDraftPrompt(input: {
     notes || "(none provided)",
     ``,
     `## Output`,
-    `Return a JSON object with two fields: "title" (a concise, specific headline) and "articleMarkdown" (the full article in GitHub-flavored Markdown, beginning at a level-2 heading; do not repeat the title as an H1).`,
+    `Return a JSON object with three fields: "title" (a concise, specific headline), "articleMarkdown" (the full article in GitHub-flavored Markdown, beginning at a level-2 heading; do not repeat the title as an H1), and "tags" (an array of up to 4 Dev.to-style topic tags — single lowercase words, no spaces or punctuation, e.g. "react", "webdev", "rust").`,
   ].join("\n");
 }
 
-/** Pure: parse and validate the model's JSON output into title + body. */
+/** Pure: parse and validate the model's JSON output into title + body + tags. */
 export function parseDraftResponse(rawText: string): {
   title: string;
   articleMarkdown: string;
+  tags: string[];
 } {
   const text = (rawText ?? "").trim();
   if (!text) {
@@ -95,7 +96,7 @@ export function parseDraftResponse(rawText: string): {
   } catch {
     throw new Error("draftArticle: model output was not valid JSON.");
   }
-  const obj = parsed as { title?: unknown; articleMarkdown?: unknown };
+  const obj = parsed as { title?: unknown; articleMarkdown?: unknown; tags?: unknown };
   if (
     typeof obj.title !== "string" ||
     typeof obj.articleMarkdown !== "string" ||
@@ -104,7 +105,11 @@ export function parseDraftResponse(rawText: string): {
   ) {
     throw new Error("draftArticle: model output missing title or articleMarkdown.");
   }
-  return { title: obj.title, articleMarkdown: obj.articleMarkdown };
+  // Tags are a best-effort seed: tolerate absence or a malformed value.
+  const tags = Array.isArray(obj.tags)
+    ? obj.tags.filter((t): t is string => typeof t === "string" && t.trim() !== "").slice(0, 4)
+    : [];
+  return { title: obj.title, articleMarkdown: obj.articleMarkdown, tags };
 }
 
 /** Thin wrapper around the Gemini structured-output call. */
@@ -119,8 +124,9 @@ async function generateArticle(prompt: string): Promise<string> {
         properties: {
           title: { type: Type.STRING },
           articleMarkdown: { type: Type.STRING },
+          tags: { type: Type.ARRAY, items: { type: Type.STRING } },
         },
-        required: ["title", "articleMarkdown"],
+        required: ["title", "articleMarkdown", "tags"],
       },
     },
   });
@@ -144,12 +150,13 @@ export async function handler(state: ContentEngineState): Promise<ContentEngineS
 
   const prompt = buildDraftPrompt({ repo: state.repo, enrichment: payload, notes, mode: state.mode });
   const raw = await generateArticle(prompt);
-  const { title, articleMarkdown } = parseDraftResponse(raw);
+  const { title, articleMarkdown, tags } = parseDraftResponse(raw);
 
   const article: DraftedArticle = {
     title,
     articleMarkdown: sanitizeMarkdown(articleMarkdown),
     draftedAt: new Date().toISOString(),
+    tags,
   };
 
   console.log(

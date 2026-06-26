@@ -39,6 +39,8 @@ export async function handler(
         articleMarkdown: record.articleMarkdown,
         publishedAt: record.publishedAt,
         status: record.status,
+        tags: record.tags ?? [],
+        language: record.language ?? null,
       }),
     };
   } catch (error: any) {

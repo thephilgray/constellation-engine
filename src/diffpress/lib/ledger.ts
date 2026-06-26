@@ -25,13 +25,17 @@ function tableName(): string {
 export function buildMarkPublishedParams(
   table: string,
   repoName: string,
-  meta: { title: string; publishedAt: string; articleMarkdown: string }
+  meta: { title: string; publishedAt: string; articleMarkdown: string; tags?: string[] }
 ): UpdateCommandInput {
+  // Persist drafted tags (the editable Dev.to seed) only when provided; the
+  // publish-console path omits them so it never clobbers an existing seed.
+  const setTags = meta.tags !== undefined;
   return {
     TableName: table,
     Key: { repoName },
     UpdateExpression:
-      "SET #status = :published, title = :title, publishedAt = :publishedAt, articleMarkdown = :article",
+      "SET #status = :published, title = :title, publishedAt = :publishedAt, articleMarkdown = :article" +
+      (setTags ? ", tags = :tags" : ""),
     // Idempotent: do not re-publish an item already in PUBLISHED state.
     ConditionExpression:
       "attribute_not_exists(#status) OR #status <> :published",
@@ -41,6 +45,7 @@ export function buildMarkPublishedParams(
       ":title": meta.title,
       ":publishedAt": meta.publishedAt,
       ":article": meta.articleMarkdown,
+      ...(setTags ? { ":tags": meta.tags } : {}),
     },
   };
 }
@@ -104,13 +109,13 @@ export function buildMarkDismissedParams(
 export function buildMarkScheduledParams(
   table: string,
   repoName: string,
-  meta: { scheduleAt: string; targets: PublishTargets; seriesLink: string }
+  meta: { scheduleAt: string; targets: PublishTargets; seriesLink: string; tags: string[] }
 ): UpdateCommandInput {
   return {
     TableName: table,
     Key: { repoName },
     UpdateExpression:
-      "SET #status = :scheduled, scheduleAt = :scheduleAt, targets = :targets, seriesLink = :seriesLink",
+      "SET #status = :scheduled, scheduleAt = :scheduleAt, targets = :targets, seriesLink = :seriesLink, publishTags = :publishTags",
     ConditionExpression:
       "attribute_not_exists(#status) OR #status <> :published",
     ExpressionAttributeNames: { "#status": "status" },
@@ -120,6 +125,7 @@ export function buildMarkScheduledParams(
       ":scheduleAt": meta.scheduleAt,
       ":targets": meta.targets,
       ":seriesLink": meta.seriesLink,
+      ":publishTags": meta.tags,
     },
   };
 }
@@ -186,7 +192,7 @@ export async function getByRepo(repoName: string): Promise<PublicationRecord | n
 /** Flip the item to PUBLISHED. Swallows the conditional-check failure (idempotent). */
 export async function markPublished(
   repoName: string,
-  meta: { title: string; publishedAt: string; articleMarkdown: string }
+  meta: { title: string; publishedAt: string; articleMarkdown: string; tags?: string[] }
 ): Promise<void> {
   try {
     await docClient.send(
@@ -203,7 +209,7 @@ export async function markPublished(
 
 export async function markScheduled(
   repoName: string,
-  meta: { scheduleAt: string; targets: PublishTargets; seriesLink: string }
+  meta: { scheduleAt: string; targets: PublishTargets; seriesLink: string; tags: string[] }
 ): Promise<void> {
   await docClient.send(
     new UpdateCommand(buildMarkScheduledParams(tableName(), repoName, meta))

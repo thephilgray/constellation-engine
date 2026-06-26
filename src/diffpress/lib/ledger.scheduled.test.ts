@@ -1,14 +1,14 @@
 import { describe, it, expect } from "vitest";
-import { buildMarkScheduledParams, BOARD_PROJECTION } from "./ledger";
+import { buildMarkScheduledParams, buildMarkPublishedParams, BOARD_PROJECTION } from "./ledger";
 
 const targets = {
   devto: true, diffpress: false, thephilgray: true, linkedin: false, substack: false,
 };
 
 describe("buildMarkScheduledParams", () => {
-  it("sets status SCHEDULED with scheduleAt, targets and seriesLink", () => {
+  it("sets status SCHEDULED with scheduleAt, targets, seriesLink and publishTags", () => {
     const p = buildMarkScheduledParams("T", "o/r", {
-      scheduleAt: "2026-07-01T09:00:00.000Z", targets, seriesLink: "https://x/p",
+      scheduleAt: "2026-07-01T09:00:00.000Z", targets, seriesLink: "https://x/p", tags: ["react", "go"],
     });
     expect(p.TableName).toBe("T");
     expect(p.Key).toEqual({ repoName: "o/r" });
@@ -16,10 +16,29 @@ describe("buildMarkScheduledParams", () => {
     expect(p.ExpressionAttributeValues![":scheduleAt"]).toBe("2026-07-01T09:00:00.000Z");
     expect(p.ExpressionAttributeValues![":targets"]).toEqual(targets);
     expect(p.ExpressionAttributeValues![":seriesLink"]).toBe("https://x/p");
+    expect(p.ExpressionAttributeValues![":publishTags"]).toEqual(["react", "go"]);
+    expect(p.UpdateExpression).toContain("publishTags = :publishTags");
   });
   it("does not overwrite an already-PUBLISHED item", () => {
-    const p = buildMarkScheduledParams("T", "o/r", { scheduleAt: "x", targets, seriesLink: "" });
+    const p = buildMarkScheduledParams("T", "o/r", { scheduleAt: "x", targets, seriesLink: "", tags: [] });
     expect(p.ConditionExpression).toContain("<> :published");
+  });
+});
+
+describe("buildMarkPublishedParams tags", () => {
+  it("persists the drafted tags seed when provided", () => {
+    const p = buildMarkPublishedParams("T", "o/r", {
+      title: "X", publishedAt: "2026-07-01T00:00:00.000Z", articleMarkdown: "b", tags: ["react"],
+    });
+    expect(p.UpdateExpression).toContain("tags = :tags");
+    expect(p.ExpressionAttributeValues![":tags"]).toEqual(["react"]);
+  });
+  it("omits tags entirely when not provided, so the seed is never clobbered", () => {
+    const p = buildMarkPublishedParams("T", "o/r", {
+      title: "X", publishedAt: "2026-07-01T00:00:00.000Z", articleMarkdown: "b",
+    });
+    expect(p.UpdateExpression).not.toContain("tags");
+    expect(p.ExpressionAttributeValues![":tags"]).toBeUndefined();
   });
 });
 

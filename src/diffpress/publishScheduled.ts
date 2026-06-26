@@ -6,7 +6,7 @@ export async function handler(): Promise<{ published: number }> {
   const due = await queryScheduledDue(new Date().toISOString());
   for (const record of due) {
     try {
-      await publishNow(record, record.targets!, record.seriesLink ?? "");
+      await publishNow(record, record.targets!, record.seriesLink ?? "", record.publishTags ?? []);
       console.log(`[publishScheduled] published ${record.repoName}`);
     } catch (err) {
       console.error(`[publishScheduled] failed ${record.repoName}:`, err);

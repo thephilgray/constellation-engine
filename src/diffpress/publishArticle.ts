@@ -32,7 +32,8 @@ function webhookConfigs(): Partial<Record<"diffpress" | "thephilgray", WebhookCo
 async function postDevto(
   title: string,
   markdown: string,
-  canonicalUrl: string
+  canonicalUrl: string,
+  tags: string[]
 ): Promise<TargetResult> {
   try {
     const res = await fetch("https://dev.to/api/articles", {
@@ -41,7 +42,7 @@ async function postDevto(
         "Content-Type": "application/json",
         "api-key": Resource.DEVTO_API_KEY.value,
       },
-      body: JSON.stringify(buildDevtoArticle({ title, markdown, canonicalUrl })),
+      body: JSON.stringify(buildDevtoArticle({ title, markdown, canonicalUrl, tags })),
     });
     if (!res.ok) {
       return { id: "devto", ok: false, detail: `HTTP ${res.status}` };
@@ -92,13 +93,14 @@ async function postWebhook(
 export async function publishNow(
   record: PublicationRecord,
   targets: PublishTargets,
-  seriesLink: string
+  seriesLink: string,
+  tags: string[]
 ): Promise<{ results: TargetResult[]; summary: string }> {
   const canonicalUrl = canonicalUrlFor(targets, slugify(record.title ?? ""));
   const jobs: Promise<TargetResult>[] = selectedTargets(targets).map((id: TargetId) => {
     switch (id) {
       case "devto":
-        return postDevto(record.title ?? "", record.articleMarkdown ?? "", canonicalUrl);
+        return postDevto(record.title ?? "", record.articleMarkdown ?? "", canonicalUrl, tags);
       case "diffpress":
       case "thephilgray":
         return postWebhook(id, record, targets, seriesLink);
@@ -125,7 +127,7 @@ export async function handler(
   if (!parsed.ok) {
     return { statusCode: parsed.statusCode, body: JSON.stringify({ message: parsed.message }) };
   }
-  const { repoName, targets, timing, scheduleAt, seriesLink } = parsed.value;
+  const { repoName, targets, timing, scheduleAt, seriesLink, tags } = parsed.value;
 
   try {
     const record = await getByRepo(repoName);
@@ -134,14 +136,14 @@ export async function handler(
     }
 
     if (timing === "schedule") {
-      await markScheduled(repoName, { scheduleAt, targets, seriesLink });
+      await markScheduled(repoName, { scheduleAt, targets, seriesLink, tags });
       return {
         statusCode: 202,
         body: JSON.stringify({ scheduled: true, summary: `Scheduled for ${scheduleAt}` }),
       };
     }
 
-    const { results, summary } = await publishNow(record, targets, seriesLink);
+    const { results, summary } = await publishNow(record, targets, seriesLink, tags);
     return { statusCode: 200, body: JSON.stringify({ scheduled: false, results, summary }) };
   } catch (error: any) {
     console.error("[publishArticle] failed:", error);

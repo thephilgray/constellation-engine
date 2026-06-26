@@ -50,9 +50,21 @@ describe("buildDraftPrompt", () => {
 });
 
 describe("parseDraftResponse", () => {
-  it("parses a valid JSON response", () => {
-    const raw = JSON.stringify({ title: "My Title", articleMarkdown: "## Body" });
-    expect(parseDraftResponse(raw)).toEqual({ title: "My Title", articleMarkdown: "## Body" });
+  it("parses a valid JSON response with tags", () => {
+    const raw = JSON.stringify({ title: "My Title", articleMarkdown: "## Body", tags: ["react", "webdev"] });
+    expect(parseDraftResponse(raw)).toEqual({
+      title: "My Title", articleMarkdown: "## Body", tags: ["react", "webdev"],
+    });
+  });
+
+  it("defaults tags to [] and caps/cleans a malformed tags value", () => {
+    const missing = JSON.stringify({ title: "T", articleMarkdown: "## B" });
+    expect(parseDraftResponse(missing).tags).toEqual([]);
+
+    const messy = JSON.stringify({
+      title: "T", articleMarkdown: "## B", tags: ["a", "", 3, "b", "c", "d", "e"],
+    });
+    expect(parseDraftResponse(messy).tags).toEqual(["a", "b", "c", "d"]);
   });
 
   it("throws on empty output", () => {
