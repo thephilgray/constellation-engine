@@ -11,6 +11,7 @@ import { AI_STREAM_URL } from "@/lib/amplify";
 import type {
   ArticleResponse,
   DeployPayload,
+  DeployResponse,
   DiscoveryConfig,
   DraftBody,
   DraftMeta,
@@ -19,7 +20,6 @@ import type {
   ReviewNote,
 } from "./types";
 
-const delay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 /**
  * Load the pipeline board. All four columns come from the ledger via
@@ -241,24 +241,13 @@ export async function reviseArticleStream(
   return { title };
 }
 
-/** Deploy / syndicate the finished article. Eventually a deploy Step Function. */
-export async function deployArticle(
-  payload: DeployPayload,
-): Promise<{ ok: true; summary: string }> {
-  await delay(900);
-  const names: Record<keyof DeployPayload["targets"], string> = {
-    devto: "Dev.to",
-    linkedin: "LinkedIn",
-    substack: "Substack",
-    portfolio: "Portfolio",
-  };
-  const on = (Object.keys(payload.targets) as (keyof typeof names)[])
-    .filter((k) => payload.targets[k])
-    .map((k) => names[k]);
-  const summary =
-    (on.length ? on.join(" · ") : "no targets") +
-    " · " +
-    (payload.timing === "now" ? "publishing now" : "scheduled");
-  return { ok: true, summary };
+export async function deployArticle(payload: DeployPayload): Promise<DeployResponse> {
+  const res = await authedFetch("/api/publish", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error(`Failed to publish (${res.status})`);
+  return res.json();
 }
 
