@@ -19,7 +19,6 @@ export default $config({
     const GOOGLE_BOOKS_API_KEY = new sst.Secret("GOOGLE_BOOKS_API_KEY");
     const TAVILY_API_KEY = new sst.Secret("TAVILY_API_KEY");
     const DEVTO_API_KEY = new sst.Secret("DEVTO_API_KEY");
-    const PUBLISH_WEBHOOKS = new sst.Secret("PUBLISH_WEBHOOKS");
 
     // NEW: Authentication (with Google Identity Provider)
     // Note: 'identityProviders' is not a direct property of CognitoUserPool args in this version.
@@ -394,6 +393,13 @@ export default $config({
       primaryIndex: { hashKey: "id" },
     });
 
+    // Webhook syndication configs (PK: id). Metadata only — secrets live in
+    // SSM SecureString at /diffpress/<stage>/webhooks/<id>.
+    const webhookConfig = new sst.aws.Dynamo("WebhookConfig", {
+      fields: { id: "string" },
+      primaryIndex: { hashKey: "id" },
+    });
+
     api.route("POST /api/publish-handoff", {
       handler: "src/diffpress/publishHandoff.handler",
       link: [auth, publicationLifecycle],
@@ -411,7 +417,10 @@ export default $config({
 
     api.route("POST /api/publish", {
       handler: "src/diffpress/publishArticle.handler",
-      link: [auth, publicationLifecycle, DEVTO_API_KEY, PUBLISH_WEBHOOKS],
+      link: [auth, publicationLifecycle, DEVTO_API_KEY, webhookConfig],
+      permissions: [
+        { actions: ["ssm:GetParameter"], resources: [$interpolate`arn:aws:ssm:*:*:parameter/diffpress/${$app.stage}/webhooks/*`] },
+      ],
       timeout: "30 seconds",
     }, {
       auth: {
@@ -420,6 +429,22 @@ export default $config({
         },
       },
     });
+
+    // Webhook CRUD + connectivity test (manage syndication targets in-UI).
+    const ssmWebhookArn = $interpolate`arn:aws:ssm:*:*:parameter/diffpress/${$app.stage}/webhooks/*`;
+
+    for (const route of ["GET /api/webhooks", "POST /api/webhooks", "DELETE /api/webhooks", "POST /api/webhooks/test"]) {
+      api.route(route, {
+        handler: "src/diffpress/webhookConfig.handler",
+        link: [auth, webhookConfig],
+        permissions: [
+          { actions: ["ssm:GetParameter", "ssm:PutParameter", "ssm:DeleteParameter"], resources: [ssmWebhookArn] },
+        ],
+        timeout: "30 seconds",
+      }, {
+        auth: { jwt: { authorizer: authorizer.id } },
+      });
+    }
 
     // Read the pending/published board (Ready for Dev + In Review columns).
     api.route("GET /api/handoffs", {
@@ -696,7 +721,10 @@ export default $config({
       schedule: "rate(5 minutes)",
       job: {
         handler: "src/diffpress/publishScheduled.handler",
-        link: [publicationLifecycle, DEVTO_API_KEY, PUBLISH_WEBHOOKS],
+        link: [publicationLifecycle, DEVTO_API_KEY, webhookConfig],
+        permissions: [
+          { actions: ["ssm:GetParameter"], resources: [$interpolate`arn:aws:ssm:*:*:parameter/diffpress/${$app.stage}/webhooks/*`] },
+        ],
         timeout: "60 seconds",
       },
     });
