@@ -30,6 +30,10 @@ declare module "sst" {
       "name": string
       "type": "sst.aws.Bucket"
     }
+    "DEVTO_API_KEY": {
+      "type": "sst.sst.Secret"
+      "value": string
+    }
     "DialecticalLibrarian": {
       "arn": string
       "type": "sst.aws.StepFunctions"
@@ -168,6 +172,10 @@ declare module "sst" {
     "WebClientId": {
       "type": "sst.sst.Linkable"
       "value": string
+    }
+    "WebhookConfig": {
+      "name": string
+      "type": "sst.aws.Dynamo"
     }
   }
 }
