@@ -30,7 +30,9 @@ function tableName(): string {
 }
 
 function stage(): string {
-  return process.env.SST_STAGE ?? "dev";
+  // Resource.App.stage is injected into every linked Lambda; process.env.SST_STAGE
+  // is only set under `sst dev`, so it's undefined on a real deploy.
+  return (Resource as unknown as { App: { stage: string } }).App.stage;
 }
 
 export function paramName(s: string, id: string): string {
