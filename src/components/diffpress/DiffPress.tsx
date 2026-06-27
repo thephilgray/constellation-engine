@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { Dashboard } from "./Dashboard";
 import { Editor } from "./Editor";
 import { HandoffDrawer } from "./HandoffDrawer";
+import { PublishConsole } from "./PublishConsole";
 import { VersionHistoryDrawer } from "./VersionHistoryDrawer";
 import { TopBar } from "./TopBar";
 import { useDiffPress } from "./store";
@@ -21,6 +22,7 @@ export default function DiffPress() {
       <TopBar />
       {view === "dashboard" ? <Dashboard /> : <Editor />}
       <HandoffDrawer />
+      <PublishConsole />
       <VersionHistoryDrawer />
     </div>
   );
