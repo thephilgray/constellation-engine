@@ -4,30 +4,16 @@ import { getByRepo, markPublished, markScheduled } from "./lib/ledger";
 import type { PublicationRecord } from "./types";
 import {
   parsePublishInput,
-  selectedTargets,
   summarizeResults,
   buildWebhookPayload,
   buildDevtoArticle,
-  canonicalUrlFor,
+  canonicalUrlFromWebhook,
   signWebhook,
   slugify,
   type PublishTargets,
-  type TargetId,
   type TargetResult,
 } from "./lib/publish";
-
-interface WebhookConfig {
-  url: string;
-  secret: string;
-}
-
-function webhookConfigs(): Partial<Record<"diffpress" | "thephilgray", WebhookConfig>> {
-  try {
-    return JSON.parse(Resource.PUBLISH_WEBHOOKS.value);
-  } catch {
-    return {};
-  }
-}
+import { listWebhooks, getWebhookSecret, type WebhookConfig } from "./lib/webhooks";
 
 async function postDevto(
   title: string,
@@ -54,15 +40,12 @@ async function postDevto(
 }
 
 async function postWebhook(
-  id: "diffpress" | "thephilgray",
+  cfg: WebhookConfig,
+  secret: string,
   record: PublicationRecord,
-  targets: PublishTargets,
-  seriesLink: string
+  seriesLink: string,
+  canonicalUrl: string
 ): Promise<TargetResult> {
-  const cfg = webhookConfigs()[id];
-  if (!cfg?.url || !cfg?.secret) {
-    return { id, ok: false, detail: "not configured" };
-  }
   try {
     const rawBody = JSON.stringify(
       buildWebhookPayload({
@@ -70,7 +53,7 @@ async function postWebhook(
         markdown: record.articleMarkdown ?? "",
         repoName: record.repoName,
         seriesLink,
-        targets,
+        canonicalUrl,
         publishedAt: new Date().toISOString(),
       })
     );
@@ -78,14 +61,14 @@ async function postWebhook(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "X-DiffPress-Signature": signWebhook(rawBody, cfg.secret),
+        "X-DiffPress-Signature": signWebhook(rawBody, secret),
       },
       body: rawBody,
     });
-    if (!res.ok) return { id, ok: false, detail: `HTTP ${res.status}` };
-    return { id, ok: true, detail: "delivered" };
+    if (!res.ok) return { id: cfg.id, ok: false, detail: `HTTP ${res.status}` };
+    return { id: cfg.id, ok: true, detail: "delivered" };
   } catch (err: any) {
-    return { id, ok: false, detail: err?.message ?? "request failed" };
+    return { id: cfg.id, ok: false, detail: err?.message ?? "request failed" };
   }
 }
 
@@ -96,18 +79,28 @@ export async function publishNow(
   seriesLink: string,
   tags: string[]
 ): Promise<{ results: TargetResult[]; summary: string }> {
-  const canonicalUrl = canonicalUrlFor(targets, slugify(record.title ?? ""));
-  const jobs: Promise<TargetResult>[] = selectedTargets(targets).map((id: TargetId) => {
-    switch (id) {
-      case "devto":
-        return postDevto(record.title ?? "", record.articleMarkdown ?? "", canonicalUrl, tags);
-      case "diffpress":
-      case "thephilgray":
-        return postWebhook(id, record, targets, seriesLink);
-      default:
-        return Promise.resolve({ id, ok: false, detail: "not supported" });
-    }
-  });
+  const allWebhooks = await listWebhooks();
+  const enabled = targets.webhooks
+    .map((id) => allWebhooks.find((w) => w.id === id))
+    .filter((w): w is WebhookConfig => !!w);
+  const canonicalUrl = canonicalUrlFromWebhook(enabled[0]?.url ?? null, slugify(record.title ?? ""));
+
+  const jobs: Promise<TargetResult>[] = [];
+  if (targets.devto) {
+    jobs.push(postDevto(record.title ?? "", record.articleMarkdown ?? "", canonicalUrl, tags));
+  }
+  for (const id of ["linkedin", "substack"] as const) {
+    if (targets[id]) jobs.push(Promise.resolve({ id, ok: false, detail: "not supported" }));
+  }
+  for (const cfg of enabled) {
+    jobs.push(
+      getWebhookSecret(cfg.id).then((secret) =>
+        secret
+          ? postWebhook(cfg, secret, record, seriesLink, canonicalUrl)
+          : ({ id: cfg.id, ok: false, detail: "not configured" } as TargetResult)
+      )
+    );
+  }
   const results = await Promise.all(jobs);
 
   if (results.some((r) => r.ok)) {

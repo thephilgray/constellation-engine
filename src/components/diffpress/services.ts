@@ -18,6 +18,7 @@ import type {
   HandoffsResponse,
   PipelineData,
   ReviewNote,
+  WebhookConfig,
 } from "./types";
 
 
@@ -248,6 +249,50 @@ export async function deployArticle(payload: DeployPayload): Promise<DeployRespo
     body: JSON.stringify(payload),
   });
   if (!res.ok) throw new Error(`Failed to publish (${res.status})`);
+  return res.json();
+}
+
+/** List the user's configured webhook targets via `GET /api/webhooks`. */
+export async function listWebhooks(): Promise<WebhookConfig[]> {
+  const res = await authedFetch("/api/webhooks");
+  if (!res.ok) throw new Error(`Failed to load webhooks (${res.status})`);
+  return (await res.json()).webhooks;
+}
+
+/** Create or update a webhook target via `POST /api/webhooks`. */
+export async function saveWebhook(input: {
+  id?: string;
+  name: string;
+  url: string;
+  secret?: string;
+}): Promise<WebhookConfig> {
+  const res = await authedFetch("/api/webhooks", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) throw new Error(`Failed to save webhook (${res.status})`);
+  return (await res.json()).webhook;
+}
+
+/** Remove a webhook target via `DELETE /api/webhooks`. */
+export async function deleteWebhook(id: string): Promise<void> {
+  const res = await authedFetch(`/api/webhooks?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+  if (!res.ok) throw new Error(`Failed to delete webhook (${res.status})`);
+}
+
+/** Send a test ping to a webhook target via `POST /api/webhooks/test`. */
+export async function testWebhook(input: {
+  id?: string;
+  url?: string;
+  secret?: string;
+}): Promise<{ ok: boolean; status: number }> {
+  const res = await authedFetch("/api/webhooks/test", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) throw new Error(`Failed to test webhook (${res.status})`);
   return res.json();
 }
 

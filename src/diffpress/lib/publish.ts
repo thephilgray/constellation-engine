@@ -1,13 +1,13 @@
 import { createHmac } from "node:crypto";
 
-export type TargetId = "devto" | "diffpress" | "thephilgray" | "linkedin" | "substack";
+// Fixed (non-webhook) syndication targets. Webhooks are dynamic, by id.
+export type FixedTargetId = "devto" | "linkedin" | "substack";
 
 export interface PublishTargets {
   devto: boolean;
-  diffpress: boolean;
-  thephilgray: boolean;
   linkedin: boolean;
   substack: boolean;
+  webhooks: string[]; // enabled webhook config ids
 }
 
 export interface PublishInput {
@@ -23,7 +23,7 @@ export interface PublishInput {
 const MAX_DEVTO_TAGS = 4;
 
 export interface TargetResult {
-  id: TargetId;
+  id: string;
   ok: boolean;
   detail: string;
 }
@@ -38,18 +38,10 @@ export interface WebhookPayload {
   repoName: string;
 }
 
-const TARGET_NAMES: Record<TargetId, string> = {
+const TARGET_NAMES: Record<string, string> = {
   devto: "Dev.to",
-  diffpress: "diffpress.com",
-  thephilgray: "thephilgray.com",
   linkedin: "LinkedIn",
   substack: "Substack",
-};
-
-// Own-domain webhook targets and their canonical bases.
-const DOMAIN_BASE: Record<"diffpress" | "thephilgray", string> = {
-  diffpress: "https://diffpress.com",
-  thephilgray: "https://thephilgray.com",
 };
 
 export function slugify(title: string): string {
@@ -63,10 +55,10 @@ export function signWebhook(rawBody: string, secret: string): string {
   return "sha256=" + createHmac("sha256", secret).update(rawBody).digest("hex");
 }
 
-export function canonicalUrlFor(targets: PublishTargets, slug: string): string {
-  const domains = (["diffpress", "thephilgray"] as const).filter((d) => targets[d]);
-  const base = domains.length === 1 ? DOMAIN_BASE[domains[0]] : DOMAIN_BASE.diffpress;
-  return `${base}/${slug}`;
+/** Canonical base = origin of the first enabled webhook's URL; empty when none. */
+export function canonicalUrlFromWebhook(firstWebhookUrl: string | null, slug: string): string {
+  if (!firstWebhookUrl) return "";
+  return `${new URL(firstWebhookUrl).origin}/${slug}`;
 }
 
 export function buildWebhookPayload(args: {
@@ -74,7 +66,7 @@ export function buildWebhookPayload(args: {
   markdown: string;
   repoName: string;
   seriesLink: string;
-  targets: PublishTargets;
+  canonicalUrl: string;
   publishedAt: string;
 }): WebhookPayload {
   const slug = slugify(args.title);
@@ -82,7 +74,7 @@ export function buildWebhookPayload(args: {
     title: args.title,
     slug,
     markdown: args.markdown,
-    canonicalUrl: canonicalUrlFor(args.targets, slug),
+    canonicalUrl: args.canonicalUrl,
     publishedAt: args.publishedAt,
     series: args.seriesLink.trim() === "" ? null : args.seriesLink,
     repoName: args.repoName,
@@ -133,13 +125,14 @@ export function buildDevtoArticle(args: {
   };
 }
 
-export function selectedTargets(targets: PublishTargets): TargetId[] {
-  return (Object.keys(targets) as TargetId[]).filter((id) => targets[id]);
+export function selectedTargets(t: PublishTargets): string[] {
+  const fixed = (["devto", "linkedin", "substack"] as const).filter((k) => t[k]);
+  return [...fixed, ...t.webhooks];
 }
 
 export function summarizeResults(results: TargetResult[]): string {
   return results
-    .map((r) => `${TARGET_NAMES[r.id]} ${r.ok ? "✓" : "✗"}`)
+    .map((r) => `${TARGET_NAMES[r.id] ?? r.id} ${r.ok ? "✓" : "✗"}`)
     .join(" · ");
 }
 
@@ -167,10 +160,11 @@ export function parsePublishInput(event: {
   }
   const norm: PublishTargets = {
     devto: !!targets.devto,
-    diffpress: !!targets.diffpress,
-    thephilgray: !!targets.thephilgray,
     linkedin: !!targets.linkedin,
     substack: !!targets.substack,
+    webhooks: Array.isArray(targets.webhooks)
+      ? targets.webhooks.filter((x: unknown): x is string => typeof x === "string")
+      : [],
   };
   if (!selectedTargets(norm).length) {
     return { ok: false, statusCode: 400, message: "At least one target is required" };

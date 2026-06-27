@@ -4,10 +4,9 @@ import { cn } from "@/lib/utils";
 import { useIsMobile } from "./hooks";
 import { useDiffPress } from "./store";
 import { Segmented, Toggle } from "./ui";
-import type { SyndicationTargets } from "./types";
 
 const TARGETS: {
-  id: keyof SyndicationTargets;
+  id: "devto" | "linkedin" | "substack";
   name: string;
   desc: string;
   icon: React.ReactNode;
@@ -29,18 +28,6 @@ const TARGETS: {
     name: "Substack",
     desc: "Newsletter to subscribers",
     icon: <Mail size={19} strokeWidth={1.7} />,
-  },
-  {
-    id: "diffpress",
-    name: "diffpress.com",
-    desc: "Signed webhook to your DiffPress site",
-    icon: <Globe size={19} strokeWidth={1.7} />,
-  },
-  {
-    id: "thephilgray",
-    name: "thephilgray.com",
-    desc: "Signed webhook to your personal site",
-    icon: <Globe size={19} strokeWidth={1.7} />,
   },
 ];
 
@@ -65,10 +52,18 @@ export function PublishConsole() {
   const removeTag = useDiffPress((s) => s.removeTag);
   const deploy = useDiffPress((s) => s.deploy);
   const backToDashboard = useDiffPress((s) => s.backToDashboard);
+  const webhooks = useDiffPress((s) => s.webhooks);
+  const enabledWebhooks = useDiffPress((s) => s.targets.webhooks);
+  const toggleWebhook = useDiffPress((s) => s.toggleWebhook);
+  const saveWebhook = useDiffPress((s) => s.saveWebhook);
+  const deleteWebhook = useDiffPress((s) => s.deleteWebhook);
+  const testWebhook = useDiffPress((s) => s.testWebhook);
   const [tagDraft, setTagDraft] = useState("");
+  const [editor, setEditor] = useState<{ id?: string; name: string; url: string; secret: string } | null>(null);
+  const [testResult, setTestResult] = useState<{ ok: boolean; status: number } | null>(null);
 
   if (!publishOpen) return null;
-  const anyTarget = Object.values(targets).some(Boolean);
+  const anyTarget = targets.devto || targets.linkedin || targets.substack || targets.webhooks.length > 0;
 
   const shell = isMobile
     ? "dp-anim-sheet fixed inset-x-0 bottom-0 z-[71] max-h-[92vh] overflow-y-auto rounded-t-[22px] bg-white p-[22px_20px_28px] shadow-[0_-20px_60px_rgba(26,24,20,0.2)]"
@@ -149,6 +144,82 @@ export function PublishConsole() {
                 </div>
               ))}
             </div>
+
+            <SectionLabel>Signed webhooks</SectionLabel>
+            <div className="mb-3">
+              {webhooks.map((w) => (
+                <div key={w.id} className="flex items-center gap-[14px] py-3">
+                  <span className="flex flex-[0_0_auto] text-[#8a877f]"><Globe size={19} strokeWidth={1.7} /></span>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[14.5px] font-medium">{w.name}</div>
+                    <div className="truncate text-[12px] text-dp-faint-2">{w.url}</div>
+                  </div>
+                  <button
+                    onClick={() => { setEditor({ id: w.id, name: w.name, url: w.url, secret: "" }); setTestResult(null); }}
+                    className="cursor-pointer border-none bg-transparent p-1 text-[12px] text-dp-faint hover:text-dp-ink"
+                  >Edit</button>
+                  <button
+                    onClick={() => deleteWebhook(w.id)}
+                    aria-label={`Delete ${w.name}`}
+                    className="cursor-pointer border-none bg-transparent p-1 text-dp-faint hover:text-red-500"
+                  ><X size={16} strokeWidth={1.8} /></button>
+                  <Toggle on={enabledWebhooks.includes(w.id)} onChange={() => toggleWebhook(w.id)} label={w.name} />
+                </div>
+              ))}
+            </div>
+
+            {editor ? (
+              <div className="mb-7 rounded-[10px] bg-[#f6f5f1] p-[14px]">
+                <input
+                  value={editor.name}
+                  onChange={(e) => setEditor({ ...editor, name: e.target.value })}
+                  placeholder="Name (e.g. diffpress.com)"
+                  className="mb-2 w-full border-none border-b-[1.5px] border-dp-line bg-transparent py-[6px] font-dp-mono text-[14px] outline-none"
+                />
+                <input
+                  value={editor.url}
+                  onChange={(e) => setEditor({ ...editor, url: e.target.value })}
+                  placeholder="https://example.com/webhook"
+                  className="mb-2 w-full border-none border-b-[1.5px] border-dp-line bg-transparent py-[6px] font-dp-mono text-[14px] outline-none"
+                />
+                <div className="mb-3 flex items-center gap-2">
+                  <input
+                    value={editor.secret}
+                    onChange={(e) => setEditor({ ...editor, secret: e.target.value })}
+                    placeholder={editor.id ? "Secret (blank = keep current)" : "Signing secret"}
+                    className="flex-1 border-none border-b-[1.5px] border-dp-line bg-transparent py-[6px] font-dp-mono text-[14px] outline-none"
+                  />
+                  <button
+                    onClick={() => setEditor({ ...editor, secret: Array.from(crypto.getRandomValues(new Uint8Array(32))).map((b) => b.toString(16).padStart(2, "0")).join("") })}
+                    className="cursor-pointer rounded-[7px] border-none bg-[#e4e2db] px-[10px] py-[6px] text-[12px] hover:opacity-90"
+                  >Generate</button>
+                </div>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={async () => {
+                      await saveWebhook({ id: editor.id, name: editor.name, url: editor.url, secret: editor.secret || undefined });
+                      setEditor(null); setTestResult(null);
+                    }}
+                    className="cursor-pointer rounded-[8px] border-none bg-dp-ink px-[14px] py-[8px] text-[13px] font-medium text-dp-paper hover:opacity-90"
+                  >Save</button>
+                  <button
+                    onClick={async () => setTestResult(await testWebhook({ id: editor.id, url: editor.url, secret: editor.secret || undefined }))}
+                    className="cursor-pointer rounded-[8px] border-none bg-[#e4e2db] px-[14px] py-[8px] text-[13px] hover:opacity-90"
+                  >Test</button>
+                  {testResult && (
+                    <span className={cn("text-[12px]", testResult.ok ? "text-dp-green" : "text-red-500")}>
+                      {testResult.ok ? `✓ ${testResult.status}` : `✗ ${testResult.status || "failed"}`}
+                    </span>
+                  )}
+                  <button onClick={() => { setEditor(null); setTestResult(null); }} className="ml-auto cursor-pointer border-none bg-transparent text-[12px] text-dp-faint hover:text-dp-ink">Cancel</button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => { setEditor({ name: "", url: "", secret: "" }); setTestResult(null); }}
+                className="mb-7 cursor-pointer rounded-[8px] border-[1.5px] border-dashed border-dp-line bg-transparent px-[14px] py-[10px] text-[13px] text-dp-faint hover:text-dp-ink"
+              >+ Add webhook</button>
+            )}
 
             {targets.devto && (
               <>

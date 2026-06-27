@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { buildMarkScheduledParams, buildMarkPublishedParams, BOARD_PROJECTION } from "./ledger";
 
 const targets = {
-  devto: true, diffpress: false, thephilgray: true, linkedin: false, substack: false,
+  devto: true, linkedin: false, substack: false, webhooks: ["wh_thephilgray_abc"],
 };
 
 describe("buildMarkScheduledParams", () => {
