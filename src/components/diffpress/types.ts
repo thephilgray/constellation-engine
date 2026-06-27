@@ -81,14 +81,19 @@ export interface DiscoveryConfig {
 
 export interface SyndicationTargets {
   devto: boolean;
-  diffpress: boolean;
-  thephilgray: boolean;
   linkedin: boolean;
   substack: boolean;
+  webhooks: string[]; // enabled webhook ids
+}
+
+export interface WebhookConfig {
+  id: string;
+  name: string;
+  url: string;
 }
 
 export interface PublishTargetResult {
-  id: keyof SyndicationTargets;
+  id: string;
   ok: boolean;
   detail: string;
 }
