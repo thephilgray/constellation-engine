@@ -16,6 +16,10 @@ import {
   runReviewStream,
   replyToNote as replyToNoteApi,
   reviseArticleStream,
+  listWebhooks,
+  saveWebhook as saveWebhookApi,
+  deleteWebhook as deleteWebhookApi,
+  testWebhook as testWebhookApi,
 } from "./services";
 import type {
   DiscoveryMode,
@@ -27,6 +31,7 @@ import type {
   ReviewNote,
   SyndicationTargets,
   Timing,
+  WebhookConfig,
 } from "./types";
 
 /** Client-side handoff prompt (the backend doesn't generate one). */
@@ -166,9 +171,10 @@ interface DiffPressState {
   deploySummary: string;
   deployResults: PublishTargetResult[];
   tags: string[];
+  webhooks: WebhookConfig[];
   openPublish: () => void;
   closePublish: () => void;
-  toggleTarget: (id: keyof SyndicationTargets) => void;
+  toggleTarget: (id: "devto" | "linkedin" | "substack") => void;
   setTiming: (t: Timing) => void;
   setScheduleAt: (v: string) => void;
   setSeriesLink: (v: string) => void;
@@ -176,6 +182,11 @@ interface DiffPressState {
   removeTag: (idx: number) => void;
   deploy: () => Promise<void>;
   backToDashboard: () => void;
+  loadWebhooks: () => Promise<void>;
+  saveWebhook: (input: { id?: string; name: string; url: string; secret?: string }) => Promise<void>;
+  deleteWebhook: (id: string) => Promise<void>;
+  testWebhook: (input: { id?: string; url?: string; secret?: string }) => Promise<{ ok: boolean; status: number }>;
+  toggleWebhook: (id: string) => void;
 }
 
 export const useDiffPress = create<DiffPressState>((set, get) => ({
@@ -515,7 +526,7 @@ export const useDiffPress = create<DiffPressState>((set, get) => ({
   },
 
   publishOpen: false,
-  targets: { ...EMPTY_DEPLOY.targets },
+  targets: { devto: false, linkedin: false, substack: false, webhooks: [] },
   timing: EMPTY_DEPLOY.timing,
   scheduleAt: EMPTY_DEPLOY.scheduleAt,
   seriesLink: EMPTY_DEPLOY.seriesLink,
@@ -524,6 +535,7 @@ export const useDiffPress = create<DiffPressState>((set, get) => ({
   deploySummary: "",
   deployResults: [],
   tags: [],
+  webhooks: [],
   openPublish: () => {
     // Publishable when nothing is outstanding: no review run, or all notes resolved.
     const { notes, resolvedNotes, articleTags, articleLanguage } = get();
@@ -532,11 +544,39 @@ export const useDiffPress = create<DiffPressState>((set, get) => ({
       const langSeed = (articleLanguage ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
       const seed = articleTags.length ? articleTags.slice(0, 4) : langSeed ? [langSeed] : [];
       set({ publishOpen: true, deployed: false, tags: seed });
+      get().loadWebhooks();
     }
   },
   closePublish: () => set({ publishOpen: false }),
   toggleTarget: (id) =>
     set((s) => ({ targets: { ...s.targets, [id]: !s.targets[id] } })),
+  toggleWebhook: (id) =>
+    set((s) => {
+      const on = s.targets.webhooks.includes(id);
+      return {
+        targets: {
+          ...s.targets,
+          webhooks: on ? s.targets.webhooks.filter((w) => w !== id) : [...s.targets.webhooks, id],
+        },
+      };
+    }),
+  loadWebhooks: async () => {
+    try {
+      set({ webhooks: await listWebhooks() });
+    } catch {
+      set({ webhooks: [] });
+    }
+  },
+  saveWebhook: async (input) => {
+    await saveWebhookApi(input);
+    await get().loadWebhooks();
+  },
+  deleteWebhook: async (id) => {
+    await deleteWebhookApi(id);
+    set((s) => ({ targets: { ...s.targets, webhooks: s.targets.webhooks.filter((w) => w !== id) } }));
+    await get().loadWebhooks();
+  },
+  testWebhook: async (input) => testWebhookApi(input),
   setTiming: (timing) => set({ timing }),
   setScheduleAt: (scheduleAt) => set({ scheduleAt }),
   setSeriesLink: (seriesLink) => set({ seriesLink }),
