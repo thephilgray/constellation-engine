@@ -85,7 +85,7 @@ export function PublishConsole() {
               Article deployed
             </div>
             {deployResults.length ? (
-              <ul className="mb-6 inline-block text-left text-[14px] leading-[1.8] text-dp-muted">
+              <ul className="mx-auto mb-6 block w-fit text-left text-[14px] leading-[1.8] text-dp-muted">
                 {deployResults.map((r) => (
                   <li key={r.id}>
                     <span className={r.ok ? "text-dp-green" : "text-red-500"}>
