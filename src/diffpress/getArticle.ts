@@ -41,6 +41,7 @@ export async function handler(
         status: record.status,
         tags: record.tags ?? [],
         language: record.language ?? null,
+        syndicatedTargets: record.syndicatedTargets ?? [],
       }),
     };
   } catch (error: any) {

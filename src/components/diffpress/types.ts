@@ -2,7 +2,7 @@
 // eventual API (API Gateway + Step Functions) is expected to return, so the
 // stubbed services in `services.ts` can be swapped for real calls 1:1.
 
-export type ColumnId = "discovery" | "readyForDev" | "drafting" | "inReview";
+export type ColumnId = "discovery" | "readyForDev" | "drafting" | "inReview" | "published";
 
 /** Why a repo surfaced in Discovery (GH Archive velocity signal). */
 export type SignalType = "TRENDING" | "NEW" | "RELEASE";
@@ -52,11 +52,22 @@ export interface ReviewCard {
   editable: boolean;
 }
 
+export interface PublishedCard {
+  id: string;
+  title: string;
+  repo: string;
+  /** ISO timestamp the article was syndicated. */
+  publishedAt?: string;
+  /** Target ids already published to (e.g. "devto", webhook ids). */
+  syndicatedTargets: string[];
+}
+
 export interface PipelineData {
   discovery: DiscoveryCard[];
   readyForDev: HandoffCard[];
   drafting: DraftingCard[];
   inReview: ReviewCard[];
+  published: PublishedCard[];
 }
 
 /** A handoff prompt + setup for a repo that is ready for local dev. */
@@ -145,6 +156,12 @@ export interface HandoffsResponse {
     title?: string;
     publishedAt?: string;
   }[];
+  published: {
+    repoName: string;
+    title?: string;
+    publishedAt?: string;
+    syndicatedTargets?: string[];
+  }[];
 }
 
 export interface ArticleResponse {
@@ -156,6 +173,8 @@ export interface ArticleResponse {
   /** LLM-suggested Dev.to tags; seed for the publish console. */
   tags?: string[];
   language?: string | null;
+  /** Target ids this article has already been published to. */
+  syndicatedTargets?: string[];
 }
 
 export interface DraftMeta {

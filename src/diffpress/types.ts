@@ -96,6 +96,7 @@ export type PublicationStatus =
   | "DRAFTING"
   | "SCHEDULED"
   | "PUBLISHED"
+  | "SYNDICATED"
   | "DISMISSED";
 
 /** An item in the PublicationLifecycle table (PK: repoName). */
@@ -113,6 +114,8 @@ export interface PublicationRecord {
   tags?: string[];
   discoveredAt?: string;
   publishedAt?: string;
+  /** Target ids already syndicated to (e.g. "devto", webhook ids). Drives the dup-guard. */
+  syndicatedTargets?: string[];
   // Scheduling fields (status === "SCHEDULED")
   scheduleAt?: string;   // ISO 8601; when the cron should publish
   targets?: PublishTargets;

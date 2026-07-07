@@ -54,6 +54,7 @@ export function PublishConsole() {
   const backToDashboard = useDiffPress((s) => s.backToDashboard);
   const webhooks = useDiffPress((s) => s.webhooks);
   const enabledWebhooks = useDiffPress((s) => s.targets.webhooks);
+  const syndicated = useDiffPress((s) => s.articleSyndicatedTargets);
   const toggleWebhook = useDiffPress((s) => s.toggleWebhook);
   const saveWebhook = useDiffPress((s) => s.saveWebhook);
   const deleteWebhook = useDiffPress((s) => s.deleteWebhook);
@@ -127,22 +128,31 @@ export function PublishConsole() {
 
             <SectionLabel>Syndication targets</SectionLabel>
             <div className="mb-7">
-              {TARGETS.map((t) => (
-                <div key={t.id} className="flex items-center gap-[14px] py-3">
-                  <span className="flex flex-[0_0_auto] text-[#8a877f]">
-                    {t.icon}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-[14.5px] font-medium">{t.name}</div>
-                    <div className="text-[12px] text-dp-faint-2">{t.desc}</div>
+              {TARGETS.map((t) => {
+                const done = syndicated.includes(t.id);
+                return (
+                  <div key={t.id} className="flex items-center gap-[14px] py-3">
+                    <span className="flex flex-[0_0_auto] text-[#8a877f]">
+                      {t.icon}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[14.5px] font-medium">{t.name}</div>
+                      <div className="text-[12px] text-dp-faint-2">{t.desc}</div>
+                    </div>
+                    {done && (
+                      <span className="flex items-center gap-1 text-[11.5px] font-medium text-dp-green">
+                        <Check size={13} strokeWidth={2} /> Published
+                      </span>
+                    )}
+                    <Toggle
+                      on={targets[t.id]}
+                      onChange={() => toggleTarget(t.id)}
+                      label={t.name}
+                      disabled={done}
+                    />
                   </div>
-                  <Toggle
-                    on={targets[t.id]}
-                    onChange={() => toggleTarget(t.id)}
-                    label={t.name}
-                  />
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             <SectionLabel>Signed webhooks</SectionLabel>
@@ -163,7 +173,10 @@ export function PublishConsole() {
                     aria-label={`Delete ${w.name}`}
                     className="cursor-pointer border-none bg-transparent p-1 text-dp-faint hover:text-red-500"
                   ><X size={16} strokeWidth={1.8} /></button>
-                  <Toggle on={enabledWebhooks.includes(w.id)} onChange={() => toggleWebhook(w.id)} label={w.name} />
+                  {syndicated.includes(w.id) && (
+                    <span className="flex items-center gap-1 text-[11.5px] font-medium text-dp-green"><Check size={13} strokeWidth={2} /> Published</span>
+                  )}
+                  <Toggle on={enabledWebhooks.includes(w.id)} onChange={() => toggleWebhook(w.id)} label={w.name} disabled={syndicated.includes(w.id)} />
                 </div>
               ))}
             </div>

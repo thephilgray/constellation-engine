@@ -64,6 +64,13 @@ export async function fetchCandidates(): Promise<PipelineData> {
       repo: r.repoName,
       editable: true,
     })),
+    published: (board.published ?? []).map((p) => ({
+      id: p.repoName,
+      title: p.title ?? p.repoName,
+      repo: p.repoName,
+      publishedAt: p.publishedAt,
+      syndicatedTargets: p.syndicatedTargets ?? [],
+    })),
   };
 }
 

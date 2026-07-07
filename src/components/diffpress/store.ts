@@ -76,6 +76,7 @@ export function removeFromPipeline(
     readyForDev: pipeline.readyForDev.filter((c) => c.id !== repoName),
     drafting: pipeline.drafting.filter((c) => c.id !== repoName),
     inReview: pipeline.inReview.filter((c) => c.id !== repoName),
+    published: pipeline.published.filter((c) => c.id !== repoName),
   };
 }
 
@@ -98,6 +99,8 @@ interface DiffPressState {
   articleMarkdown: string;
   // Captured on load to seed the publish console's Dev.to tags.
   articleTags: string[];
+  // Target ids this article was already published to; pre-checks + locks them in the console.
+  articleSyndicatedTargets: string[];
   articleLanguage: string | null;
   articleLoading: boolean;
   articleSaving: boolean;
@@ -198,7 +201,7 @@ export const useDiffPress = create<DiffPressState>((set, get) => ({
   // the navigation type stays stable.
   setEditorMode: (mode) => set({ editorMode: mode }),
 
-  pipeline: { discovery: [], readyForDev: [], drafting: [], inReview: [] },
+  pipeline: { discovery: [], readyForDev: [], drafting: [], inReview: [], published: [] },
   loadPipeline: async () => {
     try {
       const pipeline = await fetchCandidates();
@@ -207,7 +210,7 @@ export const useDiffPress = create<DiffPressState>((set, get) => ({
       // Backend unreachable or not signed in: clear all columns so we never
       // present stale or mock data as real.
       console.warn("[diffpress] failed to load pipeline:", err);
-      set({ pipeline: { discovery: [], readyForDev: [], drafting: [], inReview: [] } });
+      set({ pipeline: { discovery: [], readyForDev: [], drafting: [], inReview: [], published: [] } });
     }
   },
   dismissCard: async (repoName) => {
@@ -226,6 +229,7 @@ export const useDiffPress = create<DiffPressState>((set, get) => ({
   articleTitle: "",
   articleMarkdown: "",
   articleTags: [],
+  articleSyndicatedTargets: [],
   articleLanguage: null,
   articleLoading: false,
   articleSaving: false,
@@ -241,6 +245,7 @@ export const useDiffPress = create<DiffPressState>((set, get) => ({
       articleTitle: "",
       articleMarkdown: "",
       articleTags: [],
+      articleSyndicatedTargets: [],
       articleLanguage: null,
       articleLoading: true,
       articleSaved: false,
@@ -254,6 +259,7 @@ export const useDiffPress = create<DiffPressState>((set, get) => ({
           articleTitle: article.title,
           articleMarkdown: article.articleMarkdown,
           articleTags: article.tags ?? [],
+          articleSyndicatedTargets: article.syndicatedTargets ?? [],
           articleLanguage: article.language ?? null,
           articleLoading: false,
         });
@@ -538,12 +544,22 @@ export const useDiffPress = create<DiffPressState>((set, get) => ({
   webhooks: [],
   openPublish: () => {
     // Publishable when nothing is outstanding: no review run, or all notes resolved.
-    const { notes, resolvedNotes, articleTags, articleLanguage } = get();
+    const { notes, resolvedNotes, articleTags, articleLanguage, articleSyndicatedTargets } = get();
     if (notes.every((n) => resolvedNotes[n.id])) {
       // Seed Dev.to tags: the drafted LLM tags, else a single language-derived tag.
       const langSeed = (articleLanguage ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
       const seed = articleTags.length ? articleTags.slice(0, 4) : langSeed ? [langSeed] : [];
-      set({ publishOpen: true, deployed: false, tags: seed });
+      // Pre-check the targets already published to; the console locks these on.
+      const done = new Set(articleSyndicatedTargets);
+      const targets: SyndicationTargets = {
+        devto: done.has("devto"),
+        linkedin: done.has("linkedin"),
+        substack: done.has("substack"),
+        webhooks: articleSyndicatedTargets.filter(
+          (id) => !["devto", "linkedin", "substack"].includes(id),
+        ),
+      };
+      set({ publishOpen: true, deployed: false, tags: seed, targets });
       get().loadWebhooks();
     }
   },

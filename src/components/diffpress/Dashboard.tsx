@@ -1,4 +1,4 @@
-import { ChevronRight, ListFilter, SquarePen, X } from "lucide-react";
+import { Check, ChevronRight, ListFilter, SquarePen, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useDiffPress } from "./store";
 import { Segmented } from "./ui";
@@ -6,6 +6,7 @@ import type {
   DiscoveryCard,
   DraftingCard,
   HandoffCard,
+  PublishedCard,
   ReviewCard,
   SignalType,
 } from "./types";
@@ -257,6 +258,51 @@ function ReviewArticleCard({ card }: { card: ReviewCard }) {
   );
 }
 
+/** Display backstop: at most this many published cards. */
+const PUBLISHED_RENDER_CAP = 8;
+
+/** Friendly label for a syndication target id (webhook ids stay as-is). */
+const TARGET_LABELS: Record<string, string> = {
+  devto: "Dev.to",
+  linkedin: "LinkedIn",
+  substack: "Substack",
+};
+
+function PublishedArticleCard({ card }: { card: PublishedCard }) {
+  const openArticle = useDiffPress((s) => s.openArticle);
+  const when = card.publishedAt
+    ? new Date(card.publishedAt).toLocaleDateString(undefined, {
+        month: "short",
+        day: "numeric",
+      })
+    : null;
+  const targets = card.syndicatedTargets
+    .map((id) => TARGET_LABELS[id] ?? "webhook")
+    .join(", ");
+  return (
+    <article
+      onClick={() => openArticle(card.id)}
+      className={cn(
+        CARD_BASE,
+        "cursor-pointer transition-[box-shadow,transform] duration-300 ease-[cubic-bezier(.2,0,0,1)] hover:-translate-y-px hover:shadow-[0_4px_18px_rgba(26,24,20,0.07)]",
+      )}
+    >
+      <div className="mb-2 text-[15px] font-semibold leading-[1.3] tracking-[-0.015em]">
+        {card.title}
+      </div>
+      <div className="mb-[13px] font-dp-mono text-[11.5px] text-dp-faint-2">
+        {card.repo}
+      </div>
+      <div className="mb-[10px] flex items-center gap-[6px] text-[11.5px] font-medium text-dp-green">
+        <Check size={13} strokeWidth={2} />
+        {targets || "Published"}
+        {when ? ` · ${when}` : ""}
+      </div>
+      <div className="text-[11.5px] font-medium text-dp-slate">Add targets →</div>
+    </article>
+  );
+}
+
 function CommandCenter() {
   const engineState = useDiffPress((s) => s.engineState);
   const discoveryMode = useDiffPress((s) => s.discoveryMode);
@@ -363,7 +409,7 @@ export function Dashboard() {
 
         {cmdOpen && <CommandCenter />}
 
-        <div className="flex flex-col gap-[30px] min-[880px]:grid min-[880px]:grid-cols-2 min-[880px]:items-start min-[880px]:gap-x-[clamp(20px,2.4vw,36px)] min-[880px]:gap-y-9 min-[1220px]:grid-cols-4">
+        <div className="flex flex-col gap-[30px] min-[880px]:grid min-[880px]:grid-cols-2 min-[880px]:items-start min-[880px]:gap-x-[clamp(20px,2.4vw,36px)] min-[880px]:gap-y-9 min-[1220px]:grid-cols-5">
           <DiscoveryColumn cards={pipeline.discovery} />
           <ColumnShell title="Ready for Dev" count={pipeline.readyForDev.length}>
             {pipeline.readyForDev.map((c) => (
@@ -379,6 +425,14 @@ export function Dashboard() {
             {pipeline.inReview.map((c) => (
               <ReviewArticleCard key={c.id} card={c} />
             ))}
+          </ColumnShell>
+          <ColumnShell title="Recently Published" count={pipeline.published.length}>
+            {[...pipeline.published]
+              .sort((a, b) => (b.publishedAt ?? "").localeCompare(a.publishedAt ?? ""))
+              .slice(0, PUBLISHED_RENDER_CAP)
+              .map((c) => (
+                <PublishedArticleCard key={c.id} card={c} />
+              ))}
           </ColumnShell>
         </div>
       </div>

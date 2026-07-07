@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   buildMarkPublishedParams,
+  buildMarkSyndicatedParams,
   isAlreadyPublishedError,
   buildMarkDraftingParams,
   buildMarkAwaitingParams,
@@ -33,6 +34,22 @@ describe("buildMarkPublishedParams", () => {
     expect(params.ExpressionAttributeValues![":article"]).toBe(
       "# Inside Next.js\n\nbody"
     );
+  });
+});
+
+describe("buildMarkSyndicatedParams", () => {
+  it("persists the deduped union of published targets and the SYNDICATED status", () => {
+    const params = buildMarkSyndicatedParams("MyTable", "owner/repo", {
+      title: "T",
+      publishedAt: "2026-06-27T01:00:00.000Z",
+      articleMarkdown: "# T",
+      syndicatedTargets: ["devto", "wh-1"],
+    });
+    expect(params.ExpressionAttributeValues![":syndicated"]).toBe("SYNDICATED");
+    expect(params.ExpressionAttributeValues![":targets"]).toEqual(["devto", "wh-1"]);
+    expect(params.UpdateExpression).toContain("syndicatedTargets = :targets");
+    // No condition: re-publishing to add a target must be allowed.
+    expect(params.ConditionExpression).toBeUndefined();
   });
 });
 

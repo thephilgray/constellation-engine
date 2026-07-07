@@ -50,6 +50,32 @@ export function buildMarkPublishedParams(
   };
 }
 
+/**
+ * Pure: flip an item to SYNDICATED and record the full set of targets it has
+ * been published to. `syndicatedTargets` is the deduped union (computed by the
+ * caller from the prior record), so re-publishing to add a target is allowed.
+ */
+export function buildMarkSyndicatedParams(
+  table: string,
+  repoName: string,
+  meta: { title: string; publishedAt: string; articleMarkdown: string; syndicatedTargets: string[] }
+): UpdateCommandInput {
+  return {
+    TableName: table,
+    Key: { repoName },
+    UpdateExpression:
+      "SET #status = :syndicated, title = :title, publishedAt = :publishedAt, articleMarkdown = :article, syndicatedTargets = :targets",
+    ExpressionAttributeNames: { "#status": "status" },
+    ExpressionAttributeValues: {
+      ":syndicated": "SYNDICATED",
+      ":title": meta.title,
+      ":publishedAt": meta.publishedAt,
+      ":article": meta.articleMarkdown,
+      ":targets": meta.syndicatedTargets,
+    },
+  };
+}
+
 /** Pure: flip an item to DRAFTING (only if not already PUBLISHED). */
 export function buildMarkDraftingParams(
   table: string,
@@ -207,6 +233,16 @@ export async function markPublished(
   }
 }
 
+/** Flip the item to SYNDICATED, recording the deduped union of published targets. */
+export async function markSyndicated(
+  repoName: string,
+  meta: { title: string; publishedAt: string; articleMarkdown: string; syndicatedTargets: string[] }
+): Promise<void> {
+  await docClient.send(
+    new UpdateCommand(buildMarkSyndicatedParams(tableName(), repoName, meta))
+  );
+}
+
 export async function markScheduled(
   repoName: string,
   meta: { scheduleAt: string; targets: PublishTargets; seriesLink: string; tags: string[] }
@@ -231,7 +267,7 @@ export async function saveArticle(
  * Projects out `articleMarkdown` (fetched on demand) to keep the payload light.
  */
 export async function listBoardItems(): Promise<PublicationRecord[]> {
-  const statuses = ["DISCOVERED", "AWAITING_HANDOFF", "DRAFTING", "PUBLISHED"];
+  const statuses = ["DISCOVERED", "AWAITING_HANDOFF", "DRAFTING", "PUBLISHED", "SYNDICATED"];
   const groups = await Promise.all(statuses.map((s) => queryByStatus(s)));
   return groups.flat();
 }
@@ -245,7 +281,7 @@ export const STATUS_INDEX = "status-index";
  * DynamoDB returns ONLY the listed attributes, so omissions are silent data loss.
  */
 export const BOARD_PROJECTION =
-  "repoName, #status, repoUrl, taskToken, discoveredAt, title, publishedAt, description, stars, #lang, pushedAt, signalType, starsGained, releaseTag, coverageScore, handoffPrompt, scheduleAt";
+  "repoName, #status, repoUrl, taskToken, discoveredAt, title, publishedAt, syndicatedTargets, description, stars, #lang, pushedAt, signalType, starsGained, releaseTag, coverageScore, handoffPrompt, scheduleAt";
 
 /** Flip an item to DRAFTING. Swallows the conditional-check failure (idempotent). */
 export async function markDrafting(repoName: string): Promise<void> {

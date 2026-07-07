@@ -19,6 +19,7 @@ const base: PipelineData = {
   readyForDev: [{ id: "e/f", repo: "e/f", desc: "" }],
   drafting: [],
   inReview: [],
+  published: [],
 };
 
 describe("removeFromPipeline", () => {

@@ -64,6 +64,22 @@ describe("bucketBoard", () => {
     expect(board.inReview[0]).not.toHaveProperty("taskToken");
   });
 
+  it("routes SYNDICATED items to published with their published date", () => {
+    const board = bucketBoard([
+      {
+        repoName: "helix-editor/helix",
+        status: "SYNDICATED",
+        title: "State of the Art: Helix",
+        publishedAt: "2026-06-27T01:00:00.000Z",
+      },
+    ]);
+    expect(board.published).toHaveLength(1);
+    expect(board.published[0].title).toBe("State of the Art: Helix");
+    expect(board.published[0].publishedAt).toBe("2026-06-27T01:00:00.000Z");
+    // PUBLISHED (drafted, awaiting review) must not leak into published.
+    expect(board.inReview).toHaveLength(0);
+  });
+
   it("ignores unknown statuses", () => {
     const board = bucketBoard([{ repoName: "x/y", status: "WEIRD" as any }]);
     expect(board.discovered).toHaveLength(0);

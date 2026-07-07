@@ -1,6 +1,6 @@
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from "aws-lambda";
 import { Resource } from "sst";
-import { getByRepo, markPublished, markScheduled } from "./lib/ledger";
+import { getByRepo, markSyndicated, markScheduled } from "./lib/ledger";
 import type { PublicationRecord } from "./types";
 import {
   parsePublishInput,
@@ -85,14 +85,18 @@ export async function publishNow(
     .filter((w): w is WebhookConfig => !!w);
   const canonicalUrl = canonicalUrlFromWebhook(enabled[0]?.url ?? null, slugify(record.title ?? ""));
 
+  // Dup-guard: never re-post to a target this article was already syndicated to.
+  const already = new Set(record.syndicatedTargets ?? []);
+
   const jobs: Promise<TargetResult>[] = [];
-  if (targets.devto) {
+  if (targets.devto && !already.has("devto")) {
     jobs.push(postDevto(record.title ?? "", record.articleMarkdown ?? "", canonicalUrl, tags));
   }
   for (const id of ["linkedin", "substack"] as const) {
-    if (targets[id]) jobs.push(Promise.resolve({ id, ok: false, detail: "not supported" }));
+    if (targets[id] && !already.has(id)) jobs.push(Promise.resolve({ id, ok: false, detail: "not supported" }));
   }
   for (const cfg of enabled) {
+    if (already.has(cfg.id)) continue;
     jobs.push(
       getWebhookSecret(cfg.id).then((secret) =>
         secret
@@ -103,11 +107,13 @@ export async function publishNow(
   }
   const results = await Promise.all(jobs);
 
-  if (results.some((r) => r.ok)) {
-    await markPublished(record.repoName, {
+  const succeeded = results.filter((r) => r.ok).map((r) => r.id);
+  if (succeeded.length) {
+    await markSyndicated(record.repoName, {
       title: record.title ?? "",
       publishedAt: new Date().toISOString(),
       articleMarkdown: record.articleMarkdown ?? "",
+      syndicatedTargets: [...new Set([...already, ...succeeded])],
     });
   }
   return { results, summary: summarizeResults(results) };

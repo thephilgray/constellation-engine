@@ -35,16 +35,24 @@ export interface ReviewItem {
   publishedAt?: string;
 }
 
+export interface PublishedItem {
+  repoName: string;
+  title?: string;
+  publishedAt?: string;
+  syndicatedTargets?: string[];
+}
+
 export interface Board {
   discovered: DiscoveredItem[];
   readyForDev: HandoffItem[];
   drafting: DraftingItem[];
   inReview: ReviewItem[];
+  published: PublishedItem[];
 }
 
-/** Pure: split ledger items into the four board columns the UI renders. */
+/** Pure: split ledger items into the board columns the UI renders. */
 export function bucketBoard(items: PublicationRecord[]): Board {
-  const board: Board = { discovered: [], readyForDev: [], drafting: [], inReview: [] };
+  const board: Board = { discovered: [], readyForDev: [], drafting: [], inReview: [], published: [] };
   for (const item of items) {
     switch (item.status) {
       case "DISCOVERED":
@@ -81,6 +89,14 @@ export function bucketBoard(items: PublicationRecord[]): Board {
           repoName: item.repoName,
           title: item.title,
           publishedAt: item.publishedAt,
+        });
+        break;
+      case "SYNDICATED":
+        board.published.push({
+          repoName: item.repoName,
+          title: item.title,
+          publishedAt: item.publishedAt,
+          syndicatedTargets: item.syndicatedTargets ?? [],
         });
         break;
       // Unknown statuses are intentionally dropped (no default bucket).

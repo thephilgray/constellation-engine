@@ -43,19 +43,23 @@ export function Toggle({
   on,
   onChange,
   label,
+  disabled,
 }: {
   on: boolean;
   onChange: () => void;
   label?: string;
+  disabled?: boolean;
 }) {
   return (
     <button
       role="switch"
       aria-checked={on}
       aria-label={label}
+      disabled={disabled}
       onClick={onChange}
       className={cn(
-        "relative h-[22px] w-[38px] flex-[0_0_auto] cursor-pointer rounded-full border-none p-0 transition-colors",
+        "relative h-[22px] w-[38px] flex-[0_0_auto] rounded-full border-none p-0 transition-colors",
+        disabled ? "cursor-default opacity-60" : "cursor-pointer",
         on ? "bg-dp-slate" : "bg-[#dcd9d1]",
       )}
     >
