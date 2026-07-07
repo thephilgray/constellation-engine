@@ -12,6 +12,7 @@
 [![Astro 5](https://img.shields.io/badge/Astro-5.0-bc52ee?style=for-the-badge&logo=astro&logoColor=white)](https://astro.build)
 [![React 19](https://img.shields.io/badge/React-19.0-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev)
 [![Tailwind CSS v4](https://img.shields.io/badge/Tailwind_v4-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com)
+[![License](https://img.shields.io/badge/License-Apache%202.0%20%2B%20BUSL--1.1-0055ff?style=for-the-badge)](LICENSE)
 
 </div>
 
@@ -250,6 +251,17 @@ Deploy the serverless infrastructure and web dashboard to AWS:
 ```bash
 npm run deploy:prod
 ```
+
+---
+
+## 🔐 Licensing & Commercial Rights
+
+Constellation Engine operates under a **Dual-Licensing Model**:
+
+1. **Core Open-Source Modules ([Apache License 2.0](file:///Users/phillipgray/Projects/constellation-engine/LICENSE)):**
+   All foundational backend services, personal second-brain personas (`The Gardener`, `The Philosopher`, `The Biographer`, etc.), and web dashboard components are licensed under the permissive **Apache License 2.0**. You are free to use, modify, and build upon these core systems.
+2. **DiffPress Commercial Module ([Business Source License 1.1](file:///Users/phillipgray/Projects/constellation-engine/src/diffpress/LICENSE)):**
+   The contents of the [src/diffpress](file:///Users/phillipgray/Projects/constellation-engine/src/diffpress) directory constitute the commercial **DiffPress AI Publication Engine**. This module is licensed under **BUSL-1.1**, allowing free personal use, self-hosting, and internal testing, while strictly prohibiting commercial packaging as a paid SaaS or managed cloud service. On **July 6, 2030**, this license automatically converts to **Apache License 2.0**.
 
 ---
 

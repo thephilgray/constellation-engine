@@ -2,6 +2,7 @@
   "name": "constellation-engine",
   "type": "module",
   "version": "0.0.1",
+  "license": "Apache-2.0 AND BUSL-1.1",
   "scripts": {
     "astro": "astro",
     "build": "astro build",

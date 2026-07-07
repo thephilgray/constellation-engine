@@ -1,0 +1,26 @@
+Business Source License 1.1
+
+License parameters:
+Licensor: Phillip Gray / DiffPress
+Licensed Work: DiffPress AI Publication Engine (all files and contents within the `src/diffpress/` directory)
+Change Date: 2030-07-06
+Change License: Apache License, Version 2.0
+Additional Use Grant: You may use, modify, create derivative works of, and self-host the Licensed Work for non-commercial purposes, personal use, internal testing, and educational experimentation. Commercial hosting, offering the Licensed Work as a managed cloud service or paid SaaS, or bundling the Licensed Work into a competing commercial content publishing platform without prior written permission from the Licensor is strictly prohibited.
+
+==============================================================================
+
+Terms
+
+The Licensor hereby grants you the right to copy, modify, create derivative works, sign, or distribute the Licensed Work, subject to the Change Date and the License Parameters above.
+
+1. Grant of License
+The Licensor grants you a world-wide, royalty-free, non-exclusive license to use the Licensed Work subject to the limitations set forth in the License Parameters above and this license agreement.
+
+2. Limitations
+You may not use the Licensed Work for any commercial purpose that violates the Additional Use Grant above. In particular, offering the Licensed Work as a managed cloud service, paid SaaS, or commercial publication suite to third parties is strictly prohibited prior to the Change Date.
+
+3. Change Date
+On the Change Date specified above, this license automatically terminates and converts to the Change License specified above (Apache License, Version 2.0). Upon conversion, all terms of the Change License shall govern your use of the Licensed Work from that date forward.
+
+4. Disclaimer of Warranty
+THE LICENSED WORK IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE LICENSOR BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE LICENSED WORK OR THE USE OR OTHER DEALINGS IN THE LICENSED WORK.
